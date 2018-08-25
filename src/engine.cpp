@@ -137,9 +137,15 @@ uint64_t engine_t::nodesearched() {
 	return nodes;
 }
 
-void engine_t::stopIterations() {
+void engine_t::stopIteration() {
 	for (auto& t : *this) {
 		t->stop_iter = true;
+	}
+}
+
+void engine_t::resolveIteration() {
+	for (auto& t : *this) {
+		t->resolve_iter = true;
 	}
 }
 

@@ -105,7 +105,8 @@ struct engine_t : public std::vector<search_t*> {
 	void onDummyChange();
 
 	uint64_t nodesearched();
-	void stopIterations();
+	void stopIteration();
+	void resolveIteration();
 
 	bool defer_move(uint64_t move_hash, int depth);
 	void starting_search(uint64_t move_hash, int depth);
@@ -125,6 +126,9 @@ struct engine_t : public std::vector<search_t*> {
 	std::atomic<bool> use_time;
 	std::atomic<bool> stop;
 	bool doSMP;
+
+	std::atomic<int> alpha;
+	std::atomic<int> beta;
 
 	int64_t start_time;
 	int64_t time_limit_max;

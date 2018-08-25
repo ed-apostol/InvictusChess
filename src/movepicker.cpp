@@ -8,13 +8,12 @@
 #include "movepicker.h"
 #include "log.h"
 
-movepicker_t::movepicker_t(position_t& pos, bool skipq, uint16_t hmove, uint16_t k1, uint16_t k2) {
+movepicker_t::movepicker_t(position_t& pos, bool inCheck, bool skipq, uint16_t hmove, uint16_t k1, uint16_t k2) {
 	idx = 0;
 	hashmove = hmove;
 	killer1 = k1;
 	killer2 = k2;
 	pinned = pos.pinnedPieces(pos.side);
-	inCheck = pos.kingIsInCheck();
 	skipquiet = skipq;
 	if (inCheck) {
 		pos.genCheckEvasions(mvlist);

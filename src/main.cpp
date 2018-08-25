@@ -15,7 +15,6 @@ int main(void) {
 }
 
 // TODO:
-//-board is drawn
 //-history moves and other new history ideas
 //-LMP
 //-king safety eval
@@ -59,3 +58,4 @@ int main(void) {
 //-replace PST?
 //-ponder
 //-ABDADA??? -sync at root, sync aspiration window,
+//-board is drawn

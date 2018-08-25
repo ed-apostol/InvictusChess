@@ -61,8 +61,8 @@ struct search_t : public thread_t {
 	void extractPV(move_t rmove);
 	void displayInfo(int depth, int alpha, int beta);
 	void start();
-	int search(bool root, bool inPv, int alpha, int beta, int depth, int ply);
-	int qsearch(int alpha, int beta, int ply);
+	int search(bool root, bool inPv, int alpha, int beta, int depth, int ply, bool inCheck);
+	int qsearch(int alpha, int beta, int ply, bool inCheck);
 
 	position_t pos;
 	engine_t& e;

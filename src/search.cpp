@@ -54,17 +54,19 @@ uint64_t search_t::perft(int depth) {
 	if (depth == 0) return 1ull;
 	movelist_t mvlist;
 	bool inCheck = pos.kingIsInCheck();
-	if (inCheck)
-		pos.genCheckEvasions(mvlist);
+	if (inCheck) pos.genCheckEvasions(mvlist);
 	else {
 		pos.genTacticalMoves(mvlist);
 		pos.genQuietMoves(mvlist);
 	}
 	uint64_t pinned = pos.pinnedPieces(pos.side);
+	//uint64_t dcc = pos.discoveredCheckCandidates(pos.side);
 	for (int x = 0; x < mvlist.size; ++x) {
 		if (!pos.moveIsLegal(mvlist.mv(x), pinned, inCheck)) continue;
 		//ASSERT(pos.moveIsValid(mvlist.mv(x), pinned));
+		//bool moveGivesCheck = pos.moveIsCheck(mvlist.mv(x), dcc);
 		pos.doMove(undo, mvlist.mv(x));
+		//ASSERT(moveGivesCheck == pos.kingIsInCheck());
 		cnt += perft(depth - 1);
 		pos.undoMove(undo);
 	}
@@ -126,20 +128,27 @@ void search_t::start() {
 	for (auto& m : killer1) m = 0;
 	for (auto& m : killer2) m = 0;
 	nodecnt = 0;
+	bool inCheck = pos.kingIsInCheck();
 
 	for (int depth = 1; depth <= e.limits.depth; ++depth) {
-		int delta = 16, alpha = -MATE, beta = MATE;
+		int delta = 16;
+		e.alpha = -MATE;
+		e.beta = MATE;
 		maxplysearched = 0;
-		resolve_iter = false;
-		stop_iter = false;
 		if (depth > 3) // use rootbestmove score
-			alpha = std::max(-MATE, rootmove.s - delta), beta = std::min(MATE, rootmove.s + delta);
-		//PrintOutput() << thread_id << " : " << depth << " " << alpha << " " << beta;
+			e.alpha = std::max(-MATE, e.rootbestmove.s - delta), e.beta = std::min(MATE, e.rootbestmove.s + delta);
 		while (true) {
-			search(true, true, alpha, beta, depth, 0);
-			if (e.stop || stop_iter) break;
-			if (rootmove.s <= alpha) alpha = std::max(-MATE, rootmove.s - delta);
-			else if (rootmove.s >= beta) beta = std::min(MATE, rootmove.s + delta);
+			//PrintOutput() << thread_id << " : " << depth << " " << e.alpha << " " << e.beta;
+			stop_iter = false;
+			resolve_iter = false;
+			search(true, true, e.alpha, e.beta, depth, 0, inCheck);
+			if (e.stop) break;
+			if (stop_iter) {
+				if (resolve_iter) continue;
+				else break;
+			}
+			if (rootmove.s <= e.alpha) e.alpha = std::max(-MATE, rootmove.s - delta);
+			else if (rootmove.s >= e.beta) e.beta = std::min(MATE, rootmove.s + delta);
 			else {
 				extractPV(rootmove); // this fills the hash, so it should be here
 				std::lock_guard<spinlock_t> lck(e.updatelock);
@@ -149,14 +158,15 @@ void search_t::start() {
 					if (pvlist.size > 1) e.rootponder = pvlist.mv(1);
 					if (depth >= 8) {
 						//PrintOutput() << "thread_id: " << thread_id;
-						displayInfo(depth, alpha, beta);
+						displayInfo(depth, e.alpha, e.beta);
 					}
-					e.stopIterations(); // stop thread iterations except this one
+					e.stopIteration();
 				}
 				break;
 			}
 			delta <<= 1;
-			resolve_iter = true;
+			e.resolveIteration();
+			e.stopIteration();
 		}
 		if (e.stop) break;
 		// TODO check for time here if going to next iter is still possible, if > 70% stop search
@@ -174,8 +184,8 @@ void search_t::start() {
 	}
 }
 
-int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int ply) {
-	if (depth <= 0) return qsearch(alpha, beta, ply);
+int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int ply, bool inCheck) {
+	if (depth <= 0) return qsearch(alpha, beta, ply, inCheck);
 
 	ASSERT(alpha < beta);
 	ASSERT(!(pos.colorBB[WHITE] & pos.colorBB[BLACK]));
@@ -210,7 +220,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 	}
 	else tte.move.m = 0;
 
-	if (!inPv && !pos.kingIsInCheck() // inefficient, re-use
+	if (!inPv && !inCheck
 		&& depth >= 2 && pos.colorBB[pos.side] & ~(pos.piecesBB[PAWN] | pos.piecesBB[KING])
 		&& pos.stack.lastmove.m != 0 && tte.move.m == 0) {
 		int evalscore = eval.score(pos);
@@ -218,13 +228,13 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 			undo_t undo;
 			int R = 4 + depth / 6 + std::min(3, (evalscore - beta) / 200);
 			pos.doNullMove(undo);
-			int score = -search(false, false, -beta, -beta + 1, depth - R, ply + 1);
+			int score = -search(false, false, -beta, -beta + 1, depth - R, ply + 1, false);
 			pos.undoNullMove(undo);
 			if (e.stop || stop_iter) return 0;
 			if (score >= beta) {
 				if (score >= 32500) score = beta;
 				if (depth < 12 && abs(beta) < 32500) return score;
-				int score2 = search(false, false, alpha, beta, depth - R, ply + 1);
+				int score2 = search(false, false, alpha, beta, depth - R, ply + 1, inCheck);
 				if (e.stop || stop_iter) return 0;
 				if (score2 >= beta) return score;
 			}
@@ -232,7 +242,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 	}
 
 	if (inPv &&  tte.move.m == 0 && depth >= 3) {
-		int score = search(root, inPv, alpha, beta, depth - 2, ply);
+		int score = search(root, inPv, alpha, beta, depth - 2, ply, inCheck);
 		e.tt.retrieve(pos.stack.hash, tte);
 	}
 
@@ -243,14 +253,17 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 	undo_t undo;
 	int score;
 	uint64_t move_hash;
-	movepicker_t mp(pos, false, tte.move.m, killer1[ply], killer2[ply]);
+	movepicker_t mp(pos, inCheck, false, tte.move.m, killer1[ply], killer2[ply]);
+	uint64_t dcc = pos.discoveredCheckCandidates(pos.side);
 	for (move_t m; mp.getMoves(pos, m);) {
 		if (e.doSMP && mp.stage == STAGE_DEFERRED) movestried = m.s;
 		else ++movestried;
 
+		bool moveGivesCheck = pos.moveIsCheck(m, dcc);
+
 		if (best_score == -MATE) {
 			pos.doMove(undo, m);
-			score = -search(false, inPv, -beta, -alpha, depth - 1, ply + 1);
+			score = -search(false, inPv, -beta, -alpha, depth - 1 + moveGivesCheck, ply + 1, moveGivesCheck);
 			pos.undoMove(undo);
 		}
 		else {
@@ -273,7 +286,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 				}
 			}
 			int reduction = 1;
-			if (!pos.moveIsTactical(m) && depth > 2) {
+			if (!pos.moveIsTactical(m) && !moveGivesCheck && depth > 2) {
 				reduction = LMRTable[std::min(depth, 63)][std::min(movestried, 63)];
 				reduction += !inPv;
 				reduction -= (m.m == mp.killer1) || (m.m == mp.killer2);
@@ -281,17 +294,19 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 			}
 			pos.doMove(undo, m);
 
+			//ASSERT(moveGivesCheck == pos.kingIsInCheck());
+
 			if (e.doSMP && mp.stage != STAGE_DEFERRED) e.starting_search(move_hash, depth);
 
-			score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1);
+			score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1, moveGivesCheck);
 
 			if (reduction != 1 && !e.stop && !stop_iter && score > alpha)
-				score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1);
+				score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1, moveGivesCheck);
 
 			if (e.doSMP && mp.stage != STAGE_DEFERRED) e.finished_search(move_hash, depth);
 
 			if (inPv && !e.stop && !stop_iter&& score > alpha)
-				score = -search(false, inPv, -beta, -alpha, depth - 1, ply + 1);
+				score = -search(false, inPv, -beta, -alpha, depth - 1, ply + 1, moveGivesCheck);
 
 			pos.undoMove(undo);
 		}
@@ -311,7 +326,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 		}
 	}
 	if (movestried == 0) {
-		if (mp.inCheck) return -MATE + ply;
+		if (inCheck) return -MATE + ply;
 		else return 0;
 	}
 	if (best_score > old_alpha) {
@@ -336,7 +351,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 	return best_score;
 }
 
-int search_t::qsearch(int alpha, int beta, int ply) {
+int search_t::qsearch(int alpha, int beta, int ply, bool inCheck) {
 	ASSERT(alpha < beta);
 	ASSERT(!(pos.colorBB[WHITE] & pos.colorBB[BLACK]));
 
@@ -356,8 +371,8 @@ int search_t::qsearch(int alpha, int beta, int ply) {
 	if (ply >= MAXPLY) return eval.score(pos);
 
 	int best_score = -MATE;
-	movepicker_t mp(pos, true);
-	if (!mp.inCheck) {
+	movepicker_t mp(pos, inCheck, true);
+	if (!inCheck) {
 		best_score = eval.score(pos);
 		if (best_score >= beta) return best_score;
 		alpha = std::max(alpha, best_score);
@@ -365,10 +380,12 @@ int search_t::qsearch(int alpha, int beta, int ply) {
 	undo_t undo;
 	move_t best_move(0);
 	int movestried = 0;
+	uint64_t dcc = pos.discoveredCheckCandidates(pos.side);
 	for (move_t m; mp.getMoves(pos, m);) {
 		++movestried;
+		bool moveGivesCheck = pos.moveIsCheck(m, dcc);
 		pos.doMove(undo, m);
-		int score = -qsearch(-beta, -alpha, ply + 1);
+		int score = -qsearch(-beta, -alpha, ply + 1, moveGivesCheck);
 		pos.undoMove(undo);
 		if (e.stop || stop_iter) return 0;
 		if (score > best_score) {
@@ -380,7 +397,7 @@ int search_t::qsearch(int alpha, int beta, int ply) {
 			}
 		}
 	}
-	if (movestried == 0 && mp.inCheck) return -MATE + ply;
+	if (movestried == 0 && inCheck) return -MATE + ply;
 	if (best_move.m != 0) e.pvt.storePV(pos.stack.hash, best_move, 0);
 	return best_score;
 }
