@@ -107,6 +107,7 @@ bool movepicker_t::getMoves(position_t& pos, move_t& move) {
 		}
 		++stage;
 		idx = 0;
+		//if (deferred.size) PrintOutput() << "deferred size: " << deferred.size;
 	case STAGE_DEFERRED:
 		while (idx < deferred.size) {
 			move = deferred.mv(idx++);

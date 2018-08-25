@@ -42,7 +42,6 @@ struct undo_t {
 };
 
 struct position_t {
-	position_t() : piecesBB(7), colorBB(2), pieces(64), kpos(2), history(1024), side(WHITE) {}
 	void initPosition();
 	void undoNullMove(undo_t& undo);
 	void doNullMove(undo_t& undo);
@@ -86,11 +85,11 @@ struct position_t {
 	bool phashIsValid();
 
 	uint64_t occupiedBB;
-	std::vector<uint64_t> history;
-	std::vector<uint64_t> piecesBB;
-	std::vector<uint64_t> colorBB;
-	std::vector<int> pieces;
-	std::vector<int> kpos;
+	uint64_t history[1024];
+	uint64_t piecesBB[7];
+	uint64_t colorBB[2];
+	int pieces[64];
+	int kpos[2];
 	undo_t stack;
 	int side;
 	int num_moves;

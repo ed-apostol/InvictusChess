@@ -88,7 +88,7 @@ struct engine_t : public std::vector<search_t*> {
 	static const int CS_SIZE = 32768;
 	static const int CS_WAYS = 4;
 	static const int DEFER_DEPTH = 3;
-	static const int CUTOFF_CHECK_DEPTH = 3;
+	static const int CUTOFF_CHECK_DEPTH = 4;
 
 	engine_t();
 	~engine_t();
@@ -108,9 +108,9 @@ struct engine_t : public std::vector<search_t*> {
 	void stopIteration();
 	void resolveIteration();
 
-	bool defer_move(uint64_t move_hash, int depth);
-	void starting_search(uint64_t move_hash, int depth);
-	void finished_search(uint64_t move_hash, int depth);
+	bool defer_move(uint32_t move_hash, int depth);
+	void starting_search(uint32_t move_hash, int depth);
+	void finished_search(uint32_t move_hash, int depth);
 
 	pvhash_table_t pvt;
 	trans_table_t tt;
@@ -122,7 +122,7 @@ struct engine_t : public std::vector<search_t*> {
 	int rootbestdepth;
 	spinlock_t updatelock;
 
-	std::atomic<int> currently_searching[CS_SIZE][CS_WAYS];
+	std::atomic<uint32_t> currently_searching[CS_SIZE][CS_WAYS];
 	std::atomic<bool> use_time;
 	std::atomic<bool> stop;
 	bool doSMP;

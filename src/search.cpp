@@ -18,7 +18,7 @@
 namespace Search {
 	int LMRTable[64][64];
 	void initArr() {
-		PrintOutput logger;
+		//PrintOutput logger;
 		for (int d = 1; d < 64; d++) {
 			for (int p = 1; p < 64; p++) {
 				LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.25;
@@ -60,13 +60,9 @@ uint64_t search_t::perft(int depth) {
 		pos.genQuietMoves(mvlist);
 	}
 	uint64_t pinned = pos.pinnedPieces(pos.side);
-	//uint64_t dcc = pos.discoveredCheckCandidates(pos.side);
 	for (int x = 0; x < mvlist.size; ++x) {
 		if (!pos.moveIsLegal(mvlist.mv(x), pinned, inCheck)) continue;
-		//ASSERT(pos.moveIsValid(mvlist.mv(x), pinned));
-		//bool moveGivesCheck = pos.moveIsCheck(mvlist.mv(x), dcc);
 		pos.doMove(undo, mvlist.mv(x));
-		//ASSERT(moveGivesCheck == pos.kingIsInCheck());
 		cnt += perft(depth - 1);
 		pos.undoMove(undo);
 	}
@@ -135,7 +131,7 @@ void search_t::start() {
 		e.alpha = -MATE;
 		e.beta = MATE;
 		maxplysearched = 0;
-		if (depth > 3) // use rootbestmove score
+		if (depth > 3)
 			e.alpha = std::max(-MATE, e.rootbestmove.s - delta), e.beta = std::min(MATE, e.rootbestmove.s + delta);
 		while (true) {
 			//PrintOutput() << thread_id << " : " << depth << " " << e.alpha << " " << e.beta;
@@ -252,7 +248,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 	move_t best_move(0);
 	undo_t undo;
 	int score;
-	uint64_t move_hash;
+	uint32_t move_hash;
 	movepicker_t mp(pos, inCheck, false, tte.move.m, killer1[ply], killer2[ply]);
 	uint64_t dcc = pos.discoveredCheckCandidates(pos.side);
 	for (move_t m; mp.getMoves(pos, m);) {
@@ -277,7 +273,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 							return tte.move.s;
 					}
 				}
-				move_hash = pos.stack.hash;
+				move_hash = pos.stack.hash >> 32;
 				move_hash ^= (m.m * 1664525) + 1013904223;
 				if (e.defer_move(move_hash, depth)) {
 					m.s = movestried;
@@ -285,6 +281,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 					continue;
 				}
 			}
+
 			int reduction = 1;
 			if (!pos.moveIsTactical(m) && !moveGivesCheck && depth > 2) {
 				reduction = LMRTable[std::min(depth, 63)][std::min(movestried, 63)];
@@ -292,18 +289,15 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 				reduction -= (m.m == mp.killer1) || (m.m == mp.killer2);
 				reduction = std::min(depth - 1, std::max(reduction, 1));
 			}
+
 			pos.doMove(undo, m);
 
-			//ASSERT(moveGivesCheck == pos.kingIsInCheck());
-
 			if (e.doSMP && mp.stage != STAGE_DEFERRED) e.starting_search(move_hash, depth);
-
 			score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1, moveGivesCheck);
+			if (e.doSMP && mp.stage != STAGE_DEFERRED) e.finished_search(move_hash, depth);
 
 			if (reduction != 1 && !e.stop && !stop_iter && score > alpha)
 				score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1, moveGivesCheck);
-
-			if (e.doSMP && mp.stage != STAGE_DEFERRED) e.finished_search(move_hash, depth);
 
 			if (inPv && !e.stop && !stop_iter&& score > alpha)
 				score = -search(false, inPv, -beta, -alpha, depth - 1, ply + 1, moveGivesCheck);

@@ -393,7 +393,7 @@ bool position_t::isMatDrawn() {
 	int cnt = bitCnt(colorBB[side]), xcnt = bitCnt(colorBB[side ^ 1]);
 	if (cnt == 1 || xcnt == 1) {
 		if (abs(cnt - xcnt) <= 1) return true;
-		if (abs(cnt - xcnt) == 3 && bitCnt(piecesBB[KNIGHT]) == 2) return true;
+		if (abs(cnt - xcnt) == 2 && bitCnt(piecesBB[KNIGHT]) == 2) return true;
 	}
 	return false;
 }
