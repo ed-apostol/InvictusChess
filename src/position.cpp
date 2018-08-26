@@ -407,10 +407,6 @@ int position_t::getSide(int sq) {
 	return BLACK;
 }
 
-bool position_t::colorIsDifferent(int sq, int c) {
-	return ((BitMask[sq] & colorBB[c]) == 0);
-}
-
 uint64_t  position_t::getPieceBB(int pc, int c) {
 	return piecesBB[pc] & colorBB[c];
 }

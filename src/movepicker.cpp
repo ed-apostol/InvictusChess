@@ -18,10 +18,10 @@ movepicker_t::movepicker_t(position_t& pos, bool inCheck, bool skipq, uint16_t h
 	if (inCheck) {
 		pos.genCheckEvasions(mvlist);
 		scoreEvasions(pos);
-		stage = STAGE_EVASION;
+		stage = STG_EVASION;
 	}
-	else if (skipquiet) stage = STAGE_GENTACTICAL;
-	else stage = STAGE_HTABLE;
+	else if (skipquiet) stage = STG_GENTACTICS;
+	else stage = STG_HTABLE;
 }
 
 move_t movepicker_t::getBestMoveFromIdx(int idx) {
@@ -37,25 +37,25 @@ move_t movepicker_t::getBestMoveFromIdx(int idx) {
 
 bool movepicker_t::getMoves(position_t& pos, move_t& move) {
 	switch (stage) {
-	case STAGE_EVASION:
+	case STG_EVASION:
 		if (idx < mvlist.size) {
 			move = getBestMoveFromIdx(idx++);
 			return true;
 		}
 		else return false;
 		break;
-	case STAGE_HTABLE:
+	case STG_HTABLE:
 		++stage;
 		if (!skipquiet && hashmove != 0) {
 			move.m = hashmove;
 			if (pos.moveIsValid(move, pinned) && pos.moveIsLegal(move, pinned, false))
 				return true;
 		}
-	case STAGE_GENTACTICAL:
+	case STG_GENTACTICS:
 		pos.genTacticalMoves(mvlist);
 		scoreTactical(pos);
 		++stage;
-	case STAGE_WINTACTICAL:
+	case STG_WINTACTICS:
 		while (idx < mvlist.size) {
 			move = getBestMoveFromIdx(idx++);
 			if (move.m == hashmove) continue;
@@ -69,25 +69,25 @@ bool movepicker_t::getMoves(position_t& pos, move_t& move) {
 		}
 		if (skipquiet) return false;
 		++stage;
-	case STAGE_KILLER1:
+	case STG_KILLER1:
 		++stage;
 		if (killer1 != hashmove && killer1 != 0) {
 			move.m = killer1;
 			if (pos.moveIsValid(move, pinned) && pos.moveIsLegal(move, pinned, false))
 				return true;
 		}
-	case STAGE_KILLER2:
+	case STG_KILLER2:
 		++stage;
 		if (killer2 != hashmove && killer2 != 0) {
 			move.m = killer2;
 			if (pos.moveIsValid(move, pinned) && pos.moveIsLegal(move, pinned, false))
 				return true;
 		}
-	case STAGE_GENQUIETS:
+	case STG_GENQUIET:
 		pos.genQuietMoves(mvlist);
 		scoreNonTactical(pos);
 		++stage;
-	case STAGE_QUIETS:
+	case STG_QUIET:
 		while (idx < mvlist.size) { // order when history scoring is done
 			move = mvlist.mv(idx++);
 			if (move.m == hashmove) continue;
@@ -98,7 +98,7 @@ bool movepicker_t::getMoves(position_t& pos, move_t& move) {
 		}
 		++stage;
 		idx = 0;
-	case STAGE_BADTACTICAL:
+	case STG_BADTACTICS:
 		while (idx < mvlistbad.size) { // no need to order, ordered already
 			move = mvlistbad.mv(idx++);
 			if (move.m == hashmove) continue;
@@ -108,14 +108,14 @@ bool movepicker_t::getMoves(position_t& pos, move_t& move) {
 		++stage;
 		idx = 0;
 		//if (deferred.size) PrintOutput() << "deferred size: " << deferred.size;
-	case STAGE_DEFERRED:
+	case STG_DEFERRED:
 		while (idx < deferred.size) {
 			move = deferred.mv(idx++);
 			return true;
 		}
 		++stage;
 		break;
-	case STAGE_DONE:
+	case STG_DONE:
 		return false;
 	}
 	return false;

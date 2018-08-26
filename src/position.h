@@ -59,7 +59,6 @@ struct position_t {
 	uint64_t getPieceBB(int pc, int c);
 	uint64_t getBishopSlidersBB(int c);
 	uint64_t getRookSlidersBB(int c);
-	bool colorIsDifferent(int sq, int c);
 
 	uint64_t allAttackersToSquare(int sq, uint64_t occupied);
 	bool statExEval(move_t m, int threshold);

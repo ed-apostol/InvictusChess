@@ -68,9 +68,9 @@ struct tt_entry_t {
 };
 
 enum TTBounds {
-	EXACT = 1,
-	LOWERBOUND,
-	UPPERBOUND
+	TT_EXACT = 1,
+	TT_LOWER,
+	TT_UPPER
 };
 
 class trans_table_t : public hashtable_t < tt_entry_t > {

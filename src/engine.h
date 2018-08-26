@@ -108,9 +108,9 @@ struct engine_t : public std::vector<search_t*> {
 	void stopIteration();
 	void resolveIteration();
 
-	bool defer_move(uint32_t move_hash, int depth);
-	void starting_search(uint32_t move_hash, int depth);
-	void finished_search(uint32_t move_hash, int depth);
+	bool deferMove(uint32_t move_hash, int depth);
+	void startingSearch(uint32_t move_hash, int depth);
+	void finishedSearch(uint32_t move_hash, int depth);
 
 	pvhash_table_t pvt;
 	trans_table_t tt;

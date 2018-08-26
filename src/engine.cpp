@@ -149,7 +149,7 @@ void engine_t::resolveIteration() {
 	}
 }
 
-bool engine_t::defer_move(uint32_t move_hash, int depth) {
+bool engine_t::deferMove(uint32_t move_hash, int depth) {
 	if (depth < DEFER_DEPTH) return false;
 	uint32_t n = move_hash & (CS_SIZE - 1);
 	for (int i = 0; i < CS_WAYS; ++i) {
@@ -158,7 +158,7 @@ bool engine_t::defer_move(uint32_t move_hash, int depth) {
 	return false;
 }
 
-void engine_t::starting_search(uint32_t move_hash, int depth) {
+void engine_t::startingSearch(uint32_t move_hash, int depth) {
 	if (depth < DEFER_DEPTH) return;
 	uint32_t n = move_hash & (CS_SIZE - 1);
 	for (int i = 0; i < CS_WAYS; ++i) {
@@ -172,7 +172,7 @@ void engine_t::starting_search(uint32_t move_hash, int depth) {
 	currently_searching[n][0] = move_hash;
 }
 
-void engine_t::finished_search(uint32_t move_hash, int depth) {
+void engine_t::finishedSearch(uint32_t move_hash, int depth) {
 	if (depth < DEFER_DEPTH) return;
 	uint32_t n = move_hash & (CS_SIZE - 1);
 	for (int i = 0; i < CS_WAYS; ++i) {
