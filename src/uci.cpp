@@ -133,7 +133,7 @@ void uci_t::positioncmd(iss& stream) {
 	}
 	engine.origpos.setPosition(fen);
 	for (bool found = true; stream >> token && found;) {
-		movelist_t ml;
+		movelist_t<256> ml;
 		undo_t undo;
 		found = false;
 		engine.origpos.genLegal(ml);
@@ -225,7 +225,7 @@ void uci_t::eval() {
 }
 
 void uci_t::moves() {
-	movelist_t ml;
+	movelist_t<256> ml;
 	engine.origpos.genLegal(ml);
 	for (int x = 0; x < ml.size; ++x)
 		PrintOutput() << " " << ml.mv(x).to_str();

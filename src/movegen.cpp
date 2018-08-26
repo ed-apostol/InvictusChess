@@ -16,11 +16,11 @@ using namespace Attacks;
 using namespace BitUtils;
 using namespace PositionData;
 
-void position_t::genLegal(movelist_t& mvlist) {
+void position_t::genLegal(movelist_t<256>& mvlist) {
 	if (kingIsInCheck())
 		genCheckEvasions(mvlist);
 	else {
-		movelist_t mlt;
+		movelist_t<256> mlt;
 		uint64_t pinned = pinnedPieces(side);
 		genTacticalMoves(mlt);
 		genQuietMoves(mlt);
@@ -36,7 +36,7 @@ void position_t::genLegal(movelist_t& mvlist) {
 		for (uint64_t mvbits = FNC(from = popFirstBit(bits), SP) & TBB; mvbits;)  \
 			ML.add(move_t(int(from), int(popFirstBit(mvbits)), F));
 
-void position_t::genQuietMoves(movelist_t& mvlist) {
+void position_t::genQuietMoves(movelist_t<256>& mvlist) {
 	uint64_t pcbits;
 
 	if (stack.castle & (side ? BCKS : WCKS) && !(occupiedBB & CastleSquareMask1[side][0]) && !areaIsAttacked(side ^ 1, CastleSquareMask2[side][0]))
@@ -59,7 +59,7 @@ void position_t::genQuietMoves(movelist_t& mvlist) {
 	genMoves(mvlist, kingAttacksBB, getPieceBB(KING, side), 0, ~occupiedBB & ~kingMovesBB(kpos[side ^ 1]), MF_NORMAL);
 }
 
-void position_t::genTacticalMoves(movelist_t& mvlist) {
+void position_t::genTacticalMoves(movelist_t<256>& mvlist) {
 	const uint64_t targetBB = colorBB[side ^ 1] & ~piecesBB[KING];
 
 	if (stack.epsq != -1)
@@ -83,7 +83,7 @@ void position_t::genTacticalMoves(movelist_t& mvlist) {
 	genMoves(mvlist, kingAttacksBB, getPieceBB(KING, side), 0, targetBB & ~kingMovesBB(kpos[side ^ 1]), MF_NORMAL);
 }
 
-void position_t::genCheckEvasions(movelist_t& mvlist) {
+void position_t::genCheckEvasions(movelist_t<256>& mvlist) {
 	const int xside = side ^ 1;
 	const int ksq = kpos[side];
 	const uint64_t checkers = getAttacksBB(ksq, xside);

@@ -8,6 +8,7 @@
 
 #include "typedefs.h"
 #include "position.h"
+#include "search.h"
 
 enum MoveGenStages {
 	STG_EVASION,
@@ -24,21 +25,24 @@ enum MoveGenStages {
 };
 
 struct movepicker_t {
-	movepicker_t(position_t& pos, bool inCheck, bool skipq, uint16_t hmove = 0, uint16_t k1 = 0, uint16_t k2 = 0);
+	movepicker_t(search_t& search, bool inCheck, bool skipq, int ply, uint16_t hmove = 0, uint16_t k1 = 0, uint16_t k2 = 0);
 	move_t getBestMoveFromIdx(int idx);
-	bool getMoves(position_t& pos, move_t& move);
-	void scoreTactical(position_t& pos);
-	void scoreNonTactical(position_t& pos);
-	void scoreEvasions(position_t& pos);
+	bool getMoves(move_t& move);
+	void scoreTactical();
+	void scoreNonTactical();
+	void scoreEvasions();
 	int stage;
 	int idx;
+	int ply;
 	bool skipquiet;
 	uint64_t pinned;
 	uint16_t hashmove;
 	uint16_t killer1;
 	uint16_t killer2;
 	uint16_t counter;
-	movelist_t mvlist;
-	movelist_t mvlistbad;
-	movelist_t deferred;
+	search_t& s;
+	position_t& pos;
+	movelist_t<256> mvlist;
+	movelist_t<32> mvlistbad;
+	movelist_t<128> deferred;
 };

@@ -103,6 +103,7 @@ struct move_t {
 	int16_t s;
 };
 
+template<int N>
 struct movelist_t {
 public:
 	movelist_t() : size(0) {}
@@ -110,7 +111,7 @@ public:
 	move_t& mv(int idx) { return tab[idx]; }
 	int size;
 private:
-	move_t tab[256];
+	move_t tab[N];
 };
 
 struct score_t {

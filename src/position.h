@@ -64,10 +64,10 @@ struct position_t {
 	bool statExEval(move_t m, int threshold);
 
 	//movegen
-	void genLegal(movelist_t& mvlist);
-	void genQuietMoves(movelist_t& mvlist);
-	void genTacticalMoves(movelist_t& mvlist);
-	void genCheckEvasions(movelist_t& mvlist);
+	void genLegal(movelist_t<256>& mvlist);
+	void genQuietMoves(movelist_t<256>& mvlist);
+	void genTacticalMoves(movelist_t<256>& mvlist);
+	void genCheckEvasions(movelist_t<256>& mvlist);
 	bool areaIsAttacked(int c, uint64_t area);
 	bool sqIsAttacked(uint64_t occ, int sq, int c);
 	bool kingIsInCheck();

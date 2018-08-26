@@ -18,10 +18,14 @@
 namespace Search {
 	int LMRTable[64][64];
 	void initArr() {
-		//PrintOutput logger;
+		//LogAndPrintOutput logger;
 		for (int d = 1; d < 64; d++) {
 			for (int p = 1; p < 64; p++) {
-				LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.25;
+				//LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.25; //Ethereal
+				//LMRTable[d][p] = 0.5 + log(d) * log(p) / 3; // Hannibal
+				//LMRTable[d][p] = log(d) * log(p) / 1.95; // SF
+				//LMRTable[d][p] = 0.5 + log(d) * log(p) / 2.1; // Laser
+				LMRTable[d][p] = 0.5 + log(d) * log(p) / 2.15;
 				//logger << " " << LMRTable[d][p];
 			}
 			//logger << "\n";
@@ -52,7 +56,7 @@ uint64_t search_t::perft(int depth) {
 	undo_t undo;
 	uint64_t cnt = 0ull;
 	if (depth == 0) return 1ull;
-	movelist_t mvlist;
+	movelist_t<256> mvlist;
 	bool inCheck = pos.kingIsInCheck();
 	if (inCheck) pos.genCheckEvasions(mvlist);
 	else {
@@ -71,7 +75,7 @@ uint64_t search_t::perft(int depth) {
 
 // use this for checking move generation: faster
 uint64_t search_t::perft2(int depth) {
-	movelist_t mvlist;
+	movelist_t<256> mvlist;
 	pos.genLegal(mvlist);
 	if (depth == 1) return mvlist.size;
 	undo_t undo;
@@ -121,6 +125,7 @@ void search_t::displayInfo(int depth, int alpha, int beta) {
 }
 
 void search_t::start() {
+	memset(history, 0, sizeof(history));
 	for (auto& m : killer1) m = 0;
 	for (auto& m : killer2) m = 0;
 	nodecnt = 0;
@@ -139,6 +144,7 @@ void search_t::start() {
 			resolve_iter = false;
 			search(true, true, e.alpha, e.beta, depth, 0, inCheck);
 			if (e.stop) break;
+			std::lock_guard<spinlock_t> lock(e.updatelock);
 			if (stop_iter) {
 				if (resolve_iter) continue;
 				else break;
@@ -147,7 +153,6 @@ void search_t::start() {
 			else if (rootmove.s >= e.beta) e.beta = std::min(MATE, rootmove.s + delta);
 			else {
 				extractPV(rootmove);
-				std::lock_guard<spinlock_t> lck(e.updatelock);
 				if (depth > e.rootbestdepth || (depth == e.rootbestdepth && rootmove.s > e.rootbestmove.s)) {
 					e.rootbestdepth = depth;
 					e.rootbestmove = rootmove;
@@ -184,9 +189,7 @@ bool search_t::stopSearch() {
 	if ((++nodecnt & 0x3fff) == 0) {
 		if (thread_id == 0 && e.use_time) {
 			uint64_t currtime = Utils::getTime();
-			//PrintOutput() << currtime;
-			if ((currtime >= e.time_limit_max && !resolve_iter)
-				|| (currtime >= e.time_limit_abs)) {
+			if ((currtime >= e.time_limit_max && !resolve_iter) || (currtime >= e.time_limit_abs)) {
 				e.stop = true;
 				return true;
 			}
@@ -256,11 +259,31 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 	undo_t undo;
 	int score;
 	uint32_t move_hash;
-	movepicker_t mp(pos, inCheck, false, tte.move.m, killer1[ply], killer2[ply]);
+	movepicker_t mp(*this, inCheck, false, ply, tte.move.m, killer1[ply], killer2[ply]);
 	uint64_t dcc = pos.discoveredCheckCandidates(pos.side);
-	for (move_t m; mp.getMoves(pos, m);) {
+	playedmoves[ply].size = 0;
+	for (move_t m; mp.getMoves(m);) {
 		if (e.doSMP && mp.stage == STG_DEFERRED) movestried = m.s;
 		else ++movestried;
+
+		if (e.doSMP && mp.stage != STG_DEFERRED && best_score != -MATE) {
+			if (mp.deferred.size > 0 && depth >= e.CUTOFF_CHECK_DEPTH) {
+				if (e.tt.retrieve(pos.stack.hash, tte)) {
+					tte.move.s = scoreFromTrans(tte.move.s, ply, MATE);
+					if (tte.depth >= depth && ((tte.bound() == TT_EXACT) ||
+						(tte.bound() == TT_LOWER && tte.move.s >= beta)
+						|| (tte.bound() == TT_UPPER && tte.move.s <= old_alpha)))
+						return tte.move.s;
+				}
+			}
+			move_hash = pos.stack.hash >> 32;
+			move_hash ^= (m.m * 1664525) + 1013904223;
+			if (e.deferMove(move_hash, depth)) {
+				m.s = movestried;
+				mp.deferred.add(m);
+				continue;
+			}
+		}
 
 		bool moveIsCheck = pos.moveIsCheck(m, dcc);
 
@@ -270,27 +293,8 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 			pos.undoMove(undo);
 		}
 		else {
-			if (e.doSMP && mp.stage != STG_DEFERRED) {
-				if (mp.deferred.size > 0 && depth >= e.CUTOFF_CHECK_DEPTH) {
-					if (e.tt.retrieve(pos.stack.hash, tte)) {
-						tte.move.s = scoreFromTrans(tte.move.s, ply, MATE);
-						if (tte.depth >= depth && ((tte.bound() == TT_EXACT) ||
-							(tte.bound() == TT_LOWER && tte.move.s >= beta)
-							|| (tte.bound() == TT_UPPER && tte.move.s <= alpha)))
-							return tte.move.s;
-					}
-				}
-				move_hash = pos.stack.hash >> 32;
-				move_hash ^= (m.m * 1664525) + 1013904223;
-				if (e.deferMove(move_hash, depth)) {
-					m.s = movestried;
-					mp.deferred.add(m);
-					continue;
-				}
-			}
-
 			int reduction = 1;
-			if (!pos.moveIsTactical(m) && !moveIsCheck && depth > 2) {
+			if (!inCheck && !moveIsCheck && !pos.moveIsTactical(m) && depth > 2) {
 				reduction = LMRTable[std::min(depth, 63)][std::min(movestried, 63)];
 				reduction += !inPv;
 				reduction -= (m.m == mp.killer1) || (m.m == mp.killer2);
@@ -312,6 +316,9 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 			pos.undoMove(undo);
 		}
 		if (e.stop || stop_iter) return 0;
+
+		if (movestried <= 64) playedmoves[ply].add(m);
+
 		if (score > best_score) {
 			best_score = score;
 			if (root) {
@@ -331,6 +338,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 		else return 0;
 	}
 	if (best_score > old_alpha) {
+		updateHistory(pos, best_move, depth, ply);
 		if (best_score >= beta) {
 			best_move.s = scoreToTrans(best_score, ply, MATE);
 			e.tt.store(pos.stack.hash, best_move, depth, TT_LOWER);
@@ -363,7 +371,7 @@ int search_t::qsearch(int alpha, int beta, int ply, bool inCheck) {
 	if (ply >= MAXPLY) return eval.score(pos);
 
 	int best_score = -MATE;
-	movepicker_t mp(pos, inCheck, true);
+	movepicker_t mp(*this, inCheck, true, ply);
 	if (!inCheck) {
 		best_score = eval.score(pos);
 		if (best_score >= beta) return best_score;
@@ -373,7 +381,7 @@ int search_t::qsearch(int alpha, int beta, int ply, bool inCheck) {
 	move_t best_move(0);
 	int movestried = 0;
 	uint64_t dcc = pos.discoveredCheckCandidates(pos.side);
-	for (move_t m; mp.getMoves(pos, m);) {
+	for (move_t m; mp.getMoves(m);) {
 		++movestried;
 		bool moveGivesCheck = pos.moveIsCheck(m, dcc);
 		pos.doMove(undo, m);
@@ -392,4 +400,16 @@ int search_t::qsearch(int alpha, int beta, int ply, bool inCheck) {
 	if (movestried == 0 && inCheck) return -MATE + ply;
 	if (best_move.m != 0) e.pvt.storePV(pos.stack.hash, best_move, 0);
 	return best_score;
+}
+
+void search_t::updateHistory(position_t& p, move_t bm, int depth, int ply) {
+	depth = std::min(15, depth);
+	history[p.side][p.getPiece(bm.moveFrom())][bm.moveTo()] += depth * depth;
+	for (int idx = 0; idx < playedmoves[ply].size; ++idx) {
+		move_t m = playedmoves[ply].mv(idx);
+		if (p.moveIsTactical(m)) continue;
+		if (m == bm) continue;
+		int& sc = history[p.side][p.getPiece(m.moveFrom())][m.moveTo()];
+		sc -= sc / (30 - depth); // decay
+	}
 }

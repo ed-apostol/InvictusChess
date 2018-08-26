@@ -8,7 +8,8 @@
 #include "movepicker.h"
 #include "log.h"
 
-movepicker_t::movepicker_t(position_t& pos, bool inCheck, bool skipq, uint16_t hmove, uint16_t k1, uint16_t k2) {
+movepicker_t::movepicker_t(search_t& search, bool inCheck, bool skipq, int ply, uint16_t hmove, uint16_t k1, uint16_t k2)
+	: s(search), pos(s.pos) {
 	idx = 0;
 	hashmove = hmove;
 	killer1 = k1;
@@ -17,7 +18,7 @@ movepicker_t::movepicker_t(position_t& pos, bool inCheck, bool skipq, uint16_t h
 	skipquiet = skipq;
 	if (inCheck) {
 		pos.genCheckEvasions(mvlist);
-		scoreEvasions(pos);
+		scoreEvasions();
 		stage = STG_EVASION;
 	}
 	else if (skipquiet) stage = STG_GENTACTICS;
@@ -35,7 +36,7 @@ move_t movepicker_t::getBestMoveFromIdx(int idx) {
 	return mvlist.mv(idx);
 }
 
-bool movepicker_t::getMoves(position_t& pos, move_t& move) {
+bool movepicker_t::getMoves(move_t& move) {
 	switch (stage) {
 	case STG_EVASION:
 		if (idx < mvlist.size) {
@@ -53,7 +54,7 @@ bool movepicker_t::getMoves(position_t& pos, move_t& move) {
 		}
 	case STG_GENTACTICS:
 		pos.genTacticalMoves(mvlist);
-		scoreTactical(pos);
+		scoreTactical();
 		++stage;
 	case STG_WINTACTICS:
 		while (idx < mvlist.size) {
@@ -85,11 +86,11 @@ bool movepicker_t::getMoves(position_t& pos, move_t& move) {
 		}
 	case STG_GENQUIET:
 		pos.genQuietMoves(mvlist);
-		scoreNonTactical(pos);
+		scoreNonTactical();
 		++stage;
 	case STG_QUIET:
-		while (idx < mvlist.size) { // order when history scoring is done
-			move = mvlist.mv(idx++);
+		while (idx < mvlist.size) {
+			move = getBestMoveFromIdx(idx++);
 			if (move.m == hashmove) continue;
 			if (move.m == killer1) continue;
 			if (move.m == killer2) continue;
@@ -107,7 +108,7 @@ bool movepicker_t::getMoves(position_t& pos, move_t& move) {
 		}
 		++stage;
 		idx = 0;
-		//if (deferred.size) PrintOutput() << "deferred size: " << deferred.size;
+		//if (deferred.size) PrintOutput() << "deferred size: " << deferred.size; // test in amazon ec2 64 threads
 	case STG_DEFERRED:
 		while (idx < deferred.size) {
 			move = deferred.mv(idx++);
@@ -121,16 +122,22 @@ bool movepicker_t::getMoves(position_t& pos, move_t& move) {
 	return false;
 }
 
-void movepicker_t::scoreTactical(position_t& pos) {
+void movepicker_t::scoreTactical() {
 	for (int x = 0; x < mvlist.size; ++x) {
-		mvlist.mv(x).s = (pos.pieces[mvlist.mv(x).moveTo()] * 6) + mvlist.mv(x).movePromote() - pos.pieces[mvlist.mv(x).moveFrom()];
+		move_t& m = mvlist.mv(x);
+		m.s = (pos.pieces[m.moveTo()] * 6) + m.movePromote() - pos.pieces[m.moveFrom()];
 	}
 }
 
-void movepicker_t::scoreNonTactical(position_t& pos) {
+void movepicker_t::scoreNonTactical() {
+	for (int x = 0; x < mvlist.size; ++x) {
+		move_t& m = mvlist.mv(x);
+		m.s = s.history[pos.side][pos.getPiece(m.moveFrom())][m.moveTo()];
+		//PrintOutput() << m.to_str() << " " << m.s;
+	}
 }
 
-void movepicker_t::scoreEvasions(position_t& pos) {
+void movepicker_t::scoreEvasions() {
 	for (int x = 0; x < mvlist.size; ++x) {
 		if (mvlist.mv(x).m == hashmove) mvlist.mv(x).s = 10000;
 		else if (mvlist.mv(x).m == killer1) mvlist.mv(x).s = 5000;

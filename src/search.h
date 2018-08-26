@@ -64,18 +64,21 @@ struct search_t : public thread_t {
 	bool stopSearch();
 	int search(bool root, bool inPv, int alpha, int beta, int depth, int ply, bool inCheck);
 	int qsearch(int alpha, int beta, int ply, bool inCheck);
+	void updateHistory(position_t& p, move_t bm, int depth, int ply);
 
 	position_t pos;
 	engine_t& e;
 
-	bool resolve_iter;
 	int maxplysearched;
 	std::atomic<uint64_t> nodecnt;
 	std::atomic<bool> stop_iter;
+	std::atomic<bool> resolve_iter;
 
 	eval_t eval;
 	move_t rootmove;
-	movelist_t pvlist;
+	movelist_t<128> pvlist;
+	movelist_t<64> playedmoves[MAXPLYSIZE];
 	uint16_t killer1[MAXPLYSIZE];
 	uint16_t killer2[MAXPLYSIZE];
+	int history[2][8][64];
 };
