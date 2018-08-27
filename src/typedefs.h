@@ -135,8 +135,8 @@ struct score_t {
 	inline score_t& operator*=(const int x) { m *= x, e *= x; return *this; }
 	inline bool operator==(const score_t d) { return (d.e == e) && (d.m == m); }
 
-	int32_t m;
-	int32_t e;
+	int16_t m;
+	int16_t e;
 };
 
 class spinlock_t {

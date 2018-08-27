@@ -25,7 +25,7 @@ namespace Search {
 				//LMRTable[d][p] = 0.5 + log(d) * log(p) / 3; // Hannibal
 				//LMRTable[d][p] = log(d) * log(p) / 1.95; // SF
 				//LMRTable[d][p] = 0.5 + log(d) * log(p) / 2.1; // Laser
-				LMRTable[d][p] = 0.5 + log(d) * log(p) / 2.15;
+				LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.25;
 				//logger << " " << LMRTable[d][p];
 			}
 			//logger << "\n";
@@ -310,7 +310,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 			if (reduction != 1 && !e.stop && !stop_iter && score > alpha)
 				score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1, moveIsCheck);
 
-			if (inPv && !e.stop && !stop_iter&& score > alpha)
+			if (inPv && !e.stop && !stop_iter && score > alpha)
 				score = -search(false, inPv, -beta, -alpha, depth - 1, ply + 1, moveIsCheck);
 
 			pos.undoMove(undo);

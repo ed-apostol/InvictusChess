@@ -133,18 +133,18 @@ void engine_t::printUCIoptions() {
 
 uint64_t engine_t::nodesearched() {
 	uint64_t nodes = 0;
-	for (auto& t : *this) nodes += t->nodecnt;
+	for (auto t : *this) nodes += t->nodecnt;
 	return nodes;
 }
 
 void engine_t::stopIteration() {
-	for (auto& t : *this) {
+	for (auto t : *this) {
 		t->stop_iter = true;
 	}
 }
 
 void engine_t::resolveIteration() {
-	for (auto& t : *this) {
+	for (auto t : *this) {
 		t->resolve_iter = true;
 	}
 }

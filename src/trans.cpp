@@ -77,7 +77,7 @@ void trans_table_t::store(uint64_t hash, move_t move, int depth, int bound) {
 		}
 	}
 	replace->hashlock = lock(hash);
-	replace->age = currentAge | (bound << 6);;
+	replace->age = currentAge | (bound << 6);
 	replace->move = move;
 	replace->depth = depth;
 }

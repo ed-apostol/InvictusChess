@@ -35,7 +35,7 @@ struct undo_t {
 	int32_t fifty;
 	int32_t epsq;
 	int32_t capturedpc;
-	int64_t pliesfromnull;
+	int32_t pliesfromnull;
 	score_t score[2];
 	uint64_t phash;
 	uint64_t hash;
