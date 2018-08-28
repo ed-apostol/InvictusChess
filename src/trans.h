@@ -16,29 +16,28 @@ public:
 	~hashtable_t() { delete[] table; }
 	virtual void clear() { memset(table, 0, tabsize * sizeof(hash_entity_t)); }
 	hash_entity_t* getEntry(const uint64_t hash) const { return &table[key(hash) & mask]; }
-	void init(const int targetMB, const size_t bucket_size) {
-		size_t size = 2;
+	void init(uint64_t mb, const int bucket_size) {
+		uint64_t size = 17;
 		bucket = bucket_size;
-		size_t half = std::max(1, targetMB) << 19;
-		while (size * sizeof(hash_entity_t) <= half) size *= 2;
-		if (size + bucket_size - 1 == tabsize) {
+		while (1ull << (size + 3) <= mb << 19) ++size;
+		if ((1ull << size) + bucket_size - 1 == tabsize) {
 			clear();
 		}
 		else {
-			tabsize = size + bucket_size - 1;
-			mask = size - 1;
-			delete table;
+			tabsize = (1ull << size) + bucket_size - 1;
+			mask = (1ull << size) - 1;
+			delete[] table;
 			table = new hash_entity_t[tabsize];
 		}
 	}
-	size_t key(uint64_t hash) const { return hash & 0xffff; }
-	size_t lock(uint64_t hash) const { return hash >> 48; }
+	uint64_t key(uint64_t hash) const { return hash & 0xffff; }
+	uint64_t lock(uint64_t hash) const { return hash >> 48; }
 
 protected:
 	hash_entity_t * table;
-	size_t tabsize;
-	size_t mask;
-	size_t bucket;
+	uint64_t tabsize;
+	uint64_t mask;
+	uint64_t bucket;
 };
 
 struct pv_hash_entry_t {

@@ -131,7 +131,7 @@ void search_t::start() {
 	nodecnt = 0;
 	bool inCheck = pos.kingIsInCheck();
 
-	for (int depth = 1; depth <= e.limits.depth; ++depth) {
+	for (int depth = 1; depth <= e.limits.depth; depth = e.rootbestdepth + 1) {
 		int delta = 16;
 		e.alpha = -MATE;
 		e.beta = MATE;
@@ -139,7 +139,7 @@ void search_t::start() {
 		if (depth > 3)
 			e.alpha = std::max(-MATE, e.rootbestmove.s - delta), e.beta = std::min(MATE, e.rootbestmove.s + delta);
 		while (true) {
-			//PrintOutput() << thread_id << " : " << depth << " " << e.alpha << " " << e.beta;
+			PrintOutput() << thread_id << " : " << depth << " " << e.alpha << " " << e.beta;
 			stop_iter = false;
 			resolve_iter = false;
 			search(true, true, e.alpha, e.beta, depth, 0, inCheck);
@@ -158,7 +158,7 @@ void search_t::start() {
 					e.rootbestmove = rootmove;
 					if (pvlist.size > 1) e.rootponder = pvlist.mv(1);
 					if (depth >= 8) {
-						//PrintOutput() << "thread_id: " << thread_id;
+						PrintOutput() << "thread_id: " << thread_id;
 						displayInfo(depth, e.alpha, e.beta);
 					}
 					e.stopIteration();

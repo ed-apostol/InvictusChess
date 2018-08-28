@@ -117,9 +117,7 @@ struct engine_t : public std::vector<search_t*> {
 	uci_options_map options;
 	uci_limits_t limits;
 	position_t origpos;
-	move_t rootbestmove;
-	move_t rootponder;
-	int rootbestdepth;
+
 	spinlock_t updatelock;
 
 	std::atomic<uint32_t> currently_searching[CS_SIZE][CS_WAYS];
@@ -129,6 +127,9 @@ struct engine_t : public std::vector<search_t*> {
 
 	std::atomic<int> alpha;
 	std::atomic<int> beta;
+	std::atomic<int> rootbestdepth;
+	move_t rootbestmove;
+	move_t rootponder;
 
 	int64_t start_time;
 	int64_t time_limit_max;
