@@ -17,7 +17,7 @@
 
 engine_t::engine_t() {
 	initUCIoptions();
-	pvt.init(1, 4);
+	pvt.init(1, 8);
 	onHashChange();
 	onThreadsChange();
 }

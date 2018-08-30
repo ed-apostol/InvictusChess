@@ -7,6 +7,8 @@
 #include "eval.h"
 #include "bitutils.h"
 #include "log.h"
+#include "constants.h"
+#include "attacks.h"
 
 using namespace BitUtils;
 
@@ -44,8 +46,11 @@ namespace {
 }
 
 namespace EvalPar {
-	static const int phasevals[7] = { 0,0,1,1,2,4,0 };
 	static const score_t mat_values[7] = { { 0,0 },{ 100, 125 },{ 460, 390 },{ 470, 420 },{ 640, 720 },{ 1310,1350 },{ 0,0 } };
+	static score_t KnightMob = { 6,8 };
+	static score_t BishopMob = { 3,3 };
+	static score_t RookMob = { 1,2 };
+	static score_t QueenMob = { 1,2 };
 
 	score_t pst[2][8][64];
 
@@ -92,6 +97,7 @@ namespace EvalPar {
 }
 
 using namespace EvalPar;
+using namespace Attacks;
 
 score_t eval_t::evalMaterial(position_t& p) {
 	score_t s;
@@ -100,24 +106,52 @@ score_t eval_t::evalMaterial(position_t& p) {
 		int pc = p.pieces[sq];
 		s += mat_values[pc];
 		s += pst[p.side][pc][sq];
-		phase += phasevals[pc];
 	}
 	for (uint64_t pcbits = p.colorBB[p.side ^ 1]; pcbits;) {
 		int sq = popFirstBit(pcbits);
 		int pc = p.pieces[sq];
 		s -= mat_values[pc];
 		s -= pst[p.side ^ 1][pc][sq];
-		phase += phasevals[pc];
 	}
 	return s;
 }
 
-int eval_t::score(position_t& p) {
-	phase = 0;
-	for (int sq = 0; sq < 64; ++sq) {
-		int pc = p.pieces[sq];
-		if (pc != EMPTY) phase += phasevals[pc];
+void eval_t::mobility(position_t& p, score_t& scr, int side) {
+	uint64_t mobmask = ~p.colorBB[side] & ~pawnatks[side ^ 1];
+	for (uint64_t pcbits = p.getPieceBB(KNIGHT, side); pcbits;) {
+		int sq = popFirstBit(pcbits);
+		scr += KnightMob * bitCnt(knightMovesBB(sq) & mobmask);
 	}
-	score_t s = p.stack.score[p.side] - p.stack.score[p.side ^ 1];
+	for (uint64_t pcbits = p.getPieceBB(BISHOP, side); pcbits;) {
+		int sq = popFirstBit(pcbits);
+		scr += BishopMob * bitCnt(bishopAttacksBB(sq, p.occupiedBB) & mobmask);
+	}
+	for (uint64_t pcbits = p.getPieceBB(ROOK, side); pcbits;) {
+		int sq = popFirstBit(pcbits);
+		scr += RookMob * bitCnt(rookAttacksBB(sq, p.occupiedBB) & mobmask);
+	}
+	for (uint64_t pcbits = p.getPieceBB(QUEEN, side); pcbits;) {
+		int sq = popFirstBit(pcbits);
+		scr += QueenMob * bitCnt(queenAttacksBB(sq, p.occupiedBB) & mobmask);
+	}
+}
+
+int eval_t::score(position_t& p) {
+	int side = p.side;
+	int xside = side ^ 1;
+
+	pawnatks[side] = pawnAttackBB(p.getPieceBB(PAWN, side), side);
+	pawnatks[xside] = pawnAttackBB(p.getPieceBB(PAWN, xside), xside);
+
+	score_t scr[2];
+
+	scr[side] = p.stack.score[side];
+	scr[xside] = p.stack.score[xside];
+
+	mobility(p, scr[side], side);
+	mobility(p, scr[xside], xside);
+
+	int phase = 4 * bitCnt(p.piecesBB[QUEEN]) + 2 * bitCnt(p.piecesBB[ROOK]) + 1 * bitCnt(p.piecesBB[KNIGHT] | p.piecesBB[BISHOP]);
+	score_t s = scr[side] - scr[xside];
 	return ((s.m*phase) + (s.e*(24 - phase))) / 24;
 }

@@ -139,7 +139,7 @@ void search_t::start() {
 		if (depth > 3)
 			e.alpha = std::max(-MATE, e.rootbestmove.s - delta), e.beta = std::min(MATE, e.rootbestmove.s + delta);
 		while (true) {
-			PrintOutput() << thread_id << " : " << depth << " " << e.alpha << " " << e.beta;
+			//PrintOutput() << thread_id << " : " << depth << " " << e.alpha << " " << e.beta;
 			stop_iter = false;
 			resolve_iter = false;
 			search(true, true, e.alpha, e.beta, depth, 0, inCheck);
@@ -158,7 +158,7 @@ void search_t::start() {
 					e.rootbestmove = rootmove;
 					if (pvlist.size > 1) e.rootponder = pvlist.mv(1);
 					if (depth >= 8) {
-						PrintOutput() << "thread_id: " << thread_id;
+						//PrintOutput() << "thread_id: " << thread_id;
 						displayInfo(depth, e.alpha, e.beta);
 					}
 					e.stopIteration();
@@ -337,26 +337,16 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 		if (inCheck) return -MATE + ply;
 		else return 0;
 	}
-	if (best_score > old_alpha) {
+	if (best_score >= beta && !pos.moveIsTactical(best_move)) {
 		updateHistory(pos, best_move, depth, ply);
-		if (best_score >= beta) {
-			best_move.s = scoreToTrans(best_score, ply, MATE);
-			e.tt.store(pos.stack.hash, best_move, depth, TT_LOWER);
-			if (killer1[ply] != best_move.m) {
-				killer2[ply] = killer1[ply];
-				killer1[ply] = best_move.m;
-			}
-		}
-		else {
-			e.pvt.storePV(pos.stack.hash, best_move, depth);
-			best_move.s = scoreToTrans(best_score, ply, MATE);
-			e.tt.store(pos.stack.hash, best_move, depth, TT_EXACT);
+		if (killer1[ply] != best_move.m) {
+			killer2[ply] = killer1[ply];
+			killer1[ply] = best_move.m;
 		}
 	}
-	else {
-		best_move.s = scoreToTrans(best_score, ply, MATE);
-		e.tt.store(pos.stack.hash, best_move, depth, TT_UPPER);
-	}
+	if (best_score > old_alpha && best_score < beta) e.pvt.storePV(pos.stack.hash, best_move, depth);
+	best_move.s = scoreToTrans(best_score, ply, MATE);
+	e.tt.store(pos.stack.hash, best_move, depth, (best_score >= beta) ? TT_LOWER : (best_score > old_alpha ? TT_EXACT : TT_UPPER));
 	return best_score;
 }
 
@@ -408,8 +398,7 @@ void search_t::updateHistory(position_t& p, move_t bm, int depth, int ply) {
 	for (int idx = 0; idx < playedmoves[ply].size; ++idx) {
 		move_t m = playedmoves[ply].mv(idx);
 		if (p.moveIsTactical(m)) continue;
-		if (m == bm) continue;
 		int& sc = history[p.side][p.getPiece(m.moveFrom())][m.moveTo()];
-		sc -= sc / (30 - depth); // decay
+		sc -= sc / 10;
 	}
 }
