@@ -73,7 +73,7 @@ void engine_t::initSearch() {
 	stop = false;
 
 	if (doSMP = size() > 1) {
-		memset(currently_searching, 0, sizeof(currently_searching));
+		for (auto& a : ply_threadcnt) a = 0;
 	}
 
 	for (auto t : *this) {
@@ -137,46 +137,14 @@ uint64_t engine_t::nodesearched() {
 	return nodes;
 }
 
-void engine_t::stopIteration() {
+void engine_t::stopIteration(int depth) {
 	for (auto t : *this) {
-		t->stop_iter = true;
+		if (t->depth <= depth) t->stop_iter = true;
 	}
 }
 
 void engine_t::resolveIteration() {
 	for (auto t : *this) {
 		t->resolve_iter = true;
-	}
-}
-
-bool engine_t::deferMove(uint32_t move_hash, int depth) {
-	if (depth < DEFER_DEPTH) return false;
-	uint32_t n = move_hash & (CS_SIZE - 1);
-	for (int i = 0; i < CS_WAYS; ++i) {
-		if (currently_searching[n][i] == move_hash) return true;
-	}
-	return false;
-}
-
-void engine_t::startingSearch(uint32_t move_hash, int depth) {
-	if (depth < DEFER_DEPTH) return;
-	uint32_t n = move_hash & (CS_SIZE - 1);
-	for (int i = 0; i < CS_WAYS; ++i) {
-		if (currently_searching[n][i] == 0) {
-			currently_searching[n][i] = move_hash;
-			return;
-		}
-		if (currently_searching[n][i] == move_hash)
-			return;
-	}
-	currently_searching[n][0] = move_hash;
-}
-
-void engine_t::finishedSearch(uint32_t move_hash, int depth) {
-	if (depth < DEFER_DEPTH) return;
-	uint32_t n = move_hash & (CS_SIZE - 1);
-	for (int i = 0; i < CS_WAYS; ++i) {
-		if (currently_searching[n][i] == move_hash)
-			currently_searching[n][i] = 0;
 	}
 }

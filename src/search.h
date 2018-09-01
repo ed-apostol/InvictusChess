@@ -71,6 +71,7 @@ struct search_t : public thread_t {
 	engine_t& e;
 
 	int maxplysearched;
+	int depth;
 	std::atomic<uint64_t> nodecnt;
 	std::atomic<bool> stop_iter;
 	std::atomic<bool> resolve_iter;

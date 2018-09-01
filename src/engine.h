@@ -105,12 +105,8 @@ struct engine_t : public std::vector<search_t*> {
 	void onDummyChange();
 
 	uint64_t nodesearched();
-	void stopIteration();
+	void stopIteration(int depth);
 	void resolveIteration();
-
-	bool deferMove(uint32_t move_hash, int depth);
-	void startingSearch(uint32_t move_hash, int depth);
-	void finishedSearch(uint32_t move_hash, int depth);
 
 	pvhash_table_t pvt;
 	trans_table_t tt;
@@ -120,7 +116,7 @@ struct engine_t : public std::vector<search_t*> {
 
 	spinlock_t updatelock;
 
-	std::atomic<uint32_t> currently_searching[CS_SIZE][CS_WAYS];
+	std::atomic<int> ply_threadcnt[search_t::MAXPLYSIZE];
 	std::atomic<bool> use_time;
 	std::atomic<bool> stop;
 	bool doSMP;

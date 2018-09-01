@@ -107,15 +107,6 @@ bool movepicker_t::getMoves(move_t& move) {
 				return true;
 		}
 		++stage;
-		idx = 0;
-		//if (deferred.size) PrintOutput() << "deferred size: " << deferred.size; // test in amazon ec2 64 threads
-	case STG_DEFERRED:
-		while (idx < deferred.size) {
-			move = deferred.mv(idx++);
-			return true;
-		}
-		++stage;
-		break;
 	case STG_DONE:
 		return false;
 	}

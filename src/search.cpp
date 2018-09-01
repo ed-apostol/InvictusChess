@@ -137,7 +137,11 @@ void search_t::start() {
 	nodecnt = 0;
 	bool inCheck = pos.kingIsInCheck();
 
-	for (int depth = 1; depth <= e.limits.depth; depth = e.rootbestdepth + 1) {
+	for (depth = 1; e.rootbestdepth < e.limits.depth; ++depth) {
+		if (e.doSMP) {
+			if (e.ply_threadcnt[depth] >= e.size() / 2) continue;
+			else ++e.ply_threadcnt[depth];
+		}
 		int delta = 16;
 		e.alpha = -MATE;
 		e.beta = MATE;
@@ -151,10 +155,7 @@ void search_t::start() {
 			search(true, true, e.alpha, e.beta, depth, 0, inCheck);
 			if (e.stop) break;
 			std::lock_guard<spinlock_t> lock(e.updatelock);
-			if (stop_iter) {
-				if (resolve_iter) continue;
-				else break;
-			}
+			if (stop_iter) break;
 			if (rootmove.s <= e.alpha) e.alpha = std::max(-MATE, rootmove.s - delta);
 			else if (rootmove.s >= e.beta) e.beta = std::min(MATE, rootmove.s + delta);
 			else {
@@ -167,13 +168,11 @@ void search_t::start() {
 						//PrintOutput() << "thread_id: " << thread_id;
 						displayInfo(depth, e.alpha, e.beta);
 					}
-					e.stopIteration();
+					//e.stopIteration(depth);
 				}
 				break;
 			}
 			delta <<= 1;
-			e.resolveIteration();
-			e.stopIteration();
 		}
 		if (e.stop) break;
 		// TODO check for time here if going to next iter is still possible, if > 70% stop search
@@ -182,6 +181,9 @@ void search_t::start() {
 	if (!e.stop && (e.limits.ponder || e.limits.infinite)) {
 		while (!e.use_time && !e.stop)
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	}
+	else {
+		e.stopIteration(MAXPLY);
 	}
 
 	if (thread_id == 0) {
@@ -265,35 +267,12 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 	move_t best_move(0);
 	undo_t undo;
 	int score;
-	uint32_t move_hash;
 	movepicker_t mp(*this, inCheck, false, ply, tte.move.m, killer1[ply], killer2[ply]);
 	uint64_t dcc = pos.discoveredCheckCandidates(pos.side);
 	playedmoves[ply].size = 0;
 	for (move_t m; mp.getMoves(m);) {
-		if (e.doSMP && mp.stage == STG_DEFERRED) movestried = m.s;
-		else ++movestried;
-
-		if (e.doSMP && mp.stage != STG_DEFERRED && best_score != -MATE) {
-			if (mp.deferred.size > 0 && depth >= e.CUTOFF_CHECK_DEPTH) {
-				if (e.tt.retrieve(pos.stack.hash, tte)) {
-					tte.move.s = scoreFromTrans(tte.move.s, ply, MATE);
-					if (tte.depth >= depth && ((tte.bound() == TT_EXACT) ||
-						(tte.bound() == TT_LOWER && tte.move.s >= beta)
-						|| (tte.bound() == TT_UPPER && tte.move.s <= old_alpha)))
-						return tte.move.s;
-				}
-			}
-			move_hash = pos.stack.hash >> 32;
-			move_hash ^= (m.m * 1664525) + 1013904223;
-			if (e.deferMove(move_hash, depth)) {
-				m.s = movestried;
-				mp.deferred.add(m);
-				continue;
-			}
-		}
-
+		++movestried;
 		bool moveIsCheck = pos.moveIsCheck(m, dcc);
-
 		if (best_score == -MATE) {
 			pos.doMove(undo, m);
 			score = -search(false, inPv, -beta, -alpha, depth - 1 + moveIsCheck, ply + 1, moveIsCheck);
@@ -310,9 +289,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 
 			pos.doMove(undo, m);
 
-			if (e.doSMP && mp.stage != STG_DEFERRED) e.startingSearch(move_hash, depth);
 			score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1, moveIsCheck);
-			if (e.doSMP && mp.stage != STG_DEFERRED) e.finishedSearch(move_hash, depth);
 
 			if (reduction != 1 && !e.stop && !stop_iter && score > alpha)
 				score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1, moveIsCheck);

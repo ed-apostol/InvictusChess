@@ -20,7 +20,6 @@ enum MoveGenStages {
 	STG_GENQUIET,
 	STG_QUIET,
 	STG_BADTACTICS,
-	STG_DEFERRED,
 	STG_DONE
 };
 
@@ -44,5 +43,4 @@ struct movepicker_t {
 	position_t& pos;
 	movelist_t<256> mvlist;
 	movelist_t<32> mvlistbad;
-	movelist_t<128> deferred;
 };
