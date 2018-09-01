@@ -59,7 +59,8 @@ bool uci_t::input(iss& stream) {
 	else if (cmd == "eval") eval();
 	else if (cmd == "moves") moves();
 	else if (cmd == "d") displaypos();
-	else LogAndPrintError() << "Invalid cmd: " << cmd;
+	else if (cmd == "speedup") speedup(stream);
+	else LogAndPrintOutput() << "Invalid cmd: " << cmd;
 
 	return true;
 }
@@ -109,7 +110,7 @@ void uci_t::gocmd(iss& stream) {
 		else if (param == "infinite") limit.infinite = true;
 		else if (param == "nodes") stream >> limit.nodes;
 		else if (param == "mate") stream >> limit.mate;
-		else { LogAndPrintError() << "Wrong go command param: " << param; return; }
+		else { LogAndPrintOutput() << "Wrong go command param: " << param; return; }
 		param = "";
 		stream >> param;
 	}
@@ -128,7 +129,7 @@ void uci_t::positioncmd(iss& stream) {
 			fen += token + " ";
 	}
 	else {
-		LogAndPrintError() << "Invalid position!";
+		LogAndPrintOutput() << "Invalid position!";
 		return;
 	}
 	engine.origpos.setPosition(fen);
@@ -233,4 +234,81 @@ void uci_t::moves() {
 
 void uci_t::displaypos() {
 	PrintOutput() << engine.origpos.to_str();
+}
+
+void uci_t::speedup(iss& stream) {
+	iss streamcmd;
+	std::vector<std::string> fenPos = {
+		"r3k2r/pbpnqp2/1p1ppn1p/6p1/2PP4/2PBPNB1/P4PPP/R2Q1RK1 w kq - 2 12",
+		"2kr3r/pbpn1pq1/1p3n2/3p1R2/3P3p/2P2Q2/P1BN2PP/R3B2K w - - 4 22",
+		"r2n1rk1/1pq2ppp/p2pbn2/8/P3Pp2/2PBB2P/2PNQ1P1/1R3RK1 w - - 0 17",
+		"1r2r2k/1p4qp/p3bp2/4p2R/n3P3/2PB4/2PB1QPK/1R6 w - - 1 32",
+		"1b3r1k/rb1q3p/pp2pppP/3n1n2/1P2N3/P2B1NPQ/1B3P2/2R1R1K1 b - - 1 32",
+		"1r1r1qk1/pn1p2p1/1pp1npBp/8/2PB2QP/4R1P1/P4PK1/3R4 w - - 0 1",
+		"3rr1k1/1b2nnpp/1p1q1p2/pP1p1P2/P1pP2P1/2N1P1QP/3N1RB1/2R3K1 w - - 0 1",
+		"rn3rq1/p5k1/2p2bp1/1p4p1/8/2P1B1PQ/5PK1/3R3R w - - 0 1",
+		"1r3rk1/3bb1pp/1qn1p3/3pP3/3P1N2/2Q2N2/2P3PP/R1BR3K w - - 0 1",
+		"rn1q1rk1/2pbb3/pn2p3/1p1pPpp1/3P4/1PNBBN2/P1P1Q1PP/R4R1K w - - 0 1"
+	};
+
+	std::vector<int> threads;
+	int depth;
+
+	stream >> depth;
+	for (int temp; stream >> temp; threads.push_back(temp));
+
+	std::vector<double> timeSpeedupSum(threads.size(), 0.0);
+	std::vector<double> nodesSpeedupSum(threads.size(), 0.0);
+
+	for (int idxpos = 0; idxpos < fenPos.size(); ++idxpos) {
+		LogAndPrintOutput() << "\n\nPos#" << idxpos + 1 << ": " << fenPos[idxpos];
+		uint64_t nodes1 = 0;
+		uint64_t spentTime1 = 0;
+		for (int idxthread = 0; idxthread < threads.size(); ++idxthread) {
+			streamcmd = iss("name Threads value " + std::to_string(threads[idxthread]));
+			setoption(streamcmd);
+			newgame();
+
+			streamcmd = iss("fen " + fenPos[idxpos]);
+			positioncmd(streamcmd);
+
+			int startTime = Utils::getTime();
+
+			streamcmd = iss("depth " + std::to_string(depth));
+			gocmd(streamcmd);
+
+			engine.waitForThreads();
+
+			double timeSpeedUp;
+			double nodesSpeedup;
+			int spentTime = Utils::getTime() - startTime;
+			uint64_t nodes = engine.nodesearched() / spentTime;
+
+			if (0 == idxthread) {
+				nodes1 = nodes;
+				spentTime1 = spentTime;
+				timeSpeedUp = (double)spentTime / 1000.0;
+				timeSpeedupSum[idxthread] += timeSpeedUp;
+				nodesSpeedup = (double)nodes;
+				nodesSpeedupSum[idxthread] += nodesSpeedup;
+				LogAndPrintOutput() << "\nBase: " << std::to_string(timeSpeedUp) << "s " << std::to_string(nodes) << "knps\n";
+			}
+			else {
+				timeSpeedUp = (double)spentTime1 / (double)spentTime;
+				timeSpeedupSum[idxthread] += timeSpeedUp;
+				nodesSpeedup = (double)nodes / (double)nodes1;
+				nodesSpeedupSum[idxthread] += nodesSpeedup;
+				LogAndPrintOutput() << "\nThread: " << std::to_string(threads[idxthread]) << " time: " << std::to_string(timeSpeedUp)
+					<< " nodes: " << std::to_string(nodesSpeedup) << "\n";
+			}
+		}
+	}
+
+	LogAndPrintOutput() << "\n\nAvg Base: " << std::to_string(timeSpeedupSum[0] / fenPos.size()) << "s "
+		<< std::to_string(nodesSpeedupSum[0] / fenPos.size()) << "knps\n";
+	for (int idxthread = 0; idxthread < threads.size(); ++idxthread) {
+		LogAndPrintOutput() << "Threads: " << std::to_string(threads[idxthread])
+			<< " time: " << std::to_string(timeSpeedupSum[idxthread] / fenPos.size()) << " nodes: " << std::to_string(nodesSpeedupSum[idxthread] / fenPos.size());
+	}
+	LogAndPrintOutput() << "\n\n";
 }

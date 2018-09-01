@@ -9,7 +9,7 @@
 
 bool pvhash_table_t::retrievePV(uint64_t hash, pv_hash_entry_t& pventry) const {
 	pv_hash_entry_t* entry = getEntry(hash);
-	for (int t = 0; t < bucket; ++t, ++entry) {
+	for (int t = bucket; t--; ++entry) {
 		if (entry->hashlock == lock(hash)) {
 			entry->age = currentAge;
 			pventry = *entry;
@@ -21,10 +21,8 @@ bool pvhash_table_t::retrievePV(uint64_t hash, pv_hash_entry_t& pventry) const {
 
 void pvhash_table_t::storePV(uint64_t hash, move_t move, int depth) {
 	int lowest = INT_MAX;
-	pv_hash_entry_t *replace, *entry;
-
-	replace = entry = getEntry(hash);
-	for (int t = 0; t < bucket; ++t, ++entry) {
+	pv_hash_entry_t *entry = getEntry(hash), *replace = entry;
+	for (int t = bucket; t--; ++entry) {
 		if (entry->hashlock == lock(hash)) {
 			if (depth >= entry->depth) {
 				replace = entry;
@@ -46,9 +44,9 @@ void pvhash_table_t::storePV(uint64_t hash, move_t move, int depth) {
 
 bool trans_table_t::retrieve(const uint64_t hash, tt_entry_t& ttentry) const {
 	tt_entry_t* entry = getEntry(hash);
-	for (int t = 0; t < bucket; ++t, ++entry) {
+	for (int t = bucket; t--; ++entry) {
 		if (entry->hashlock == lock(hash)) {
-			entry->age = entry->age & 192;
+			entry->age &= 192;
 			entry->age |= currentAge;
 			ttentry = *entry;
 			return true;
@@ -59,12 +57,10 @@ bool trans_table_t::retrieve(const uint64_t hash, tt_entry_t& ttentry) const {
 
 void trans_table_t::store(uint64_t hash, move_t move, int depth, int bound) {
 	int lowest = INT_MAX;
-	tt_entry_t *replace, *entry;
-
-	replace = entry = getEntry(hash);
-	for (int t = 0; t < bucket; ++t, ++entry) {
+	tt_entry_t *entry = getEntry(hash), *replace = entry;
+	for (int t = bucket; t--; ++entry) {
 		if (entry->hashlock == lock(hash)) {
-			if (depth >= entry->depth) {
+			if (bound == TT_EXACT || depth >= entry->depth) {
 				replace = entry;
 				break;
 			}

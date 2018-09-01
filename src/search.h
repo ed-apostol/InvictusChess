@@ -59,6 +59,7 @@ struct search_t : public thread_t {
 	uint64_t perft(int depth);
 	uint64_t perft2(int depth);
 	void extractPV(move_t rmove);
+	void updateInfo();
 	void displayInfo(int depth, int alpha, int beta);
 	void start();
 	bool stopSearch();

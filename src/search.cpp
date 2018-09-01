@@ -108,17 +108,23 @@ void search_t::extractPV(move_t rmove) {
 	while (ply > 0) pos.undoMove(undo[--ply]);
 }
 
+void search_t::updateInfo() {
+	uint64_t currtime = Utils::getTime() - e.start_time + 1;
+	uint64_t totalnodes = e.nodesearched();
+	PrintOutput() << "info time " << currtime << " nodes " << totalnodes << " nps " << (totalnodes * 1000 / currtime);
+}
+
 void search_t::displayInfo(int depth, int alpha, int beta) {
-	PrintOutput logger;
+	LogAndPrintOutput logger;
 	uint64_t currtime = Utils::getTime() - e.start_time + 1;
 	logger << "info depth " << depth << " seldepth " << maxplysearched;
-	if (abs(rootmove.s) < (MATE - MAXPLY)) {
-		if (rootmove.s <= alpha) logger << " score cp " << rootmove.s << " upperbound";
-		else if (rootmove.s >= beta) logger << " score cp " << rootmove.s << " lowerbound";
-		else logger << " score cp " << rootmove.s;
+	if (abs(e.rootbestmove.s) < (MATE - MAXPLY)) {
+		if (e.rootbestmove.s <= alpha) logger << " score cp " << e.rootbestmove.s << " upperbound";
+		else if (e.rootbestmove.s >= beta) logger << " score cp " << e.rootbestmove.s << " lowerbound";
+		else logger << " score cp " << e.rootbestmove.s;
 	}
 	else
-		logger << " score mate " << ((rootmove.s > 0) ? (MATE - rootmove.s + 1) / 2 : -(MATE + rootmove.s) / 2);
+		logger << " score mate " << ((e.rootbestmove.s > 0) ? (MATE - e.rootbestmove.s + 1) / 2 : -(MATE + e.rootbestmove.s) / 2);
 	uint64_t totalnodes = e.nodesearched();
 	logger << " time " << currtime << " nodes " << totalnodes << " nps " << (totalnodes * 1000 / currtime) << " pv";
 	for (int idx = 0; idx < pvlist.size; ++idx) logger << " " << pvlist.mv(idx).to_str();
@@ -152,10 +158,10 @@ void search_t::start() {
 			if (rootmove.s <= e.alpha) e.alpha = std::max(-MATE, rootmove.s - delta);
 			else if (rootmove.s >= e.beta) e.beta = std::min(MATE, rootmove.s + delta);
 			else {
-				extractPV(rootmove);
 				if (depth > e.rootbestdepth || (depth == e.rootbestdepth && rootmove.s > e.rootbestmove.s)) {
 					e.rootbestdepth = depth;
 					e.rootbestmove = rootmove;
+					extractPV(rootmove);
 					if (pvlist.size > 1) e.rootponder = pvlist.mv(1);
 					if (depth >= 8) {
 						//PrintOutput() << "thread_id: " << thread_id;
@@ -179,6 +185,7 @@ void search_t::start() {
 	}
 
 	if (thread_id == 0) {
+		updateInfo();
 		LogAndPrintOutput logger;
 		logger << "bestmove " << e.rootbestmove.to_str();
 		if (pvlist.size >= 2) logger << " ponder " << e.rootponder.to_str();
@@ -317,7 +324,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 		}
 		if (e.stop || stop_iter) return 0;
 
-		if (movestried <= 64) playedmoves[ply].add(m);
+		if (movestried < 64) playedmoves[ply].add(m);
 
 		if (score > best_score) {
 			best_score = score;

@@ -14,7 +14,7 @@
 
 //#define ASSERT(a)
 #define ASSERT(a) if (!(a)) \
-{LogAndPrintDebug() << "file " << __FILE__ << ", line " << __LINE__  << " : " << "assertion \"" #a "\" failed";}
+{LogAndPrintInfo() << "file " << __FILE__ << ", line " << __LINE__  << " : " << "assertion \"" #a "\" failed";}
 
 enum ColorEnum {
 	WHITE,
@@ -74,7 +74,6 @@ enum MoveFlags {
 struct move_t {
 	move_t() { }
 	move_t(int v) : m(v) { }
-	move_t(const move_t& mv) : m(mv.m), s(mv.s) { }
 	move_t(int f, int t, MoveFlags l) {
 		m = f | (t << 6) | (l << 12);
 	}

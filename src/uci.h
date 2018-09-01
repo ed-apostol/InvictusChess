@@ -37,6 +37,7 @@ private:
 	void eval();
 	void moves();
 	void displaypos();
+	void speedup(iss& stream);
 
 	static const std::string name;
 	static const std::string author;
