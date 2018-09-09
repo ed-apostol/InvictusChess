@@ -83,6 +83,7 @@ namespace PositionData {
 		}
 		for (int sq = 0; sq < 64; ++sq) {
 			for (int sq2 = 0; sq2 < 64; ++sq2) {
+				InBetween[sq][sq2] = 0;
 				int k = DirFromTo[sq][sq2];
 				if (k != 8) {
 					int k2 = DirFromTo[sq2][sq];

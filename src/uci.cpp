@@ -68,7 +68,6 @@ bool uci_t::input(iss& stream) {
 void uci_t::quit() {
 	engine.stopthreads();
 	engine.waitForThreads();
-	LogInfo() << "Engine quitting";
 }
 
 void uci_t::displayID() {
@@ -79,7 +78,6 @@ void uci_t::displayID() {
 }
 
 void uci_t::stop() {
-	LogInfo() << "Aborting search: stop";
 	engine.stopthreads();
 	engine.waitForThreads();
 }
@@ -246,7 +244,7 @@ void uci_t::speedup(iss& stream) {
 		"1b3r1k/rb1q3p/pp2pppP/3n1n2/1P2N3/P2B1NPQ/1B3P2/2R1R1K1 b - - 1 32",
 		"1r1r1qk1/pn1p2p1/1pp1npBp/8/2PB2QP/4R1P1/P4PK1/3R4 w - - 0 1",
 		"3rr1k1/1b2nnpp/1p1q1p2/pP1p1P2/P1pP2P1/2N1P1QP/3N1RB1/2R3K1 w - - 0 1",
-		"rn3rq1/p5k1/2p2bp1/1p4p1/8/2P1B1PQ/5PK1/3R3R w - - 0 1",
+		"r1bqk1nr/ppp2pbp/2n1p1p1/7P/3Pp3/2N2N2/PPP2PP1/R1BQKB1R w KQkq - 0 7",
 		"1r3rk1/3bb1pp/1qn1p3/3pP3/3P1N2/2Q2N2/2P3PP/R1BR3K w - - 0 1",
 		"rn1q1rk1/2pbb3/pn2p3/1p1pPpp1/3P4/1PNBBN2/P1P1Q1PP/R4R1K w - - 0 1"
 	};
@@ -291,22 +289,23 @@ void uci_t::speedup(iss& stream) {
 				timeSpeedupSum[idxthread] += timeSpeedUp;
 				nodesSpeedup = (double)nodes;
 				nodesSpeedupSum[idxthread] += nodesSpeedup;
-				LogAndPrintOutput() << "\nBase: " << std::to_string(timeSpeedUp) << "s " << std::to_string(nodes) << "knps\n";
+				LogAndPrintOutput() << "\nPos#" << idxpos + 1 << " Threads: " << std::to_string(threads[idxthread]) << " time: " << std::to_string(timeSpeedUp)
+					<< "s, " << std::to_string(nodes) << "knps\n";
 			}
 			else {
 				timeSpeedUp = (double)spentTime1 / (double)spentTime;
 				timeSpeedupSum[idxthread] += timeSpeedUp;
 				nodesSpeedup = (double)nodes / (double)nodes1;
 				nodesSpeedupSum[idxthread] += nodesSpeedup;
-				LogAndPrintOutput() << "\nThread: " << std::to_string(threads[idxthread]) << " time: " << std::to_string(timeSpeedUp)
+				LogAndPrintOutput() << "\nPos#" << idxpos + 1 << " Threads: " << std::to_string(threads[idxthread]) << " time: " << std::to_string(timeSpeedUp)
 					<< " nodes: " << std::to_string(nodesSpeedup) << "\n";
 			}
 		}
 	}
-
-	LogAndPrintOutput() << "\n\nAvg Base: " << std::to_string(timeSpeedupSum[0] / fenPos.size()) << "s "
-		<< std::to_string(nodesSpeedupSum[0] / fenPos.size()) << "knps\n";
-	for (int idxthread = 0; idxthread < threads.size(); ++idxthread) {
+	LogAndPrintOutput() << "\n\n";
+	LogAndPrintOutput() << "Threads: " << std::to_string(threads[0]) << " time: " << std::to_string(timeSpeedupSum[0] / fenPos.size()) << "s, "
+		<< std::to_string(nodesSpeedupSum[0] / fenPos.size()) << "knps";
+	for (int idxthread = 1; idxthread < threads.size(); ++idxthread) {
 		LogAndPrintOutput() << "Threads: " << std::to_string(threads[idxthread])
 			<< " time: " << std::to_string(timeSpeedupSum[idxthread] / fenPos.size()) << " nodes: " << std::to_string(nodesSpeedupSum[idxthread] / fenPos.size());
 	}

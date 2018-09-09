@@ -58,9 +58,9 @@ struct search_t : public thread_t {
 	void idleloop();
 	uint64_t perft(int depth);
 	uint64_t perft2(int depth);
-	void extractPV(move_t rmove);
+	void extractPV(move_t rmove, bool fillhash);
 	void updateInfo();
-	void displayInfo(int depth, int alpha, int beta);
+	void displayInfo(move_t bestmove, int depth, int alpha, int beta);
 	void start();
 	bool stopSearch();
 	int search(bool root, bool inPv, int alpha, int beta, int depth, int ply, bool inCheck);
@@ -71,6 +71,7 @@ struct search_t : public thread_t {
 	engine_t& e;
 
 	int maxplysearched;
+	int depth;
 	std::atomic<uint64_t> nodecnt;
 	std::atomic<bool> stop_iter;
 	std::atomic<bool> resolve_iter;

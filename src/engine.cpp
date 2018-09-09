@@ -17,7 +17,8 @@
 
 engine_t::engine_t() {
 	initUCIoptions();
-	pvt.init(1, 8);
+	mht.init(1);
+	pvt.init(1);
 	onHashChange();
 	onThreadsChange();
 }
@@ -73,7 +74,7 @@ void engine_t::initSearch() {
 	stop = false;
 
 	if (doSMP = size() > 1) {
-		memset(currently_searching, 0, sizeof(currently_searching));
+		mht.clear();
 	}
 
 	for (auto t : *this) {
@@ -91,11 +92,10 @@ void engine_t::waitForThreads() {
 
 void engine_t::ponderhit() {
 	use_time = true;
-	LogInfo() << "Switch from pondering to thinking";
 }
 
 void engine_t::onHashChange() {
-	tt.init(options["Hash"].getIntVal(), 4);
+	tt.init(options["Hash"].getIntVal());
 }
 
 void engine_t::onThreadsChange() {
@@ -146,37 +146,5 @@ void engine_t::stopIteration() {
 void engine_t::resolveIteration() {
 	for (auto t : *this) {
 		t->resolve_iter = true;
-	}
-}
-
-bool engine_t::deferMove(uint32_t move_hash, int depth) {
-	if (depth < DEFER_DEPTH) return false;
-	uint32_t n = move_hash & (CS_SIZE - 1);
-	for (int i = 0; i < CS_WAYS; ++i) {
-		if (currently_searching[n][i] == move_hash) return true;
-	}
-	return false;
-}
-
-void engine_t::startingSearch(uint32_t move_hash, int depth) {
-	if (depth < DEFER_DEPTH) return;
-	uint32_t n = move_hash & (CS_SIZE - 1);
-	for (int i = 0; i < CS_WAYS; ++i) {
-		if (currently_searching[n][i] == 0) {
-			currently_searching[n][i] = move_hash;
-			return;
-		}
-		if (currently_searching[n][i] == move_hash)
-			return;
-	}
-	currently_searching[n][0] = move_hash;
-}
-
-void engine_t::finishedSearch(uint32_t move_hash, int depth) {
-	if (depth < DEFER_DEPTH) return;
-	uint32_t n = move_hash & (CS_SIZE - 1);
-	for (int i = 0; i < CS_WAYS; ++i) {
-		if (currently_searching[n][i] == move_hash)
-			currently_searching[n][i] = 0;
 	}
 }

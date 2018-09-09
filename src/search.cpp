@@ -88,7 +88,7 @@ uint64_t search_t::perft2(int depth) {
 	return cnt;
 }
 
-void search_t::extractPV(move_t rmove) {
+void search_t::extractPV(move_t rmove, bool fillhash) {
 	int ply = 0;
 	undo_t undo[MAXPLYSIZE];
 	pvlist.size = 0;
@@ -100,7 +100,7 @@ void search_t::extractPV(move_t rmove) {
 		if (!pos.moveIsLegal(entry.move, pinned, false)) break;
 		pvlist.add(entry.move);
 		entry.move.s = scoreToTrans(entry.move.s, ply, MATE);
-		e.tt.store(pos.stack.hash, entry.move, entry.depth, TT_EXACT);
+		if (fillhash) e.tt.store(pos.stack.hash, entry.move, entry.depth, TT_EXACT);
 		pos.doMove(undo[ply++], entry.move);
 		if (pos.isRepeat()) break;
 		if (ply >= MAXPLY) break;
@@ -114,30 +114,32 @@ void search_t::updateInfo() {
 	PrintOutput() << "info time " << currtime << " nodes " << totalnodes << " nps " << (totalnodes * 1000 / currtime);
 }
 
-void search_t::displayInfo(int depth, int alpha, int beta) {
+void search_t::displayInfo(move_t bestmove, int depth, int alpha, int beta) {
 	LogAndPrintOutput logger;
 	uint64_t currtime = Utils::getTime() - e.start_time + 1;
 	logger << "info depth " << depth << " seldepth " << maxplysearched;
-	if (abs(e.rootbestmove.s) < (MATE - MAXPLY)) {
-		if (e.rootbestmove.s <= alpha) logger << " score cp " << e.rootbestmove.s << " upperbound";
-		else if (e.rootbestmove.s >= beta) logger << " score cp " << e.rootbestmove.s << " lowerbound";
-		else logger << " score cp " << e.rootbestmove.s;
+	if (abs(bestmove.s) < (MATE - MAXPLY)) {
+		if (bestmove.s <= alpha) logger << " score cp " << bestmove.s << " upperbound";
+		else if (bestmove.s >= beta) logger << " score cp " << bestmove.s << " lowerbound";
+		else logger << " score cp " << bestmove.s;
 	}
 	else
-		logger << " score mate " << ((e.rootbestmove.s > 0) ? (MATE - e.rootbestmove.s + 1) / 2 : -(MATE + e.rootbestmove.s) / 2);
+		logger << " score mate " << ((bestmove.s > 0) ? (MATE - bestmove.s + 1) / 2 : -(MATE + bestmove.s) / 2);
 	uint64_t totalnodes = e.nodesearched();
 	logger << " time " << currtime << " nodes " << totalnodes << " nps " << (totalnodes * 1000 / currtime) << " pv";
 	for (int idx = 0; idx < pvlist.size; ++idx) logger << " " << pvlist.mv(idx).to_str();
 }
 
 void search_t::start() {
+	if (thread_id > 8) Utils::bindThisThread(thread_id); // NUMA
+
 	memset(history, 0, sizeof(history));
 	for (auto& m : killer1) m = 0;
 	for (auto& m : killer2) m = 0;
 	nodecnt = 0;
 	bool inCheck = pos.kingIsInCheck();
 
-	for (int depth = 1; depth <= e.limits.depth; depth = e.rootbestdepth + 1) {
+	for (depth = 1; e.rootbestdepth < e.limits.depth; depth = e.rootbestdepth + 1) {
 		int delta = 16;
 		e.alpha = -MATE;
 		e.beta = MATE;
@@ -150,30 +152,35 @@ void search_t::start() {
 			resolve_iter = false;
 			search(true, true, e.alpha, e.beta, depth, 0, inCheck);
 			if (e.stop) break;
-			std::lock_guard<spinlock_t> lock(e.updatelock);
-			if (stop_iter) {
-				if (resolve_iter) continue;
-				else break;
-			}
-			if (rootmove.s <= e.alpha) e.alpha = std::max(-MATE, rootmove.s - delta);
-			else if (rootmove.s >= e.beta) e.beta = std::min(MATE, rootmove.s + delta);
 			else {
-				if (depth > e.rootbestdepth || (depth == e.rootbestdepth && rootmove.s > e.rootbestmove.s)) {
-					e.rootbestdepth = depth;
-					e.rootbestmove = rootmove;
-					extractPV(rootmove);
-					if (pvlist.size > 1) e.rootponder = pvlist.mv(1);
-					if (depth >= 8) {
-						//PrintOutput() << "thread_id: " << thread_id;
-						displayInfo(depth, e.alpha, e.beta);
-					}
-					e.stopIteration();
+				static spinlock_t updatelock;
+				std::lock_guard<spinlock_t> lock(updatelock);
+				if (stop_iter) {
+					if (resolve_iter) continue;
+					else break;
 				}
-				break;
+				bool faillow = rootmove.s <= e.alpha;
+				bool failhigh = rootmove.s >= e.beta;
+				extractPV(rootmove, !faillow && !failhigh && depth > e.rootbestdepth);
+				if (depth >= 12) {
+					//PrintOutput() << "thread_id: " << thread_id;
+					displayInfo(rootmove, depth, e.alpha, e.beta);
+				}
+				if (faillow) e.alpha = std::max(-MATE, rootmove.s - delta);
+				else if (failhigh) e.beta = std::min(MATE, rootmove.s + delta);
+				else {
+					if (depth > e.rootbestdepth) {
+						e.rootbestdepth = depth;
+						e.rootbestmove = rootmove;
+						if (pvlist.size > 1) e.rootponder = pvlist.mv(1);
+						e.stopIteration();
+					}
+					break;
+				}
+				delta <<= 1;
+				e.resolveIteration();
+				e.stopIteration();
 			}
-			delta <<= 1;
-			e.resolveIteration();
-			e.stopIteration();
 		}
 		if (e.stop) break;
 		// TODO check for time here if going to next iter is still possible, if > 70% stop search
@@ -182,6 +189,9 @@ void search_t::start() {
 	if (!e.stop && (e.limits.ponder || e.limits.infinite)) {
 		while (!e.use_time && !e.stop)
 			std::this_thread::sleep_for(std::chrono::milliseconds(5));
+	}
+	else {
+		e.stopthreads();
 	}
 
 	if (thread_id == 0) {
@@ -226,9 +236,9 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 	tte.move.m = 0;
 	if (e.tt.retrieve(pos.stack.hash, tte)) {
 		tte.move.s = scoreFromTrans(tte.move.s, ply, MATE);
-		if (!inPv && tte.depth >= depth && ((tte.bound() == TT_EXACT) ||
-			(tte.bound() == TT_LOWER && tte.move.s >= beta)
-			|| (tte.bound() == TT_UPPER && tte.move.s <= alpha)))
+		if (!inPv && tte.depth >= depth && ((tte.getBound() == TT_EXACT) ||
+			(tte.getBound() == TT_LOWER && tte.move.s >= beta)
+			|| (tte.getBound() == TT_UPPER && tte.move.s <= alpha)))
 			return tte.move.s;
 	}
 
@@ -273,19 +283,19 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 		if (e.doSMP && mp.stage == STG_DEFERRED) movestried = m.s;
 		else ++movestried;
 
-		if (e.doSMP && mp.stage != STG_DEFERRED && best_score != -MATE) {
+		if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.DEFER_DEPTH && best_score != -MATE) {
 			if (mp.deferred.size > 0 && depth >= e.CUTOFF_CHECK_DEPTH) {
 				if (e.tt.retrieve(pos.stack.hash, tte)) {
 					tte.move.s = scoreFromTrans(tte.move.s, ply, MATE);
-					if (tte.depth >= depth && ((tte.bound() == TT_EXACT) ||
-						(tte.bound() == TT_LOWER && tte.move.s >= beta)
-						|| (tte.bound() == TT_UPPER && tte.move.s <= old_alpha)))
+					if (tte.depth >= depth && ((tte.getBound() == TT_EXACT) ||
+						(tte.getBound() == TT_LOWER && tte.move.s >= beta)
+						|| (tte.getBound() == TT_UPPER && tte.move.s <= old_alpha)))
 						return tte.move.s;
 				}
 			}
 			move_hash = pos.stack.hash >> 32;
 			move_hash ^= (m.m * 1664525) + 1013904223;
-			if (e.deferMove(move_hash, depth)) {
+			if (e.mht.isBusy(move_hash)) {
 				m.s = movestried;
 				mp.deferred.add(m);
 				continue;
@@ -310,9 +320,9 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 
 			pos.doMove(undo, m);
 
-			if (e.doSMP && mp.stage != STG_DEFERRED) e.startingSearch(move_hash, depth);
+			if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.DEFER_DEPTH) e.mht.setBusy(move_hash);
 			score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1, moveIsCheck);
-			if (e.doSMP && mp.stage != STG_DEFERRED) e.finishedSearch(move_hash, depth);
+			if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.DEFER_DEPTH) e.mht.resetBusy(move_hash);
 
 			if (reduction != 1 && !e.stop && !stop_iter && score > alpha)
 				score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1, moveIsCheck);

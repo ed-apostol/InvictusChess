@@ -150,5 +150,5 @@ public:
 		mLock.clear(std::memory_order_release);
 	}
 private:
-	std::atomic_flag mLock;
+	std::atomic_flag mLock = ATOMIC_FLAG_INIT;
 };

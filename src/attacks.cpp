@@ -64,14 +64,17 @@ namespace {
 	uint64_t PawnMoves2[2][64];
 	uint64_t RMagicAttacks[0x19000];
 	uint64_t BMagicAttacks[0x1480];
-	uint64_t RMagicMask[64];
-	uint64_t BMagicMask[64];
-	int RShift[64];
-	int ROffset[64];
-	int BShift[64];
-	int BOffset[64];
 
-	uint64_t slideAttacks(int sq, const std::vector<int>& D, uint64_t occ) {
+	struct Magic {
+		uint64_t* offset;
+		uint64_t mask;
+		uint64_t magic;
+		uint64_t shift;
+	};
+	Magic RookMagic[64];
+	Magic BishopMagic[64];
+
+	uint64_t slideAttacks(int sq, uint64_t occ, const std::vector<int>& D) {
 		uint64_t att = 0;
 		for (int d : D) {
 			for (int p = sq, n = sq + d; n >= 0 && n < 64 && abs((n & 7) - (p & 7)) < 2; p = n, n += d) {
@@ -82,25 +85,25 @@ namespace {
 		return att;
 	}
 
-	inline int sliderIndex(uint64_t occ, uint64_t mask, uint64_t magic, int shift) {
+	inline int sliderIndex(uint64_t occ, Magic& m) {
 #ifdef USE_PEXT
-		return _pext_u64(occ, mask);
+		return _pext_u64(occ, m.mask);
 #else
-		return ((occ & mask) * magic) >> shift;
+		return ((occ & m.mask) * m.magic) >> m.shift;
 #endif
 	}
 
-	void initSliderTable(uint64_t atktable[], uint64_t mask[], const uint64_t magic[], int offset[], int shift[], const std::vector<int>& dir) {
-		offset[0] = 0;
+	void initSliderTable(uint64_t atktable[], Magic mtable[], const std::vector<int>& dir) {
+		mtable[0].offset = atktable;
 		for (int s = 0; s < 0x40; s++) {
-			const uint64_t edges = ((Rank1BB | Rank8BB) & ~RankBB[sqRank(s)]) | ((FileABB | FileHBB) & ~FileBB[sqFile(s)]);
-			mask[s] = slideAttacks(s, dir, 0) & ~edges;
-			shift[s] = 64 - BitUtils::bitCnt(mask[s]);
-			if (s < 63) offset[s + 1] = offset[s] + (1 << BitUtils::bitCnt(mask[s]));
+			Magic& m = mtable[s];
+			m.mask = slideAttacks(s, 0, dir) & ~(((Rank1BB | Rank8BB) & ~RankBB[sqRank(s)]) | ((FileABB | FileHBB) & ~FileBB[sqFile(s)]));
+			m.shift = 64 - BitUtils::bitCnt(m.mask);
+			if (s < 63) mtable[s + 1].offset = m.offset + (1 << BitUtils::bitCnt(m.mask));
 			uint64_t occ = 0;
 			do {
-				atktable[offset[s] + sliderIndex(occ, mask[s], magic[s], shift[s])] = slideAttacks(s, dir, occ);
-				occ = (occ - mask[s]) & mask[s];
+				m.offset[sliderIndex(occ, m)] = slideAttacks(s, occ, dir);
+				occ = (occ - m.mask) & m.mask;
 			} while (occ);
 		}
 	}
@@ -114,6 +117,13 @@ namespace {
 			}
 		}
 	}
+	uint64_t shiftLeft(uint64_t b, int i) {
+		return (b << i);
+	}
+	uint64_t shiftRight(uint64_t b, int i) {
+		return (b >> i);
+	}
+	std::function<uint64_t(uint64_t, int)> ShiftPtr[] = { shiftLeft, shiftRight };
 }
 
 namespace Attacks {
@@ -138,8 +148,8 @@ namespace Attacks {
 		initMovesTable(wpawn2mov, PawnMoves2[WHITE]);
 		initMovesTable(bpawn2mov, PawnMoves2[BLACK]);
 
-		initSliderTable(RMagicAttacks, RMagicMask, RMagic, ROffset, RShift, rookd);
-		initSliderTable(BMagicAttacks, BMagicMask, BMagic, BOffset, BShift, bishopd);
+		initSliderTable(RMagicAttacks, RookMagic, rookd);
+		initSliderTable(BMagicAttacks, BishopMagic, bishopd);
 	}
 
 	uint64_t pawnMovesBB(int from, uint64_t s) {
@@ -155,10 +165,10 @@ namespace Attacks {
 		return KnightMoves[from];
 	}
 	uint64_t bishopAttacksBB(int from, uint64_t occ) {
-		return BMagicAttacks[BOffset[from] + sliderIndex(occ, BMagicMask[from], BMagic[from], BShift[from])];
+		return BishopMagic[from].offset[sliderIndex(occ, BishopMagic[from])];
 	}
 	uint64_t rookAttacksBB(int from, uint64_t occ) {
-		return RMagicAttacks[ROffset[from] + sliderIndex(occ, RMagicMask[from], RMagic[from], RShift[from])];
+		return RookMagic[from].offset[sliderIndex(occ, RookMagic[from])];
 	}
 	uint64_t queenAttacksBB(int from, uint64_t occ) {
 		return bishopAttacksBB(from, occ) | rookAttacksBB(from, occ);
@@ -177,5 +187,11 @@ namespace Attacks {
 	}
 	uint64_t kingMovesBB(int from) {
 		return KingMoves[from];
+	}
+	uint64_t pawnAttackBB(uint64_t pawns, int color) {
+		const int Shift[] = { 9, 7 };
+		uint64_t pawnAttackLeft = ShiftPtr[color](pawns, Shift[color ^ 1]) & ~FileHBB;
+		uint64_t pawnAttackright = ShiftPtr[color](pawns, Shift[color]) & ~FileABB;
+		return (pawnAttackLeft | pawnAttackright);
 	}
 }

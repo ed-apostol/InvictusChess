@@ -18,7 +18,6 @@ namespace {
 		score_t rank[8] = { { 0, 0 },{ -1, -10 },{ 0, -5 },{ 1, 0 },{ 1 ,10 },{ 0, 20 },{ 0, 30 },{ 0, 0 } };
 		return file[sqFile(sq)] + rank[sqRank(sq)];
 	}
-
 	score_t knightPST(int sq) {
 		score_t file[8] = { { -26, -10 },{ -9, -3 },{ 2, 0 },{ 5, 2 },{ 5, 2 },{ 2, 0 },{ -9, -3 },{ -26, -10 } };
 		score_t rank[8] = { { -30, -10 },{ -9, -4 },{ 6, -1 },{ 16, 2 },{ 20, 4 },{ 19, 6 },{ 11, 3 },{ -11, -5 } };
@@ -46,30 +45,22 @@ namespace {
 }
 
 namespace EvalPar {
-	static const score_t mat_values[7] = { { 0,0 },{ 100, 125 },{ 460, 390 },{ 470, 420 },{ 640, 720 },{ 1310,1350 },{ 0,0 } };
-	static score_t KnightMob = { 6,8 };
-	static score_t BishopMob = { 3,3 };
-	static score_t RookMob = { 1,2 };
-	static score_t QueenMob = { 1,2 };
-
+	const score_t mat_values[7] = { { 0,0 },{ 100, 125 },{ 460, 390 },{ 470, 420 },{ 640, 720 },{ 1310,1350 },{ 0,0 } };
+	score_t KnightMob = { 6,8 };
+	score_t BishopMob = { 3,3 };
+	score_t RookMob = { 1,2 };
+	score_t QueenMob = { 1,2 };
 	score_t pst[2][8][64];
 
 	void initArr() {
+		std::function<score_t(int)> pstInit[] = { pawnPST, knightPST,bishopPST,rookPST,queenPST,kingPST };
 		memset(pst, 0, sizeof(pst));
-		for (int sq = 0; sq < 64; ++sq) {
-			int rsq = ((7 - sqRank(sq)) * 8) + sqFile(sq);
-			pst[WHITE][PAWN][sq] = pawnPST(sq);
-			pst[WHITE][KNIGHT][sq] = knightPST(sq);
-			pst[WHITE][BISHOP][sq] = bishopPST(sq);
-			pst[WHITE][ROOK][sq] = rookPST(sq);
-			pst[WHITE][QUEEN][sq] = queenPST(sq);
-			pst[WHITE][KING][sq] = kingPST(sq);
-			pst[BLACK][PAWN][sq] = pawnPST(rsq);
-			pst[BLACK][KNIGHT][sq] = knightPST(rsq);
-			pst[BLACK][BISHOP][sq] = bishopPST(rsq);
-			pst[BLACK][ROOK][sq] = rookPST(rsq);
-			pst[BLACK][QUEEN][sq] = queenPST(rsq);
-			pst[BLACK][KING][sq] = kingPST(rsq);
+		for (int pc = PAWN; pc <= KING; ++pc) {
+			for (int sq = 0; sq < 64; ++sq) {
+				int rsq = ((7 - sqRank(sq)) * 8) + sqFile(sq);
+				pst[WHITE][pc][sq] = pstInit[pc - 1](sq);
+				pst[BLACK][pc][sq] = pstInit[pc - 1](rsq);
+			}
 		}
 	}
 	void displayPSTbyPC(score_t A[], std::string piece, bool midgame) {

@@ -85,8 +85,6 @@ struct uci_options_map : public std::unordered_map<std::string, uci_options_t> {
 };
 
 struct engine_t : public std::vector<search_t*> {
-	static const int CS_SIZE = 32768;
-	static const int CS_WAYS = 4;
 	static const int DEFER_DEPTH = 3;
 	static const int CUTOFF_CHECK_DEPTH = 4;
 
@@ -108,19 +106,13 @@ struct engine_t : public std::vector<search_t*> {
 	void stopIteration();
 	void resolveIteration();
 
-	bool deferMove(uint32_t move_hash, int depth);
-	void startingSearch(uint32_t move_hash, int depth);
-	void finishedSearch(uint32_t move_hash, int depth);
-
+	abdada_table_t mht;
 	pvhash_table_t pvt;
 	trans_table_t tt;
 	uci_options_map options;
 	uci_limits_t limits;
 	position_t origpos;
 
-	spinlock_t updatelock;
-
-	std::atomic<uint32_t> currently_searching[CS_SIZE][CS_WAYS];
 	std::atomic<bool> use_time;
 	std::atomic<bool> stop;
 	bool doSMP;

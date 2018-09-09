@@ -51,6 +51,10 @@ bool movepicker_t::getMoves(move_t& move) {
 			move.m = hashmove;
 			if (pos.moveIsValid(move, pinned) && pos.moveIsLegal(move, pinned, false))
 				return true;
+			else {
+				LogAndPrintOutput() << move.to_str();
+				LogAndPrintOutput() << pos.to_str();
+			}
 		}
 	case STG_GENTACTICS:
 		pos.genTacticalMoves(mvlist);
@@ -108,7 +112,7 @@ bool movepicker_t::getMoves(move_t& move) {
 		}
 		++stage;
 		idx = 0;
-		//if (deferred.size) PrintOutput() << "deferred size: " << deferred.size; // test in amazon ec2 64 threads
+		//if (deferred.size) PrintOutput() << "deferred size: " << deferred.size;
 	case STG_DEFERRED:
 		while (idx < deferred.size) {
 			move = deferred.mv(idx++);
