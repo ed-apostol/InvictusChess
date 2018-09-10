@@ -293,14 +293,11 @@ void position_t::setPiece(int sq, int c, int pc) {
 void position_t::setPosition(const std::string& fenStr) {
 	static const std::string pc2char("PNBRQKpnbrqk");
 	static const std::vector<int> char2piece = { PAWN,KNIGHT,BISHOP,ROOK,QUEEN,KING };
-
 	char col, row, token;
 	size_t p;
 	int sq = A8;
 	std::istringstream ss(fenStr);
-
 	initPosition();
-
 	ss >> std::noskipws;
 	while ((ss >> token) && !isspace(token)) {
 		if (isdigit(token)) sq += (token - '0');
@@ -356,28 +353,31 @@ std::string position_t::positionToFEN() {
 		fen += sqFile(stack.epsq) + 'a';
 		fen += '1' + sqRank(stack.epsq);
 	}
-	fen += " 0 1";
+	fen += " " + std::to_string(stack.fifty) + " " + std::to_string(num_moves + 1);
 	return fen;
 }
 
 std::string position_t::to_str() {
 	std::string str;
-	const std::string piecestr = ".PNBRQK.pnbrqk";
-
+	const std::string piecestr = " PNBRQK pnbrqk";
+	const std::string board = "\n  |---|---|---|---|---|---|---|---|\n";
 	str += positionToFEN() + "\n";
-	str += "inCheck: " + std::to_string(kingIsInCheck()) + "\n";
+	str += "incheck: " + std::to_string(kingIsInCheck());
+	str += " capt: " + std::to_string(stack.capturedpc);
+	str += " lastmove: " + stack.lastmove.to_str() + "\n";
+	str += board;
 	for (int j = 7; j >= 0; --j) {
-		str += std::to_string(j + 1) + " ";
+		str += std::to_string(j + 1);
+		str += " | ";
 		for (int i = 0; i <= 7; ++i) {
 			int sq = (j * 8) + i;
 			int pc = pieces[sq] + (getSide(sq) ? 7 : 0);
 			str += piecestr[pc];
+			str += " | ";
 		}
-		str += "\n";
+		str += board;
 	}
-	str += "  abcdefgh\n";
-	str += "c:" + std::to_string(stack.capturedpc);
-	str += " lm:" + stack.lastmove.to_str();
+	str += "    a   b   c   d   e   f   g   h \n";
 	return str;
 }
 

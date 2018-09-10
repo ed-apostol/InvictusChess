@@ -20,6 +20,7 @@ namespace PositionData {
 
 struct undo_t {
 	void init() {
+		lastmove = 0;
 		castle = 0;
 		fifty = 0;
 		epsq = -1;

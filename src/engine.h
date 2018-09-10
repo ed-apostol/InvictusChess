@@ -73,21 +73,30 @@ struct uci_options_t {
 };
 
 struct uci_options_map : public std::unordered_map<std::string, uci_options_t> {
-	void print() const {
-		for (auto itr = begin(); itr != end(); ++itr) {
-			const uci_options_t& opt = itr->second;
-			LogAndPrintOutput log;
-			log << "option name " << itr->first << " type " << opt.type;
-			if (opt.type != "button") log << " default " << opt.defaultval;
-			if (opt.type == "spin") log << " min " << opt.min << " max " << opt.max;
+	uci_options_t & operator[] (std::string const& key) {
+		auto opt = find(key);
+		if (opt != end()) return opt->second;
+		else {
+			mKeys.push_back(key);
+			return (insert(std::make_pair(key, uci_options_t())).first)->second;
 		}
 	}
+	void print() const {
+		for (auto key : mKeys) {
+			auto itr = find(key);
+			if (itr != end()) {
+				const uci_options_t& opt = itr->second;
+				LogAndPrintOutput log;
+				log << "option name " << itr->first << " type " << opt.type;
+				if (opt.type != "button") log << " default " << opt.defaultval;
+				if (opt.type == "spin") log << " min " << opt.min << " max " << opt.max;
+			}
+		}
+	}
+	std::vector<std::string> mKeys;
 };
 
 struct engine_t : public std::vector<search_t*> {
-	static const int DEFER_DEPTH = 3;
-	static const int CUTOFF_CHECK_DEPTH = 4;
-
 	engine_t();
 	~engine_t();
 	void initSearch();
@@ -116,6 +125,8 @@ struct engine_t : public std::vector<search_t*> {
 	std::atomic<bool> use_time;
 	std::atomic<bool> stop;
 	bool doSMP;
+	int defer_depth;
+	int cutoffcheck_depth;
 
 	std::atomic<int> alpha;
 	std::atomic<int> beta;

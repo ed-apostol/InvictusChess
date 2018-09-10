@@ -93,10 +93,11 @@ namespace {
 #endif
 	}
 
-	void initSliderTable(uint64_t atktable[], Magic mtable[], const std::vector<int>& dir) {
+	void initSliderTable(uint64_t atktable[], const uint64_t magics[], Magic mtable[], const std::vector<int>& dir) {
 		mtable[0].offset = atktable;
 		for (int s = 0; s < 0x40; s++) {
 			Magic& m = mtable[s];
+			m.magic = magics[s];
 			m.mask = slideAttacks(s, 0, dir) & ~(((Rank1BB | Rank8BB) & ~RankBB[sqRank(s)]) | ((FileABB | FileHBB) & ~FileBB[sqFile(s)]));
 			m.shift = 64 - BitUtils::bitCnt(m.mask);
 			if (s < 63) mtable[s + 1].offset = m.offset + (1 << BitUtils::bitCnt(m.mask));
@@ -148,8 +149,8 @@ namespace Attacks {
 		initMovesTable(wpawn2mov, PawnMoves2[WHITE]);
 		initMovesTable(bpawn2mov, PawnMoves2[BLACK]);
 
-		initSliderTable(RMagicAttacks, RookMagic, rookd);
-		initSliderTable(BMagicAttacks, BishopMagic, bishopd);
+		initSliderTable(RMagicAttacks, RMagic, RookMagic, rookd);
+		initSliderTable(BMagicAttacks, BMagic, BishopMagic, bishopd);
 	}
 
 	uint64_t pawnMovesBB(int from, uint64_t s) {

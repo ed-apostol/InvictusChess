@@ -73,6 +73,9 @@ void engine_t::initSearch() {
 	use_time = !limits.ponder && (mytime || limits.movetime);
 	stop = false;
 
+	defer_depth = options["ABDADA Depth"].getIntVal();
+	cutoffcheck_depth = options["Cutoff Check Depth"].getIntVal();
+
 	if (doSMP = size() > 1) {
 		mht.clear();
 	}
@@ -125,6 +128,8 @@ void engine_t::initUCIoptions() {
 	options["Hash"] = uci_options_t(64, 1, 65536, std::bind(&engine_t::onHashChange, this));
 	options["Threads"] = uci_options_t(1, 1, 4096, std::bind(&engine_t::onThreadsChange, this));
 	options["Ponder"] = uci_options_t(false, std::bind(&engine_t::onDummyChange, this));
+	options["ABDADA Depth"] = uci_options_t(3, 1, 128, std::bind(&engine_t::onDummyChange, this));
+	options["Cutoff Check Depth"] = uci_options_t(4, 1, 128, std::bind(&engine_t::onDummyChange, this));
 }
 
 void engine_t::printUCIoptions() {

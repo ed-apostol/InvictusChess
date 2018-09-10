@@ -215,7 +215,7 @@ bool search_t::stopSearch() {
 	return false;
 }
 
-int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int ply, bool inCheck) {
+int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int ply, bool inCheck) {
 	if (depth <= 0) return qsearch(alpha, beta, ply, inCheck);
 
 	ASSERT(alpha < beta);
@@ -223,7 +223,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 
 	if (stopSearch()) return 0;
 
-	if (!root) {
+	if (!inRoot) {
 		if (ply > maxplysearched) maxplysearched = ply;
 		if (pos.stack.fifty > 99 || pos.isRepeat() || pos.isMatDrawn()) return 0;
 		if (ply >= MAXPLY) return eval.score(pos);
@@ -264,7 +264,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 	}
 
 	if (inPv && !inCheck && tte.move.m == 0 && depth >= 3) {
-		search(root, inPv, alpha, beta, depth - 2, ply, inCheck);
+		search(inRoot, inPv, alpha, beta, depth - 2, ply, inCheck);
 		if (e.stop || stop_iter) return 0;
 		e.tt.retrieve(pos.stack.hash, tte);
 	}
@@ -280,22 +280,27 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 	uint64_t dcc = pos.discoveredCheckCandidates(pos.side);
 	playedmoves[ply].size = 0;
 	for (move_t m; mp.getMoves(m);) {
-		if (e.doSMP && mp.stage == STG_DEFERRED) movestried = m.s;
+		if (e.doSMP && mp.stage == STG_DEFERRED) {
+			//if (inRoot) PrintOutput() << thread_id << " " << m.to_str();
+			movestried = m.s;
+		}
 		else ++movestried;
 
-		if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.DEFER_DEPTH && best_score != -MATE) {
-			if (mp.deferred.size > 0 && depth >= e.CUTOFF_CHECK_DEPTH) {
+		if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth && best_score != -MATE) {
+			if (mp.deferred.size > 0 && depth >= e.cutoffcheck_depth) {
 				if (e.tt.retrieve(pos.stack.hash, tte)) {
 					tte.move.s = scoreFromTrans(tte.move.s, ply, MATE);
 					if (tte.depth >= depth && ((tte.getBound() == TT_EXACT) ||
 						(tte.getBound() == TT_LOWER && tte.move.s >= beta)
-						|| (tte.getBound() == TT_UPPER && tte.move.s <= old_alpha)))
+						|| (tte.getBound() == TT_UPPER && tte.move.s <= old_alpha))) {
+						//PrintOutput() << depth << " " << m.to_str();
 						return tte.move.s;
+					}
 				}
 			}
 			move_hash = pos.stack.hash >> 32;
 			move_hash ^= (m.m * 1664525) + 1013904223;
-			if (e.mht.isBusy(move_hash)) {
+			if (e.mht.isBusy(move_hash, m.m)) {
 				m.s = movestried;
 				mp.deferred.add(m);
 				continue;
@@ -320,9 +325,9 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 
 			pos.doMove(undo, m);
 
-			if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.DEFER_DEPTH) e.mht.setBusy(move_hash);
+			if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.setBusy(move_hash, m.m, depth);
 			score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1, moveIsCheck);
-			if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.DEFER_DEPTH) e.mht.resetBusy(move_hash);
+			if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.resetBusy(move_hash, m.m);
 
 			if (reduction != 1 && !e.stop && !stop_iter && score > alpha)
 				score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1, moveIsCheck);
@@ -338,7 +343,7 @@ int search_t::search(bool root, bool inPv, int alpha, int beta, int depth, int p
 
 		if (score > best_score) {
 			best_score = score;
-			if (root) {
+			if (inRoot) {
 				rootmove = m;
 				rootmove.s = best_score;
 			}

@@ -88,13 +88,15 @@ public:
 	void resetAge() { currentAge = 0; }
 	void updateAge() { currentAge = ++currentAge % 64; }
 	void store(uint64_t hash, move_t move, int depth, int bound);
-	bool retrieve(const uint64_t hash, tt_entry_t& ttentry);
+	bool retrieve(uint64_t hash, tt_entry_t& ttentry);
 private:
 	int currentAge;
 };
 
 struct move_hash_t {
-	uint32_t movehash;
+	uint16_t move;
+	uint8_t depth;
+	uint8_t hashlock;
 };
 
 struct movehash_bucket_t {
@@ -102,7 +104,8 @@ struct movehash_bucket_t {
 };
 
 struct abdada_table_t : public hashtable_t < movehash_bucket_t > {
-	void setBusy(const uint32_t hash);
-	void resetBusy(const uint32_t hash);
-	bool isBusy(const uint32_t hash);
+	void setBusy(uint32_t hash, uint16_t move, int depth);
+	void resetBusy(uint32_t hash, uint16_t move);
+	bool isBusy(uint32_t hash, uint16_t move);
+	uint8_t mhlock(uint32_t hash) { return hash >> 24; }
 };
