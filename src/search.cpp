@@ -281,7 +281,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
 	playedmoves[ply].size = 0;
 	for (move_t m; mp.getMoves(m);) {
 		if (e.doSMP && mp.stage == STG_DEFERRED) {
-			//if (inRoot) PrintOutput() << thread_id << " " << m.to_str();
+			//if (inRoot) PrintOutput() << depth << " " << m.to_str() << " " << m.s;
 			movestried = m.s;
 		}
 		else ++movestried;
@@ -300,7 +300,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
 			}
 			move_hash = pos.stack.hash >> 32;
 			move_hash ^= (m.m * 1664525) + 1013904223;
-			if (e.mht.isBusy(move_hash, m.m)) {
+			if (e.mht.isBusy(move_hash, m.m, depth)) {
 				m.s = movestried;
 				mp.deferred.add(m);
 				continue;
@@ -327,7 +327,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
 
 			if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.setBusy(move_hash, m.m, depth);
 			score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1, moveIsCheck);
-			if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.resetBusy(move_hash, m.m);
+			if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.resetBusy(move_hash, m.m, depth);
 
 			if (reduction != 1 && !e.stop && !stop_iter && score > alpha)
 				score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1, moveIsCheck);

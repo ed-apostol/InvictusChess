@@ -32,14 +32,14 @@ namespace PositionData {
 	uint64_t ZobEpsq[8];
 	uint64_t ZobColor;
 
-	static uint64_t rand64() {
-		// http://vigna.di.unimi.it/ftp/papers/xorshift.pdf
-
-		static uint64_t seed = 104729ull;
-		seed ^= seed >> 12;
-		seed ^= seed << 25;
-		seed ^= seed >> 27;
-		return seed * 2685821657736338717ull;
+	static uint64_t xorshift128plus(void) {
+		static uint64_t s[2] = { 4123659995ull, 9981545732273789042ull };
+		uint64_t x = s[0];
+		uint64_t const y = s[1];
+		s[0] = y;
+		x ^= x << 23;
+		s[1] = x ^ y ^ (x >> 17) ^ (y >> 26);
+		return s[1] + y;
 	}
 
 	void initArr(void) {
@@ -52,13 +52,13 @@ namespace PositionData {
 		for (int side = 0; side < 2; ++side) {
 			for (int pc = 1; pc <= 6; ++pc) {
 				for (int sq = 0; sq < 64; ++sq) {
-					ZobPiece[side][pc][sq] = rand64();
+					ZobPiece[side][pc][sq] = xorshift128plus();
 				}
 			}
 		}
-		for (int sq = 1; sq < 16; ++sq) ZobCastle[sq] = rand64();
-		for (int sq = 0; sq < 8; ++sq) ZobEpsq[sq] = rand64();
-		ZobColor = rand64();
+		for (int sq = 1; sq < 16; ++sq) ZobCastle[sq] = xorshift128plus();
+		for (int sq = 0; sq < 8; ++sq) ZobEpsq[sq] = xorshift128plus();
+		ZobColor = xorshift128plus();
 
 		for (int sq = 0; sq < 64; sq++) CastleMask[sq] = 0xF;
 

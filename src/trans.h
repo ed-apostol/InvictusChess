@@ -15,8 +15,8 @@ class hashtable_t {
 public:
 	hashtable_t() : table(nullptr), tabsize(0), mask(0) {}
 	~hashtable_t() { delete[] table; }
-	virtual void clear() { memset(table, 0, tabsize * sizeof(hash_entity_t)); }
-	hash_entity_t* getEntry(const uint64_t hash) const { return &table[hash & mask]; }
+	void clear() { memset(table, 0, tabsize * sizeof(hash_entity_t)); }
+	hash_entity_t& getEntry(const uint64_t hash) { return table[hash & mask]; }
 	void init(uint64_t mb) {
 		//PrintOutput() << sizeof(hash_entity_t);
 		tabsize = (1 << 20) / sizeof(hash_entity_t); // at least 1MB
@@ -29,7 +29,7 @@ public:
 	uint32_t lock(uint64_t hash) const { return hash >> 32; }
 
 protected:
-	hash_entity_t * table;
+	hash_entity_t *table;
 	uint64_t tabsize;
 	uint64_t mask;
 };
@@ -105,7 +105,7 @@ struct movehash_bucket_t {
 
 struct abdada_table_t : public hashtable_t < movehash_bucket_t > {
 	void setBusy(uint32_t hash, uint16_t move, int depth);
-	void resetBusy(uint32_t hash, uint16_t move);
-	bool isBusy(uint32_t hash, uint16_t move);
+	void resetBusy(uint32_t hash, uint16_t move, int depth);
+	bool isBusy(uint32_t hash, uint16_t move, int depth);
 	uint8_t mhlock(uint32_t hash) { return hash >> 24; }
 };

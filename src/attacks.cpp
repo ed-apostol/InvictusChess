@@ -189,6 +189,9 @@ namespace Attacks {
 	uint64_t kingMovesBB(int from) {
 		return KingMoves[from];
 	}
+
+	std::function<uint64_t(uint64_t, int)> ShiftPtr[] = { shiftLeft, shiftRight };
+
 	uint64_t pawnAttackBB(uint64_t pawns, int color) {
 		const int Shift[] = { 9, 7 };
 		uint64_t pawnAttackLeft = ShiftPtr[color](pawns, Shift[color ^ 1]) & ~FileHBB;

@@ -32,9 +32,20 @@ void position_t::genLegal(movelist_t<256>& mvlist) {
 }
 
 #define genMoves(ML, FNC, PCB, SP, TBB, F) \
-	for (uint64_t from, bits = PCB; bits;) \
-		for (uint64_t mvbits = FNC(from = popFirstBit(bits), SP) & TBB; mvbits;)  \
-			ML.add(move_t(int(from), int(popFirstBit(mvbits)), F));
+	for (uint64_t bits = PCB; bits;) { \
+		int from = popFirstBit(bits); \
+		for (uint64_t mvbits = FNC(from, SP) & TBB; mvbits;) \
+			ML.add(move_t(from, popFirstBit(mvbits), F)); }
+
+#define genMovesProm(ML, FNC, PCB, SP, TBB) \
+	for (uint64_t bits = PCB; bits;) { \
+		int from = popFirstBit(bits); \
+		for (uint64_t mvbits = FNC(from, SP) & TBB; mvbits;) { \
+			int to = popFirstBit(mvbits); \
+			ML.add(move_t(from, to, MF_PROMQ)); \
+			ML.add(move_t(from, to, MF_PROMR)); \
+			ML.add(move_t(from, to, MF_PROMB)); \
+			ML.add(move_t(from, to, MF_PROMN)); }}
 
 void position_t::genQuietMoves(movelist_t<256>& mvlist) {
 	uint64_t pcbits;
@@ -44,12 +55,10 @@ void position_t::genQuietMoves(movelist_t<256>& mvlist) {
 	if (stack.castle & (side ? BCQS : WCQS) && !(occupiedBB & CastleSquareMask1[side][1]) && !areaIsAttacked(side ^ 1, CastleSquareMask2[side][1]))
 		mvlist.add(move_t(CastleSquareFrom[side], CastleSquareTo[side][1], MF_CASTLE));
 
-	if (side == BLACK) pcbits = (getPieceBB(PAWN, side) & ~Rank2BB) & (~occupiedBB << 8);
-	else pcbits = (getPieceBB(PAWN, side) & ~Rank7BB) & (~occupiedBB >> 8);
+	pcbits = (getPieceBB(PAWN, side) & ~Rank7ByColorBB[side]) & ShiftPtr[side ^ 1](~occupiedBB, 8);
 	genMoves(mvlist, pawnMovesBB, pcbits, side, ~occupiedBB, MF_NORMAL);
 
-	if (side == BLACK) pcbits = (getPieceBB(PAWN, side) & Rank7BB) & (~occupiedBB << 8) & (~occupiedBB << 16);
-	else pcbits = (getPieceBB(PAWN, side) & Rank2BB) & (~occupiedBB >> 8) & (~occupiedBB >> 16);
+	pcbits = (getPieceBB(PAWN, side) & Rank2ByColorBB[side]) & ShiftPtr[side ^ 1](~occupiedBB, 8) & ShiftPtr[side ^ 1](~occupiedBB, 16);
 	genMoves(mvlist, pawnMoves2BB, pcbits, side, ~occupiedBB, MF_PAWN2);
 
 	genMoves(mvlist, knightAttacksBB, getPieceBB(KNIGHT, side), 0, ~occupiedBB, MF_NORMAL);
@@ -66,14 +75,8 @@ void position_t::genTacticalMoves(movelist_t<256>& mvlist) {
 		genMoves(mvlist, pawnAttacksBB, getPieceBB(PAWN, side) & pawnAttacksBB(stack.epsq, side ^ 1), side, BitMask[stack.epsq], MF_ENPASSANT);
 
 	uint64_t pcbits = getPieceBB(PAWN, side) & Rank7ByColorBB[side];
-	genMoves(mvlist, pawnMovesBB, pcbits, side, ~occupiedBB, MF_PROMQ);
-	genMoves(mvlist, pawnMovesBB, pcbits, side, ~occupiedBB, MF_PROMR);
-	genMoves(mvlist, pawnMovesBB, pcbits, side, ~occupiedBB, MF_PROMB);
-	genMoves(mvlist, pawnMovesBB, pcbits, side, ~occupiedBB, MF_PROMN);
-	genMoves(mvlist, pawnAttacksBB, pcbits, side, targetBB, MF_PROMQ);
-	genMoves(mvlist, pawnAttacksBB, pcbits, side, targetBB, MF_PROMR);
-	genMoves(mvlist, pawnAttacksBB, pcbits, side, targetBB, MF_PROMB);
-	genMoves(mvlist, pawnAttacksBB, pcbits, side, targetBB, MF_PROMN);
+	genMovesProm(mvlist, pawnMovesBB, pcbits, side, ~occupiedBB);
+	genMovesProm(mvlist, pawnAttacksBB, pcbits, side, targetBB);
 
 	genMoves(mvlist, pawnAttacksBB, getPieceBB(PAWN, side) & ~Rank7ByColorBB[side], side, targetBB, MF_NORMAL);
 	genMoves(mvlist, knightAttacksBB, getPieceBB(KNIGHT, side), 0, targetBB, MF_NORMAL);
@@ -103,10 +106,7 @@ void position_t::genCheckEvasions(movelist_t<256>& mvlist) {
 	uint64_t pcbits = getPieceBB(PAWN, side) & notpinned & pawnAttacksBB(sqchecker, xside);
 	genMoves(mvlist, pawnAttacksBB, pcbits & ~Rank7ByColorBB[side], side, BitMask[sqchecker], MF_NORMAL);
 	pcbits &= Rank7ByColorBB[side];
-	genMoves(mvlist, pawnAttacksBB, pcbits, side, BitMask[sqchecker], MF_PROMQ);
-	genMoves(mvlist, pawnAttacksBB, pcbits, side, BitMask[sqchecker], MF_PROMR);
-	genMoves(mvlist, pawnAttacksBB, pcbits, side, BitMask[sqchecker], MF_PROMB);
-	genMoves(mvlist, pawnAttacksBB, pcbits, side, BitMask[sqchecker], MF_PROMN);
+	genMovesProm(mvlist, pawnAttacksBB, pcbits, side, BitMask[sqchecker]);
 
 	if (BitMask[sqchecker] & getPieceBB(PAWN, xside) && (sqchecker + ((side == WHITE) ? 8 : -8)) == stack.epsq)
 		genMoves(mvlist, pawnAttacksBB, pawnAttacksBB(stack.epsq, xside) & getPieceBB(PAWN, side) & notpinned, side, BitMask[stack.epsq], MF_ENPASSANT);
@@ -120,19 +120,13 @@ void position_t::genCheckEvasions(movelist_t<256>& mvlist) {
 
 	const uint64_t inbetweenBB = InBetween[sqchecker][ksq];
 
-	pcbits = getPieceBB(PAWN, side) & notpinned;
-	if (side == WHITE) pcbits &= inbetweenBB >> 8;
-	else pcbits &= inbetweenBB << 8;
+	pcbits = getPieceBB(PAWN, side) & notpinned & ShiftPtr[side ^ 1](inbetweenBB, 8);
 	genMoves(mvlist, pawnMovesBB, pcbits & ~Rank7ByColorBB[side], side, inbetweenBB, MF_NORMAL);
 	pcbits &= Rank7ByColorBB[side];
-	genMoves(mvlist, pawnMovesBB, pcbits, side, inbetweenBB, MF_PROMQ);
-	genMoves(mvlist, pawnMovesBB, pcbits, side, inbetweenBB, MF_PROMR);
-	genMoves(mvlist, pawnMovesBB, pcbits, side, inbetweenBB, MF_PROMB);
-	genMoves(mvlist, pawnMovesBB, pcbits, side, inbetweenBB, MF_PROMN);
+	genMovesProm(mvlist, pawnMovesBB, pcbits, side, inbetweenBB);
 
-	pcbits = getPieceBB(PAWN, side) & Rank2ByColorBB[side] & notpinned;
-	if (side == WHITE) pcbits &= (~occupiedBB >> 8) & (~occupiedBB >> 16) & (inbetweenBB >> 16);
-	else pcbits &= (~occupiedBB << 8) & (~occupiedBB << 16) & (inbetweenBB << 16);
+	pcbits = getPieceBB(PAWN, side) & Rank2ByColorBB[side] & notpinned & ShiftPtr[side ^ 1](~occupiedBB, 8)
+		& ShiftPtr[side ^ 1](~occupiedBB, 16) & ShiftPtr[side ^ 1](inbetweenBB, 16);
 	genMoves(mvlist, pawnMoves2BB, pcbits, side, inbetweenBB, MF_PAWN2);
 
 	genMoves(mvlist, knightAttacksBB, getPieceBB(KNIGHT, side) & notpinned, 0, inbetweenBB, MF_NORMAL);
