@@ -20,7 +20,7 @@ bool pvhash_table_t::retrievePV(uint64_t hash, pv_hash_entry_t& pventry) {
 }
 
 void pvhash_table_t::storePV(uint64_t hash, move_t move, int depth) {
-	int lowest = INT_MAX;
+	int highest = INT_MIN;
 	pv_hash_entry_t *entry = &getEntry(hash).bucket[0], *replace = entry;
 	for (int t = 3; t--; ++entry) {
 		if (entry->hashlock == lock(hash)) {
@@ -30,9 +30,9 @@ void pvhash_table_t::storePV(uint64_t hash, move_t move, int depth) {
 			}
 			else return;
 		}
-		int score = (entry->age << 8) + entry->depth;
-		if (score < lowest) {
-			lowest = score;
+		int score = (((256 + currentAge - entry->age) % 256) << 8) - entry->depth;
+		if (score > highest) {
+			highest = score;
 			replace = entry;
 		}
 	}
@@ -55,7 +55,7 @@ bool trans_table_t::retrieve(const uint64_t hash, tt_entry_t& ttentry) {
 }
 
 void trans_table_t::store(uint64_t hash, move_t move, int depth, int bound) {
-	int lowest = INT_MAX;
+	int highest = INT_MIN;
 	tt_entry_t *entry = &getEntry(hash).bucket[0], *replace = entry;
 	for (int t = 3; t--; ++entry) {
 		if (entry->hashlock == lock(hash)) {
@@ -65,9 +65,9 @@ void trans_table_t::store(uint64_t hash, move_t move, int depth, int bound) {
 			}
 			else return;
 		}
-		int score = (entry->getAge() << 8) + entry->depth;
-		if (score < lowest) {
-			lowest = score;
+		int score = (((64 + currentAge - entry->getAge()) % 64) << 8) - entry->depth;
+		if (score > highest) {
+			highest = score;
 			replace = entry;
 		}
 	}

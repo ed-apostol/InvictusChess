@@ -29,17 +29,14 @@ namespace Utils {
 		return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
 	}
 
-	typedef int(*fun1_t) (LOGICAL_PROCESSOR_RELATIONSHIP, PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, PDWORD);
-	typedef int(*fun2_t) (USHORT, PGROUP_AFFINITY);
-	typedef int(*fun3_t) (HANDLE, CONST GROUP_AFFINITY*, PGROUP_AFFINITY);
+#define GetKnownProcAddress(hmod, F) (decltype(F)*)GetProcAddress(hmod, #F)
 
-	int bestGroup(int index) {
+	int bestGroup(int index, HMODULE kernel) {
 		int groupSize = 0, groups[2048];
 		int nodes = 0, cores = 0, threads = 0;
 		DWORD returnLength = 0, byteOffset = 0;
 
-		HMODULE k32 = GetModuleHandle("Kernel32.dll");
-		fun1_t fun1 = (fun1_t)GetProcAddress(k32, "GetLogicalProcessorInformationEx");
+		auto fun1 = GetKnownProcAddress(kernel, GetLogicalProcessorInformationEx);
 		if (!fun1) return -1;
 
 		if (fun1(RelationAll, NULL, &returnLength)) return -1;
@@ -72,11 +69,11 @@ namespace Utils {
 
 	void bindThisThread(int index) {
 		int group;
-		if ((group = bestGroup(index)) == -1) return;
+		HMODULE kernel = GetModuleHandle("Kernel32.dll");
+		if ((group = bestGroup(index, kernel)) == -1) return;
 
-		HMODULE k32 = GetModuleHandle("Kernel32.dll");
-		fun2_t fun2 = (fun2_t)GetProcAddress(k32, "GetNumaNodeProcessorMaskEx");
-		fun3_t fun3 = (fun3_t)GetProcAddress(k32, "SetThreadGroupAffinity");
+		auto fun2 = GetKnownProcAddress(kernel, GetNumaNodeProcessorMaskEx);
+		auto fun3 = GetKnownProcAddress(kernel, SetThreadGroupAffinity);
 		if (!fun2 || !fun3) return;
 
 		GROUP_AFFINITY affinity;
