@@ -360,7 +360,7 @@ std::string position_t::positionToFEN() {
 std::string position_t::to_str() {
     std::string str;
     const std::string piecestr = " PNBRQK pnbrqk";
-    const std::string board = "\n  |---|---|---|---|---|---|---|---|\n";
+    const std::string board = "\n -|---|---|---|---|---|---|---|---|\n";
     str += positionToFEN() + "\n";
     str += "incheck: " + std::to_string(kingIsInCheck());
     str += " capt: " + std::to_string(stack.capturedpc);

@@ -362,9 +362,9 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             killer1[ply] = best_move.m;
         }
     }
-    if (best_score > old_alpha && best_score < beta) e.pvt.storePV(pos.stack.hash, best_move, depth);
+    if (inPv && best_move.m != 0) e.pvt.storePV(pos.stack.hash, best_move, depth);
     best_move.s = scoreToTrans(best_score, ply, MATE);
-    e.tt.store(pos.stack.hash, best_move, depth, (best_score >= beta) ? TT_LOWER : (best_score > old_alpha ? TT_EXACT : TT_UPPER));
+    e.tt.store(pos.stack.hash, best_move, depth, (best_score >= beta) ? TT_LOWER : ((inPv && best_move.m != 0) ? TT_EXACT : TT_UPPER));
     return best_score;
 }
 
@@ -397,9 +397,10 @@ int search_t::qsearch(int alpha, int beta, int ply, bool inCheck) {
         pos.undoMove(undo);
         if (e.stop || stop_iter) return 0;
         if (score > best_score) {
-            best_move = m;
-            best_move.s = best_score = score;
+            best_score = score;
             if (score > alpha) {
+                best_move = m;
+                best_move.s = best_score;
                 if (score >= beta) break;
                 alpha = score;
             }
