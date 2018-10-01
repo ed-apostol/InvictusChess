@@ -9,6 +9,7 @@
 #include "position.h"
 
 namespace Utils {
-	extern void printBitBoard(uint64_t n);
-	extern uint64_t getTime(void);
+    extern void printBitBoard(uint64_t n);
+    extern uint64_t getTime(void);
+    extern void bindThisThread(int index);
 }
