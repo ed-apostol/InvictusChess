@@ -43,10 +43,10 @@ using namespace Search;
 
 void search_t::idleloop() {
     while (!exit_flag) {
-        if (doSleep) wait();
+        if (do_sleep) wait();
         else {
             start();
-            doSleep = true;
+            do_sleep = true;
         }
     }
 }
@@ -115,7 +115,7 @@ void search_t::updateInfo() {
 }
 
 void search_t::displayInfo(move_t bestmove, int depth, int alpha, int beta) {
-    LogAndPrintOutput logger;
+    PrintOutput logger;
     uint64_t currtime = Utils::getTime() - e.start_time + 1;
     logger << "info depth " << depth << " seldepth " << maxplysearched;
     if (abs(bestmove.s) < (MATE - MAXPLY)) {
@@ -200,12 +200,11 @@ void search_t::start() {
 }
 
 bool search_t::stopSearch() {
-    if ((++nodecnt & 0x3fff) == 0) {
-        if (thread_id == 0 && e.use_time) {
-            uint64_t currtime = Utils::getTime();
-            if ((currtime >= e.time_limit_max && !resolve_iter) || (currtime >= e.time_limit_abs)) {
-                e.stop = true;
-            }
+    ++nodecnt;
+    if (thread_id == 0 && e.use_time && (nodecnt & 0x3fff) == 0) {
+        uint64_t currtime = Utils::getTime();
+        if ((currtime >= e.time_limit_max && !resolve_iter) || (currtime >= e.time_limit_abs)) {
+            e.stop = true;
         }
     }
     return e.stop;

@@ -60,15 +60,14 @@ struct position_t {
     uint64_t getPieceBB(int pc, int c);
     uint64_t getBishopSlidersBB(int c);
     uint64_t getRookSlidersBB(int c);
-
     uint64_t allAttackersToSquare(int sq, uint64_t occupied);
     bool statExEval(move_t m, int threshold);
 
-    //movegen
     void genLegal(movelist_t<256>& mvlist);
     void genQuietMoves(movelist_t<256>& mvlist);
     void genTacticalMoves(movelist_t<256>& mvlist);
     void genCheckEvasions(movelist_t<256>& mvlist);
+
     bool areaIsAttacked(int c, uint64_t area);
     bool sqIsAttacked(uint64_t occ, int sq, int c);
     bool kingIsInCheck();

@@ -11,6 +11,7 @@
 #include "attacks.h"
 
 using namespace BitUtils;
+using namespace Attacks;
 
 namespace {
     score_t pawnPST(int sq) {
@@ -50,7 +51,12 @@ namespace EvalPar {
     score_t BishopMob = { 3,3 };
     score_t RookMob = { 1,2 };
     score_t QueenMob = { 1,2 };
+    int KnightAtk = 2;
+    int BishopAtk = 2;
+    int RookAtk = 3;
+    int QueenAtk = 5;
     score_t pst[2][8][64];
+    uint64_t KingZoneMask[2][64];
 
     void initArr() {
         std::function<score_t(int)> pstInit[] = { pawnPST, knightPST,bishopPST,rookPST,queenPST,kingPST };
@@ -61,6 +67,14 @@ namespace EvalPar {
                 pst[WHITE][pc][sq] = pstInit[pc - 1](sq);
                 pst[BLACK][pc][sq] = pstInit[pc - 1](rsq);
             }
+        }
+        for (int sq = 0; sq < 64; ++sq) {
+            KingZoneMask[WHITE][sq] = kingMovesBB(sq) | (1ull << sq) | (kingMovesBB(sq) << 8);
+            KingZoneMask[BLACK][sq] = kingMovesBB(sq) | (1ull << sq) | (kingMovesBB(sq) >> 8);
+            KingZoneMask[WHITE][sq] |= sqFile(sq) == FileA ? KingZoneMask[WHITE][sq] << 1 : 0;
+            KingZoneMask[BLACK][sq] |= sqFile(sq) == FileA ? KingZoneMask[BLACK][sq] << 1 : 0;
+            KingZoneMask[WHITE][sq] |= sqFile(sq) == FileH ? KingZoneMask[WHITE][sq] >> 1 : 0;
+            KingZoneMask[BLACK][sq] |= sqFile(sq) == FileH ? KingZoneMask[BLACK][sq] >> 1 : 0;
         }
     }
     void displayPSTbyPC(score_t A[], std::string piece, bool midgame) {
@@ -88,26 +102,37 @@ namespace EvalPar {
 }
 
 using namespace EvalPar;
-using namespace Attacks;
 
 void eval_t::mobility(position_t& p, score_t& scr, int side) {
-    uint64_t mobmask = ~p.colorBB[side] & ~pawnatks[side ^ 1];
+    int xside = side ^ 1;
+    uint64_t mobmask = ~p.colorBB[side] & ~pawnatks[xside];
     for (uint64_t pcbits = p.getPieceBB(KNIGHT, side); pcbits;) {
         int sq = popFirstBit(pcbits);
-        scr += KnightMob * bitCnt(knightMovesBB(sq) & mobmask);
+        uint64_t atk = knightMovesBB(sq);
+        scr += KnightMob * bitCnt(atk & mobmask);
+        kingzoneatks[side] += (1 << 20) + (KnightAtk << 10) + bitCnt(atk & kingzone[xside]);
     }
     for (uint64_t pcbits = p.getPieceBB(BISHOP, side); pcbits;) {
         int sq = popFirstBit(pcbits);
-        scr += BishopMob * bitCnt(bishopAttacksBB(sq, p.occupiedBB) & mobmask);
+        uint64_t atk = bishopAttacksBB(sq, p.occupiedBB);
+        scr += BishopMob * bitCnt(atk & mobmask);
+        kingzoneatks[side] += (1 << 20) + (BishopAtk << 10) + bitCnt(atk & kingzone[xside]);
     }
     for (uint64_t pcbits = p.getPieceBB(ROOK, side); pcbits;) {
         int sq = popFirstBit(pcbits);
-        scr += RookMob * bitCnt(rookAttacksBB(sq, p.occupiedBB) & mobmask);
+        uint64_t atk = rookAttacksBB(sq, p.occupiedBB);
+        scr += RookMob * bitCnt(atk & mobmask);
+        kingzoneatks[side] += (1 << 20) + (RookAtk << 10) + bitCnt(atk & kingzone[xside]);
     }
     for (uint64_t pcbits = p.getPieceBB(QUEEN, side); pcbits;) {
         int sq = popFirstBit(pcbits);
-        scr += QueenMob * bitCnt(queenAttacksBB(sq, p.occupiedBB) & mobmask);
+        uint64_t atk = queenAttacksBB(sq, p.occupiedBB);
+        scr += QueenMob * bitCnt(atk & mobmask);
+        kingzoneatks[side] += (1 << 20) + (QueenAtk << 10) + bitCnt(atk & kingzone[xside]);
     }
+}
+
+void eval_t::kingsafety(position_t& p, score_t& scr, int side) {
 }
 
 int eval_t::score(position_t& p) {
@@ -115,11 +140,15 @@ int eval_t::score(position_t& p) {
 
     pawnatks[side] = pawnAttackBB(p.getPieceBB(PAWN, side), side);
     pawnatks[xside] = pawnAttackBB(p.getPieceBB(PAWN, xside), xside);
-
+    kingzone[side] = KingZoneMask[side][p.kpos[side]];
+    kingzone[xside] = KingZoneMask[xside][p.kpos[xside]];
+    kingzoneatks[side] = kingzoneatks[xside] = 0;
     score_t scr[2] = { p.stack.score[0], p.stack.score[1] };
 
     mobility(p, scr[side], side);
     mobility(p, scr[xside], xside);
+    kingsafety(p, scr[side], side);
+    kingsafety(p, scr[xside], xside);
 
     int phase = 4 * bitCnt(p.piecesBB[QUEEN]) + 2 * bitCnt(p.piecesBB[ROOK]) + 1 * bitCnt(p.piecesBB[KNIGHT] | p.piecesBB[BISHOP]);
     score_t s = scr[side] - scr[xside];

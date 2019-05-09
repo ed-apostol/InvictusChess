@@ -100,7 +100,7 @@ namespace {
             m.magic = magics[s];
             m.mask = slideAttacks(s, 0, dir) & ~(((Rank1BB | Rank8BB) & ~RankBB[sqRank(s)]) | ((FileABB | FileHBB) & ~FileBB[sqFile(s)]));
             m.shift = 64 - BitUtils::bitCnt(m.mask);
-            if (s < 63) mtable[s + 1].offset = m.offset + (1 << BitUtils::bitCnt(m.mask));
+            if (s < 63) mtable[s + 1].offset = m.offset + (1ull << BitUtils::bitCnt(m.mask));
             uint64_t occ = 0;
             do {
                 m.offset[sliderIndex(occ, m)] = slideAttacks(s, occ, dir);
@@ -129,28 +129,17 @@ namespace {
 
 namespace Attacks {
     void initArr(void) {
-        const std::vector<int> kingd = { -9, -1, 7, 8, 9, 1, -7, -8 };
-        const std::vector<int> knightd = { -17, -10, 6, 15, 17, 10, -6, -15 };
-        const std::vector<int> bishopd = { -9, 7, 9, -7 };
-        const std::vector<int> rookd = { -1, 8, 1, -8 };
-        const std::vector<int> wpawnd = { 8 };
-        const std::vector<int> bpawnd = { -8 };
-        const std::vector<int> wpawnc = { 7, 9 };
-        const std::vector<int> bpawnc = { -7, -9 };
-        const std::vector<int> wpawn2mov = { 16 };
-        const std::vector<int> bpawn2mov = { -16 };
+        initMovesTable({ -17, -10, 6, 15, 17, 10, -6, -15 }, KnightMoves);
+        initMovesTable({ -9, -1, 7, 8, 9, 1, -7, -8 }, KingMoves);
+        initMovesTable({ 8 }, PawnMoves[WHITE]);
+        initMovesTable({ -8 }, PawnMoves[BLACK]);
+        initMovesTable({ 7, 9 }, PawnCaps[WHITE]);
+        initMovesTable({ -7, -9 }, PawnCaps[BLACK]);
+        initMovesTable({ 16 }, PawnMoves2[WHITE]);
+        initMovesTable({ -16 }, PawnMoves2[BLACK]);
 
-        initMovesTable(knightd, KnightMoves);
-        initMovesTable(kingd, KingMoves);
-        initMovesTable(wpawnd, PawnMoves[WHITE]);
-        initMovesTable(bpawnd, PawnMoves[BLACK]);
-        initMovesTable(wpawnc, PawnCaps[WHITE]);
-        initMovesTable(bpawnc, PawnCaps[BLACK]);
-        initMovesTable(wpawn2mov, PawnMoves2[WHITE]);
-        initMovesTable(bpawn2mov, PawnMoves2[BLACK]);
-
-        initSliderTable(RMagicAttacks, RMagic, RookMagic, rookd);
-        initSliderTable(BMagicAttacks, BMagic, BishopMagic, bishopd);
+        initSliderTable(RMagicAttacks, RMagic, RookMagic, { -1, 8, 1, -8 });
+        initSliderTable(BMagicAttacks, BMagic, BishopMagic, { -9, 7, 9, -7 });
     }
 
     uint64_t pawnMovesBB(int from, uint64_t s) {

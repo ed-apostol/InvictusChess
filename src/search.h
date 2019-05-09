@@ -20,28 +20,28 @@ class thread_t {
 public:
     thread_t(int _thread_id) : thread_id(_thread_id) {
         exit_flag = false;
-        doSleep = true;
+        do_sleep = true;
     }
     ~thread_t() {
         exit_flag = true;
         wakeup();
-        nativeThread.join();
+        native_thread.join();
     }
     void wait() {
-        std::unique_lock<std::mutex> lk(threadLock);
-        sleepCondition.wait(lk);
+        std::unique_lock<std::mutex> lk(thread_lock);
+        sleep_condition.wait(lk);
     }
     void wakeup() {
-        doSleep = false;
-        sleepCondition.notify_one();
+        do_sleep = false;
+        sleep_condition.notify_one();
     }
-    bool doSleep;
+    bool do_sleep;
     int thread_id;
 protected:
     bool exit_flag;
-    std::thread nativeThread;
-    std::condition_variable sleepCondition;
-    std::mutex threadLock;
+    std::thread native_thread;
+    std::condition_variable sleep_condition;
+    std::mutex thread_lock;
 };
 
 struct engine_t;
@@ -52,7 +52,7 @@ struct search_t : public thread_t {
     static const int MATE = 32750;
 
     search_t(int _thread_id, engine_t& _e) : e(_e), thread_t(_thread_id) {
-        nativeThread = std::thread(&search_t::idleloop, this);
+        native_thread = std::thread(&search_t::idleloop, this);
     }
 
     void idleloop();

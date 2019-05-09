@@ -88,7 +88,7 @@ void engine_t::initSearch() {
 
 void engine_t::waitForThreads() {
     for (auto t : *this) {
-        while (!t->doSleep)
+        while (!t->do_sleep)
             std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
