@@ -1,13 +1,10 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
 
 #pragma once
-
-const uint64_t Rank7ByColorBB[2] = { 0x00FF000000000000ULL, 0x000000000000FF00ULL };
-const uint64_t Rank2ByColorBB[2] = { 0x000000000000FF00ULL, 0x00FF000000000000ULL };
 
 const uint64_t DiagonalMask[64] = {
     0x8040201008040201ULL, 0x0080402010080402ULL, 0x0000804020100804ULL, 0x0000008040201008ULL,
@@ -134,13 +131,13 @@ const uint64_t FileHBB = 0x8080808080808080ULL;
 
 const uint64_t FileBB[8] = { FileABB, FileBBB, FileCBB,FileDBB, FileEBB, FileFBB,FileGBB, FileHBB };
 
-const uint64_t Rank1BB = 0xFFULL;
-const uint64_t Rank2BB = 0xFF00ULL;
-const uint64_t Rank3BB = 0xFF0000ULL;
-const uint64_t Rank4BB = 0xFF000000ULL;
-const uint64_t Rank5BB = 0xFF00000000ULL;
-const uint64_t Rank6BB = 0xFF0000000000ULL;
-const uint64_t Rank7BB = 0xFF000000000000ULL;
+const uint64_t Rank1BB = 0x00000000000000FFULL;
+const uint64_t Rank2BB = 0x000000000000FF00ULL;
+const uint64_t Rank3BB = 0x0000000000FF0000ULL;
+const uint64_t Rank4BB = 0x00000000FF000000ULL;
+const uint64_t Rank5BB = 0x000000FF00000000ULL;
+const uint64_t Rank6BB = 0x0000FF0000000000ULL;
+const uint64_t Rank7BB = 0x00FF000000000000ULL;
 const uint64_t Rank8BB = 0xFF00000000000000ULL;
 
 const uint64_t RankBB[8] = { Rank1BB, Rank2BB, Rank3BB, Rank4BB, Rank5BB,Rank6BB, Rank7BB, Rank8BB };
@@ -150,3 +147,6 @@ const uint64_t FullBoardBB = 0xFFFFFFFFFFFFFFFFULL;
 
 const uint64_t WhiteSquaresBB = 0x55AA55AA55AA55AAULL;
 const uint64_t BlackSquaresBB = 0xAA55AA55AA55AA55ULL;
+
+const uint64_t Rank7ByColorBB[2] = { Rank7BB, Rank2BB };
+const uint64_t Rank2ByColorBB[2] = { Rank2BB, Rank7BB };

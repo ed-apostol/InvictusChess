@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -83,7 +83,7 @@ namespace PositionData {
         }
         for (int sq = 0; sq < 64; ++sq) {
             for (int sq2 = 0; sq2 < 64; ++sq2) {
-                InBetween[sq][sq2] = 0;
+                InBetween[sq][sq2] = uint64_t(0);
                 int k = DirFromTo[sq][sq2];
                 if (k != 8) {
                     int k2 = DirFromTo[sq2][sq];
@@ -302,7 +302,7 @@ void position_t::setPosition(const std::string& fenStr) {
     while ((ss >> token) && !isspace(token)) {
         if (isdigit(token)) sq += (token - '0');
         else if (token == '/') sq -= 16;
-        else if ((p = pc2char.find(token)) != std::string::npos) 
+        else if ((p = pc2char.find(token)) != std::string::npos)
             setPiece(sq++, (islower(token) ? BLACK : WHITE), char2piece[p % 6]);
     }
     ss >> token;
@@ -486,6 +486,16 @@ bool position_t::areaIsAttacked(int c, uint64_t target) {
     return false;
 }
 
+uint64_t position_t::areaSafe(int c, uint64_t occ, uint64_t target) {
+    uint64_t bits = target;
+    while (target) {
+        int sq = popFirstBit(target);
+        if (sqIsAttacked(occ, sq, c))
+            bits ^= BitMask[sq];
+    }
+    return bits;
+}
+
 bool position_t::sqIsAttacked(uint64_t occ, int sq, int c) {
     return
         (rookAttacksBB(sq, occ) & ((piecesBB[ROOK] | piecesBB[QUEEN]) & colorBB[c])) ||
@@ -544,14 +554,13 @@ uint64_t position_t::discoveredCheckCandidates(int c) {
 
     pinners = getBishopSlidersBB(c);
     pinners &= pinners ? bishopAttacksBBX(ksq, occupiedBB) : 0;
-    while (pinners) pinned |= InBetween[popFirstBit(pinners)][ksq] & colorBB[c] & ~getBishopSlidersBB(c);;
+    while (pinners) pinned |= InBetween[popFirstBit(pinners)][ksq] & colorBB[c] & ~getBishopSlidersBB(c);
 
     return pinned;
 }
 
 bool position_t::moveIsLegal(move_t move, uint64_t pinned, bool incheck) {
     if (incheck) return true;
-    if (move.isCastle()) return true;
 
     const int xside = side ^ 1;
     const int from = move.moveFrom();
@@ -561,6 +570,9 @@ bool position_t::moveIsLegal(move_t move, uint64_t pinned, bool incheck) {
     if (move.isEnPassant()) {
         uint64_t b = occupiedBB ^ BitMask[from] ^ BitMask[(sqRank(from) << 3) + sqFile(to)] ^ BitMask[to];
         return !(rookAttacksBB(ksq, b) & getRookSlidersBB(xside)) && !(bishopAttacksBB(ksq, b) & getBishopSlidersBB(xside));
+    }
+    if (move.isCastle()) {
+        return !areaIsAttacked(xside, CastleSquareMask2[side][to > from ? 0 : 1]);
     }
     if (from == ksq) return !(sqIsAttacked(occupiedBB ^ BitMask[ksq], to, xside));
     if (!(pinned & BitMask[from])) return true;
@@ -590,7 +602,6 @@ bool position_t::moveIsValid(move_t m, uint64_t pinned) {
     const int from = m.moveFrom();
     const int to = m.moveTo();
     const int pc = pieces[from];
-    const int us = side;
     const int cap = pieces[to];
     const int absdiff = abs(from - to);
     const int flag = m.moveFlags();
@@ -602,18 +613,18 @@ bool position_t::moveIsValid(move_t m, uint64_t pinned) {
     if (prom != EMPTY && (prom < KNIGHT || prom > QUEEN)) return false;
     if (from < 0 || from > 63) return false;
     if (to < 0 || to > 63) return false;
-    if (getSide(from) != us) return false;
-    if (cap != EMPTY && getSide(to) == us) return false;
+    if (getSide(from) != side) return false;
+    if (cap != EMPTY && getSide(to) == side) return false;
     if (prom != EMPTY && flag != MF_PROMB && flag != MF_PROMN && flag != MF_PROMR && flag != MF_PROMQ) return false;
-    if ((pinned & BitMask[from]) && (DirFromTo[from][kpos[us]] != DirFromTo[to][kpos[us]])) return false;
+    if ((pinned & BitMask[from]) && (DirFromTo[from][kpos[side]] != DirFromTo[to][kpos[side]])) return false;
     if (pc != PAWN && (pc != KING || absdiff != 2) && !(pieceAttacksFromBB(pc, from, occupiedBB) & BitMask[to])) return false;
     if (pc == KING) {
-        if (BitMask[to] & kingMovesBB(kpos[us ^ 1])) return false;
+        if (BitMask[to] & kingMovesBB(kpos[side ^ 1])) return false;
         if (absdiff == 2 && flag != MF_CASTLE) return false;
     }
     if (pc == PAWN) {
-        if (cap != EMPTY && !(pawnAttacksBB(from, us) & BitMask[to])) return false;
-        if (cap == EMPTY && to != stack.epsq && !((pawnMovesBB(from, us) | pawnMoves2BB(from, us)) & BitMask[to])) return false;
+        if (cap != EMPTY && !(pawnAttacksBB(from, side) & BitMask[to])) return false;
+        if (cap == EMPTY && to != stack.epsq && !((pawnMovesBB(from, side) | pawnMoves2BB(from, side)) & BitMask[to])) return false;
         if (absdiff == 16 && flag != MF_PAWN2) return false;
         if (to == stack.epsq && flag != MF_ENPASSANT) return false;
     }
@@ -621,7 +632,7 @@ bool position_t::moveIsValid(move_t m, uint64_t pinned) {
     switch (flag) {
     case MF_PAWN2: {
         if (pc != PAWN) return false;
-        if (!(Rank2ByColorBB[us] & BitMask[from])) return false;
+        if (!(Rank2ByColorBB[side] & BitMask[from])) return false;
         if (absdiff != 16) return false;
         if (cap != EMPTY) return false;
         if (pieces[(from + to) / 2] != EMPTY) return false;
@@ -639,20 +650,20 @@ bool position_t::moveIsValid(move_t m, uint64_t pinned) {
         if (from != E1 && from != E8) return false;
         if (pieces[RookFrom[to / 56][(to % 8) > 5]] != ROOK) return false;
         if (to > from) {
-            if (!(stack.castle & (us ? BCKS : WCKS))) return false;
-            if (occupiedBB & CastleSquareMask1[us][0]) return false;
-            if (areaIsAttacked(us ^ 1, CastleSquareMask2[us][0])) return false;
+            if (!(stack.castle & (side ? BCKS : WCKS))) return false;
+            if (occupiedBB & CastleSquareMask1[side][0]) return false;
+            if (areaIsAttacked(side ^ 1, CastleSquareMask2[side][0])) return false;
         }
         if (to < from) {
-            if (!(stack.castle & (us ? BCQS : WCQS))) return false;
-            if (occupiedBB & CastleSquareMask1[us][1]) return false;
-            if (areaIsAttacked(us ^ 1, CastleSquareMask2[us][1])) return false;
+            if (!(stack.castle & (side ? BCQS : WCQS))) return false;
+            if (occupiedBB & CastleSquareMask1[side][1]) return false;
+            if (areaIsAttacked(side ^ 1, CastleSquareMask2[side][1])) return false;
         }
     } break;
     case MF_PROMN: case MF_PROMB: case MF_PROMR: case MF_PROMQ: {
         if (pc != PAWN) return false;
         if (prom == EMPTY) return false;
-        if (!(Rank7ByColorBB[us] & BitMask[from])) return false;
+        if (!(Rank7ByColorBB[side] & BitMask[from])) return false;
     } break;
     }
     return true;

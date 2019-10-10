@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -85,7 +85,7 @@ namespace {
         return att;
     }
 
-    inline int sliderIndex(uint64_t occ, Magic& m) {
+    inline size_t sliderIndex(uint64_t occ, Magic& m) {
 #ifdef USE_PEXT
         return _pext_u64(occ, m.mask);
 #else
@@ -181,7 +181,7 @@ namespace Attacks {
 
     std::function<uint64_t(uint64_t, int)> ShiftPtr[] = { shiftLeft, shiftRight };
 
-    uint64_t pawnAttackBB(uint64_t pawns, int color) {
+    uint64_t pawnAttackBB(uint64_t pawns, size_t color) {
         const int Shift[] = { 9, 7 };
         uint64_t pawnAttackLeft = ShiftPtr[color](pawns, Shift[color ^ 1]) & ~FileHBB;
         uint64_t pawnAttackright = ShiftPtr[color](pawns, Shift[color]) & ~FileABB;

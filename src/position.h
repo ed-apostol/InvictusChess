@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -69,6 +69,7 @@ struct position_t {
     void genCheckEvasions(movelist_t<256>& mvlist);
 
     bool areaIsAttacked(int c, uint64_t area);
+    uint64_t areaSafe(int c, uint64_t occ, uint64_t target);
     bool sqIsAttacked(uint64_t occ, int sq, int c);
     bool kingIsInCheck();
     uint64_t pieceAttacksFromBB(int pc, int sq, uint64_t occ);

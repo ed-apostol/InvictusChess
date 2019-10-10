@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -102,7 +102,7 @@ void engine_t::onHashChange() {
 }
 
 void engine_t::onThreadsChange() {
-    int threads = options["Threads"].getIntVal();
+    size_t threads = options["Threads"].getIntVal();
     while (size() < threads) {
         int id = (int)size();
         emplace_back(new search_t(id, *this));

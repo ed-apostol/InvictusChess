@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -22,5 +22,5 @@ namespace Attacks {
     extern inline uint64_t knightMovesBB(int from);
     extern inline uint64_t kingMovesBB(int from);
     extern std::function<uint64_t(uint64_t, int)> ShiftPtr[];
-    extern inline uint64_t pawnAttackBB(uint64_t pawns, int color);
+    extern inline uint64_t pawnAttackBB(uint64_t pawns, size_t color);
 }

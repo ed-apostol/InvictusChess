@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -36,7 +36,7 @@ namespace BitUtils {
     }
 #else
     int bitCnt(uint64_t x) {
-        return __popcnt64(x);
+        return (int)__popcnt64(x);
     }
 #endif
 }

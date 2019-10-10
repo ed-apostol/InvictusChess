@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -56,7 +56,7 @@ struct search_t : public thread_t {
     }
 
     void idleloop();
-    uint64_t perft(int depth);
+    uint64_t perft(size_t depth);
     uint64_t perft2(int depth);
     void extractPV(move_t rmove, bool fillhash);
     void updateInfo();
@@ -71,7 +71,7 @@ struct search_t : public thread_t {
     engine_t& e;
 
     int maxplysearched;
-    int depth;
+    int rdepth;
     std::atomic<uint64_t> nodecnt;
     std::atomic<bool> stop_iter;
     std::atomic<bool> resolve_iter;

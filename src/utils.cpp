@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -69,7 +69,7 @@ namespace Utils {
 
     void bindThisThread(int index) {
         int group;
-        HMODULE kernel = GetModuleHandle("Kernel32.dll");
+        HMODULE kernel = GetModuleHandle("kernel32.dll");
         if ((group = bestGroup(index, kernel)) == -1) return;
 
         auto getNumaProcMask = GetKnownProcAddress(kernel, GetNumaNodeProcessorMaskEx);

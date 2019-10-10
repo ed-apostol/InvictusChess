@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -51,7 +51,7 @@ struct pv_bucket_t {
 class pvhash_table_t : public hashtable_t < pv_bucket_t > {
 public:
     void resetAge() { currentAge = 0; }
-    void updateAge() { currentAge = ++currentAge % 256; }
+    void updateAge() { currentAge = (currentAge + 1) % 256; }
     void storePV(uint64_t hash, move_t move, int depth);
     bool retrievePV(const uint64_t hash, pv_hash_entry_t& pventry);
 private:
@@ -86,7 +86,7 @@ enum TTBounds {
 class trans_table_t : public hashtable_t < tt_bucket_t > {
 public:
     void resetAge() { currentAge = 0; }
-    void updateAge() { currentAge = ++currentAge % 64; }
+    void updateAge() { currentAge = (currentAge + 1) % 64; }
     void store(uint64_t hash, move_t move, int depth, int bound);
     bool retrieve(uint64_t hash, tt_entry_t& ttentry);
 private:

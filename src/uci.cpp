@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -14,7 +14,7 @@
 const std::string uci_t::name = "Invictus";
 const std::string uci_t::author = "Edsel Apostol";
 const std::string uci_t::year = "2018";
-const std::string uci_t::version = "r234";
+const std::string uci_t::version = "r245";
 
 void uci_t::info() {
     LogAndPrintOutput() << name << " " << version;
@@ -66,8 +66,7 @@ bool uci_t::input(iss& stream) {
 }
 
 void uci_t::quit() {
-    engine.stopthreads();
-    engine.waitForThreads();
+    stop();
 }
 
 void uci_t::displayID() {
@@ -96,7 +95,7 @@ void uci_t::gocmd(iss& stream) {
     limit.init();
 
     stream >> param;
-    while (param != "") {
+    while (!param.empty()) {
         if (param == "wtime") stream >> limit.wtime;
         else if (param == "btime") stream >> limit.btime;
         else if (param == "winc") stream >> limit.winc;
@@ -109,7 +108,7 @@ void uci_t::gocmd(iss& stream) {
         else if (param == "nodes") stream >> limit.nodes;
         else if (param == "mate") stream >> limit.mate;
         else { LogAndPrintOutput() << "Wrong go command param: " << param; return; }
-        param = "";
+        param.clear();
         stream >> param;
     }
     engine.initSearch();
@@ -163,7 +162,7 @@ void uci_t::newgame() {
 uci_t::~uci_t() {}
 
 void uci_t::perftbench(iss& stream) {
-    int depth;
+    size_t depth;
     stream >> depth;
 
     std::ifstream infile("perft.epd");
@@ -258,11 +257,11 @@ void uci_t::speedup(iss& stream) {
     std::vector<double> timeSpeedupSum(threads.size(), 0.0);
     std::vector<double> nodesSpeedupSum(threads.size(), 0.0);
 
-    for (int idxpos = 0; idxpos < fenPos.size(); ++idxpos) {
+    for (size_t idxpos = 0; idxpos < fenPos.size(); ++idxpos) {
         LogAndPrintOutput() << "\n\nPos#" << idxpos + 1 << ": " << fenPos[idxpos];
         uint64_t nodes1 = 0;
         uint64_t spentTime1 = 0;
-        for (int idxthread = 0; idxthread < threads.size(); ++idxthread) {
+        for (size_t idxthread = 0; idxthread < threads.size(); ++idxthread) {
             streamcmd = iss("name Threads value " + std::to_string(threads[idxthread]));
             setoption(streamcmd);
             newgame();
@@ -270,7 +269,7 @@ void uci_t::speedup(iss& stream) {
             streamcmd = iss("fen " + fenPos[idxpos]);
             positioncmd(streamcmd);
 
-            int startTime = Utils::getTime();
+            uint64_t startTime = Utils::getTime();
 
             streamcmd = iss("depth " + std::to_string(depth));
             gocmd(streamcmd);
@@ -279,7 +278,7 @@ void uci_t::speedup(iss& stream) {
 
             double timeSpeedUp;
             double nodesSpeedup;
-            int spentTime = Utils::getTime() - startTime;
+            uint64_t spentTime = Utils::getTime() - startTime;
             uint64_t nodes = engine.nodesearched() / spentTime;
 
             if (0 == idxthread) {
@@ -305,7 +304,7 @@ void uci_t::speedup(iss& stream) {
     LogAndPrintOutput() << "\n\n";
     LogAndPrintOutput() << "Threads: " << std::to_string(threads[0]) << " time: " << std::to_string(timeSpeedupSum[0] / fenPos.size()) << "s, "
         << std::to_string(nodesSpeedupSum[0] / fenPos.size()) << "knps";
-    for (int idxthread = 1; idxthread < threads.size(); ++idxthread) {
+    for (size_t idxthread = 1; idxthread < threads.size(); ++idxthread) {
         LogAndPrintOutput() << "Threads: " << std::to_string(threads[idxthread])
             << " time: " << std::to_string(timeSpeedupSum[idxthread] / fenPos.size()) << " nodes: " << std::to_string(nodesSpeedupSum[idxthread] / fenPos.size());
     }

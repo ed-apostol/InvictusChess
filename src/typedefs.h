@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -74,8 +74,8 @@ enum MoveFlags {
 struct move_t {
     move_t() { }
     move_t(int v) : m(v) { }
-    move_t(int f, int t, MoveFlags l) {
-        m = f | (t << 6) | (l << 12);
+    move_t(int f, int t, int fl) {
+        m = f | (t << 6) | (fl << 12);
     }
     inline void init() { m = 0;  s = SHRT_MIN; }
     inline int moveFrom() const { return 63 & m; }
@@ -116,23 +116,23 @@ private:
 struct score_t {
     score_t() : m(0), e(0) {};
     score_t(int mm, int ee) : m(mm), e(ee) {}
-    inline score_t operator+(const score_t d) { return score_t(m + d.m, e + d.e); }
-    inline score_t operator-(const score_t d) { return score_t(m - d.m, e - d.e); }
-    inline score_t operator/(const score_t d) { return score_t(m / d.m, e / d.e); }
-    inline score_t operator*(const score_t d) { return score_t(m * d.m, e * d.e); }
+    inline score_t operator+(const score_t &d) { return score_t(m + d.m, e + d.e); }
+    inline score_t operator-(const score_t &d) { return score_t(m - d.m, e - d.e); }
+    inline score_t operator/(const score_t &d) { return score_t(m / d.m, e / d.e); }
+    inline score_t operator*(const score_t &d) { return score_t(m * d.m, e * d.e); }
     inline score_t operator+(const int x) { return score_t(m + x, e + x); }
     inline score_t operator-(const int x) { return score_t(m - x, e - x); }
     inline score_t operator/(const int x) { return score_t(m / x, e / x); }
     inline score_t operator*(const int x) { return score_t(m * x, e * x); }
-    inline score_t& operator+=(const score_t d) { m += d.m, e += d.e; return *this; }
-    inline score_t& operator-=(const score_t d) { m -= d.m, e -= d.e; return *this; }
-    inline score_t& operator/=(const score_t d) { m /= d.m, e /= d.e; return *this; }
-    inline score_t& operator*=(const score_t d) { m *= d.m, e *= d.e; return *this; }
+    inline score_t& operator+=(const score_t &d) { m += d.m, e += d.e; return *this; }
+    inline score_t& operator-=(const score_t &d) { m -= d.m, e -= d.e; return *this; }
+    inline score_t& operator/=(const score_t &d) { m /= d.m, e /= d.e; return *this; }
+    inline score_t& operator*=(const score_t &d) { m *= d.m, e *= d.e; return *this; }
     inline score_t& operator+=(const int x) { m += x, e += x; return *this; }
     inline score_t& operator-=(const int x) { m -= x, e -= x; return *this; }
     inline score_t& operator/=(const int x) { m /= x, e /= x; return *this; }
     inline score_t& operator*=(const int x) { m *= x, e *= x; return *this; }
-    inline bool operator==(const score_t d) { return (d.e == e) && (d.m == m); }
+    inline bool operator==(const score_t &d) { return (d.e == e) && (d.m == m); }
 
     int16_t m;
     int16_t e;

@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2018						          */
+/*  Invictus 2019						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -52,7 +52,7 @@ void search_t::idleloop() {
 }
 
 // use this for checking position routines: doMove and undoMove
-uint64_t search_t::perft(int depth) {
+uint64_t search_t::perft(size_t depth) {
     undo_t undo;
     uint64_t cnt = 0ull;
     if (depth == 0) return 1ull;
@@ -139,18 +139,18 @@ void search_t::start() {
     nodecnt = 0;
     bool inCheck = pos.kingIsInCheck();
 
-    for (depth = 1; e.rootbestdepth < e.limits.depth; depth = e.rootbestdepth + 1) {
+    for (rdepth = 1; e.rootbestdepth < e.limits.depth; rdepth = e.rootbestdepth + 1) {
         int delta = 16;
         e.alpha = -MATE;
         e.beta = MATE;
         maxplysearched = 0;
-        if (depth > 3)
+        if (rdepth > 3)
             e.alpha = std::max(-MATE, e.rootbestmove.s - delta), e.beta = std::min(MATE, e.rootbestmove.s + delta);
         while (true) {
-            //PrintOutput() << thread_id << " : " << depth << " " << e.alpha << " " << e.beta;
+            //PrintOutput() << thread_id << " : " << mdepth << " " << e.alpha << " " << e.beta;
             stop_iter = false;
             resolve_iter = false;
-            search(true, true, e.alpha, e.beta, depth, 0, inCheck);
+            search(true, true, e.alpha, e.beta, rdepth, 0, inCheck);
             if (e.stop) break;
             else {
                 static spinlock_t updatelock;
@@ -161,16 +161,16 @@ void search_t::start() {
                 }
                 bool faillow = rootmove.s <= e.alpha;
                 bool failhigh = rootmove.s >= e.beta;
-                extractPV(rootmove, !faillow && !failhigh && depth > e.rootbestdepth);
-                if (depth >= 8) {
+                extractPV(rootmove, !faillow && !failhigh && rdepth > e.rootbestdepth);
+                if (rdepth >= 8) {
                     //PrintOutput() << "thread_id: " << thread_id;
-                    displayInfo(rootmove, depth, e.alpha, e.beta);
+                    displayInfo(rootmove, rdepth, e.alpha, e.beta);
                 }
                 if (faillow) e.alpha = std::max(-MATE, rootmove.s - delta);
                 else if (failhigh) e.beta = std::min(MATE, rootmove.s + delta);
                 else {
-                    if (depth > e.rootbestdepth) {
-                        e.rootbestdepth = depth;
+                    if (rdepth > e.rootbestdepth) {
+                        e.rootbestdepth = rdepth;
                         e.rootbestmove = rootmove;
                         if (pvlist.size > 1) e.rootponder = pvlist.mv(1);
                         e.stopIteration();
@@ -202,7 +202,7 @@ void search_t::start() {
 bool search_t::stopSearch() {
     ++nodecnt;
     if (thread_id == 0 && e.use_time && (nodecnt & 0x3fff) == 0) {
-        uint64_t currtime = Utils::getTime();
+        int64_t currtime = Utils::getTime();
         if ((currtime >= e.time_limit_max && !resolve_iter) || (currtime >= e.time_limit_abs)) {
             e.stop = true;
         }
