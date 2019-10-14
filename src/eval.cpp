@@ -51,6 +51,9 @@ namespace EvalPar {
     score_t BishopMob = { 3,3 };
     score_t RookMob = { 1,2 };
     score_t QueenMob = { 1,2 };
+    score_t NumAttackers = { 10,10 };
+    score_t NumKZoneAttacks = { 10,5 };
+    score_t AttackWeights = { 5,3 };
     int KnightAtk = 2;
     int BishopAtk = 2;
     int RookAtk = 3;
@@ -110,29 +113,36 @@ void eval_t::mobility(position_t& p, score_t& scr, int side) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = knightMovesBB(sq);
         scr += KnightMob * bitCnt(atk & mobmask);
-        kingzoneatks[side] += (1 << 20) + (KnightAtk << 10) + bitCnt(atk & kingzone[xside]);
+        if (atk & kingzone[xside]) kingzoneatks[side] += (1 << 20) + (KnightAtk << 10) + bitCnt(atk & kingzone[xside]);
     }
     for (uint64_t pcbits = p.getPieceBB(BISHOP, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = bishopAttacksBB(sq, p.occupiedBB);
         scr += BishopMob * bitCnt(atk & mobmask);
-        kingzoneatks[side] += (1 << 20) + (BishopAtk << 10) + bitCnt(atk & kingzone[xside]);
+        if (atk & kingzone[xside]) kingzoneatks[side] += (1 << 20) + (BishopAtk << 10) + bitCnt(atk & kingzone[xside]);
     }
     for (uint64_t pcbits = p.getPieceBB(ROOK, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = rookAttacksBB(sq, p.occupiedBB);
         scr += RookMob * bitCnt(atk & mobmask);
-        kingzoneatks[side] += (1 << 20) + (RookAtk << 10) + bitCnt(atk & kingzone[xside]);
+        if (atk & kingzone[xside]) kingzoneatks[side] += (1 << 20) + (RookAtk << 10) + bitCnt(atk & kingzone[xside]);
     }
     for (uint64_t pcbits = p.getPieceBB(QUEEN, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = queenAttacksBB(sq, p.occupiedBB);
         scr += QueenMob * bitCnt(atk & mobmask);
-        kingzoneatks[side] += (1 << 20) + (QueenAtk << 10) + bitCnt(atk & kingzone[xside]);
+        if (atk & kingzone[xside]) kingzoneatks[side] += (1 << 20) + (QueenAtk << 10) + bitCnt(atk & kingzone[xside]);
     }
 }
 
 void eval_t::kingsafety(position_t& p, score_t& scr, int side) {
+    int tot_atkrs = kingzoneatks[side] >> 20;
+    int kzone_atkcnt = kingzoneatks[side] & ((1 << 10) - 1);
+    if (tot_atkrs >= 2 && kzone_atkcnt >= 1 && p.getPieceBB(QUEEN, side)) {
+        scr += NumAttackers * tot_atkrs;
+        scr += NumKZoneAttacks * kzone_atkcnt;
+        scr += AttackWeights * ((kingzoneatks[side] & ((1 << 20) - 1)) >> 10);
+    }
 }
 
 int eval_t::score(position_t& p) {

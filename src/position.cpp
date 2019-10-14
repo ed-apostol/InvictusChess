@@ -498,8 +498,8 @@ uint64_t position_t::areaSafe(int c, uint64_t occ, uint64_t target) {
 
 bool position_t::sqIsAttacked(uint64_t occ, int sq, int c) {
     return
-        (rookAttacksBB(sq, occ) & ((piecesBB[ROOK] | piecesBB[QUEEN]) & colorBB[c])) ||
-        (bishopAttacksBB(sq, occ) & ((piecesBB[BISHOP] | piecesBB[QUEEN]) & colorBB[c])) ||
+        (rookAttacksBB(sq, occ) & getRookSlidersBB(c)) ||
+        (bishopAttacksBB(sq, occ) & getBishopSlidersBB(c)) ||
         (knightMovesBB(sq) & piecesBB[KNIGHT] & colorBB[c]) ||
         ((pawnAttacksBB(sq, c ^ 1) & piecesBB[PAWN] & colorBB[c])) ||
         (kingMovesBB(sq) & piecesBB[KING] & colorBB[c]);
@@ -607,15 +607,11 @@ bool position_t::moveIsValid(move_t m, uint64_t pinned) {
     const int flag = m.moveFlags();
     const int prom = m.movePromote();
 
-    if (m.m == 0) return false;
-    if (pc < PAWN || pc > KING) return false;
-    if (cap < EMPTY || cap > QUEEN) return false;
+    if (pc == EMPTY) return false;
+    if (cap == KING) return false;
     if (prom != EMPTY && (prom < KNIGHT || prom > QUEEN)) return false;
-    if (from < 0 || from > 63) return false;
-    if (to < 0 || to > 63) return false;
     if (getSide(from) != side) return false;
     if (cap != EMPTY && getSide(to) == side) return false;
-    if (prom != EMPTY && flag != MF_PROMB && flag != MF_PROMN && flag != MF_PROMR && flag != MF_PROMQ) return false;
     if ((pinned & BitMask[from]) && (DirFromTo[from][kpos[side]] != DirFromTo[to][kpos[side]])) return false;
     if (pc != PAWN && (pc != KING || absdiff != 2) && !(pieceAttacksFromBB(pc, from, occupiedBB) & BitMask[to])) return false;
     if (pc == KING) {
@@ -628,7 +624,6 @@ bool position_t::moveIsValid(move_t m, uint64_t pinned) {
         if (absdiff == 16 && flag != MF_PAWN2) return false;
         if (to == stack.epsq && flag != MF_ENPASSANT) return false;
     }
-
     switch (flag) {
     case MF_PAWN2: {
         if (pc != PAWN) return false;

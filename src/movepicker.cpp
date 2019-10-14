@@ -127,25 +127,23 @@ bool movepicker_t::getMoves(move_t& move) {
 }
 
 void movepicker_t::scoreTactical() {
-    for (int x = 0; x < mvlist.size; ++x) {
-        move_t& m = mvlist.mv(x);
+    for (move_t& m : mvlist) {
         m.s = (pos.pieces[m.moveTo()] * 6) + m.movePromote() - pos.pieces[m.moveFrom()];
     }
 }
 
 void movepicker_t::scoreNonTactical() {
-    for (int x = 0; x < mvlist.size; ++x) {
-        move_t& m = mvlist.mv(x);
+    for (move_t& m : mvlist) {
         m.s = s.history[pos.side][pos.getPiece(m.moveFrom())][m.moveTo()];
         //PrintOutput() << m.to_str() << " " << m.s;
     }
 }
 
 void movepicker_t::scoreEvasions() {
-    for (int x = 0; x < mvlist.size; ++x) {
-        if (mvlist.mv(x).m == hashmove) mvlist.mv(x).s = 10000;
-        else if (mvlist.mv(x).m == killer1) mvlist.mv(x).s = 5000;
-        else if (mvlist.mv(x).m == killer2) mvlist.mv(x).s = 4999;
-        else mvlist.mv(x).s = 5000 + (pos.pieces[mvlist.mv(x).moveTo()] * 6) + mvlist.mv(x).movePromote() - pos.pieces[mvlist.mv(x).moveFrom()];
+    for (move_t& m : mvlist) {
+        if (m.m == hashmove) m.s = 10000;
+        else if (m.m == killer1) m.s = 5000;
+        else if (m.m == killer2) m.s = 4999;
+        else m.s = 5000 + (pos.pieces[m.moveTo()] * 6) + m.movePromote() - pos.pieces[m.moveFrom()];
     }
 }

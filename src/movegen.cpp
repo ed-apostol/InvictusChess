@@ -29,12 +29,10 @@ static const MoveFlags Flags[11] = {
 };
 
 #define genMoves(mt, PCB, SP, TBB)\
-    for (uint64_t bits = getPieceBB(Pieces[mt], side) & PCB; bits;) {\
-        int from = popFirstBit(bits);\
-        for (uint64_t mvbits = AttackFuncs[mt](from, SP) & TBB; mvbits;) {\
-            int to = popFirstBit(mvbits);\
-            if (Flags[mt] == MF_PROMN) for (int fl = MF_PROMN; fl <= MF_PROMQ; ++fl) mvlist.add(move_t(from, to, fl));\
-            else mvlist.add(move_t(from, to, Flags[mt]));}}
+    for (uint64_t from, bits = getPieceBB(Pieces[mt], side) & PCB; bits;) {\
+        for (uint64_t mvbits = AttackFuncs[mt](int(from = popFirstBit(bits)), SP) & TBB; mvbits;) {\
+            for (int to = popFirstBit(mvbits), fl = Flags[mt], fll = (Flags[mt] == MF_PROMN ? MF_PROMQ : Flags[mt]); fl <= fll; ++fl)\
+                mvlist.add(move_t(int(from), to, fl));}}
 
 #define genMovesPcs(PCB, TBB)\
     genMoves(MT_KNIGHT, PCB, occupiedBB, TBB);\
@@ -50,9 +48,9 @@ void position_t::genLegal(movelist_t<256>& mvlist) {
         uint64_t pinned = pinnedPieces(side);
         genTacticalMoves(mlt);
         genQuietMoves(mlt);
-        for (int x = 0; x < mlt.size; ++x) {
-            if (!moveIsLegal(mlt.mv(x), pinned, false)) continue;
-            mvlist.add(mlt.mv(x));
+        for (move_t m : mlt) {
+            if (!moveIsLegal(m, pinned, false)) continue;
+            mvlist.add(m);
         }
     }
 }

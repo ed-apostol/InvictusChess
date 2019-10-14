@@ -14,7 +14,7 @@
 const std::string uci_t::name = "Invictus";
 const std::string uci_t::author = "Edsel Apostol";
 const std::string uci_t::year = "2018";
-const std::string uci_t::version = "r245";
+const std::string uci_t::version = "r247";
 
 void uci_t::info() {
     LogAndPrintOutput() << name << " " << version;
@@ -136,10 +136,10 @@ void uci_t::positioncmd(iss& stream) {
         found = false;
         engine.origpos.genLegal(ml);
         for (auto& a : token) a = tolower(a);
-        for (int x = 0; x < ml.size; ++x) {
-            if (ml.mv(x).to_str() == token) {
+        for (move_t m : ml) {
+            if (m.to_str() == token) {
                 found = true;
-                engine.origpos.doMove(undo, ml.mv(x));
+                engine.origpos.doMove(undo, m);
                 break;
             }
         }
@@ -225,8 +225,8 @@ void uci_t::eval() {
 void uci_t::moves() {
     movelist_t<256> ml;
     engine.origpos.genLegal(ml);
-    for (int x = 0; x < ml.size; ++x)
-        PrintOutput() << " " << ml.mv(x).to_str();
+    for (move_t m : ml)
+        PrintOutput() << " " << m.to_str();
 }
 
 void uci_t::displaypos() {

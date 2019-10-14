@@ -64,9 +64,9 @@ uint64_t search_t::perft(size_t depth) {
         pos.genQuietMoves(mvlist);
     }
     uint64_t pinned = pos.pinnedPieces(pos.side);
-    for (int x = 0; x < mvlist.size; ++x) {
-        if (!pos.moveIsLegal(mvlist.mv(x), pinned, inCheck)) continue;
-        pos.doMove(undo, mvlist.mv(x));
+    for (move_t m : mvlist) {
+        if (!pos.moveIsLegal(m, pinned, inCheck)) continue;
+        pos.doMove(undo, m);
         cnt += perft(depth - 1);
         pos.undoMove(undo);
     }
@@ -80,8 +80,8 @@ uint64_t search_t::perft2(int depth) {
     if (depth == 1) return mvlist.size;
     undo_t undo;
     uint64_t cnt = 0ull;
-    for (int x = 0; x < mvlist.size; ++x) {
-        pos.doMove(undo, mvlist.mv(x));
+    for (move_t m : mvlist) {
+        pos.doMove(undo, m);
         cnt += perft2(depth - 1);
         pos.undoMove(undo);
     }
@@ -127,7 +127,7 @@ void search_t::displayInfo(move_t bestmove, int depth, int alpha, int beta) {
         logger << " score mate " << ((bestmove.s > 0) ? (MATE - bestmove.s + 1) / 2 : -(MATE + bestmove.s) / 2);
     uint64_t totalnodes = e.nodesearched();
     logger << " time " << currtime << " nodes " << totalnodes << " nps " << (totalnodes * 1000 / currtime) << " pv";
-    for (int idx = 0; idx < pvlist.size; ++idx) logger << " " << pvlist.mv(idx).to_str();
+    for (move_t m : pvlist) logger << " " << m.to_str();
 }
 
 void search_t::start() {

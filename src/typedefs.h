@@ -105,6 +105,11 @@ struct move_t {
 template<int N>
 struct movelist_t {
 public:
+    move_t* begin() { return &tab[0]; }
+    move_t* end() { return &tab[size]; }
+    move_t const* begin() const { return &tab[0]; }
+    move_t const* end() const { return &tab[size]; }
+
     movelist_t() : size(0) {}
     void add(const move_t& m) { tab[size] = m; ++size; }
     move_t& mv(int idx) { return tab[idx]; }
