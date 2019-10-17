@@ -29,7 +29,7 @@ static const MoveFlags Flags[11] = {
 };
 
 #define genMoves(mt, PCB, SP, TBB)\
-    for (uint64_t from, bits = getPieceBB(Pieces[mt], side) & PCB; bits;) {\
+    for (uint64_t from, bits = pieceBB(Pieces[mt], side) & PCB; bits;) {\
         for (uint64_t mvbits = AttackFuncs[mt](int(from = popFirstBit(bits)), SP) & TBB; mvbits;) {\
             for (int to = popFirstBit(mvbits), fl = Flags[mt], fll = (Flags[mt] == MF_PROMN ? MF_PROMQ : Flags[mt]); fl <= fll; ++fl)\
                 mvlist.add(move_t(int(from), to, fl));}}
@@ -45,7 +45,7 @@ void position_t::genLegal(movelist_t<256>& mvlist) {
         genCheckEvasions(mvlist);
     else {
         movelist_t<256> mlt;
-        uint64_t pinned = pinnedPieces(side);
+        uint64_t pinned = pinnedPiecesBB(side);
         genTacticalMoves(mlt);
         genQuietMoves(mlt);
         for (move_t m : mlt) {
@@ -85,19 +85,19 @@ void position_t::genCheckEvasions(movelist_t<256>& mvlist) {
     const int ksq = kpos[side];
     const uint64_t checkersBB = getAttacksBB(ksq, xside);
 
-    genMoves(MT_KING, occupiedBB, 0, areaSafe(xside, occupiedBB ^ BitMask[ksq], kingMovesBB(ksq)) & ~colorBB[side] & ~kingMovesBB(kpos[xside]));
+    genMoves(MT_KING, occupiedBB, 0, safeSqsBB(xside, occupiedBB ^ BitMask[ksq], kingMovesBB(ksq)) & ~colorBB[side] & ~kingMovesBB(kpos[xside]));
 
     if (checkersBB & (checkersBB - 1)) return;
 
     const int sqchecker = getFirstBit(checkersBB);
-    const uint64_t notpinned = ~pinnedPieces(side);
+    const uint64_t notpinned = ~pinnedPiecesBB(side);
     const uint64_t inbetweenBB = InBetween[sqchecker][ksq];
 
     uint64_t pcbits = notpinned & pawnAttacksBB(sqchecker, xside);
     genMoves(MT_PAWNCAP, pcbits & ~Rank7ByColorBB[side], side, checkersBB);
     genMoves(MT_PAWNCAPPROM, pcbits & Rank7ByColorBB[side], side, checkersBB);
 
-    if (checkersBB & getPieceBB(PAWN, xside) && (sqchecker + ((side == WHITE) ? 8 : -8)) == stack.epsq)
+    if (checkersBB & pieceBB(PAWN, xside) && (sqchecker + ((side == WHITE) ? 8 : -8)) == stack.epsq)
         genMoves(MT_EP, notpinned, side, BitMask[stack.epsq]);
 
     genMovesPcs(notpinned, (inbetweenBB | checkersBB));

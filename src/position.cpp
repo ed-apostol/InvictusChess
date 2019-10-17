@@ -132,10 +132,10 @@ void position_t::doNullMove(undo_t& undo) {
 
 void position_t::undoMove(undo_t& undo) {
     move_t m = stack.lastmove;
-    int xside = side;
-    int from = m.moveFrom();
-    int to = m.moveTo();
-    int pc = pieces[to];
+    const int xside = side;
+    const int from = m.moveFrom();
+    const int to = m.moveTo();
+    const int pc = pieces[to];
 
     side = xside ^ 1;
 
@@ -143,7 +143,7 @@ void position_t::undoMove(undo_t& undo) {
     piecesBB[pc] ^= BitMask[from] | BitMask[to];
     colorBB[side] ^= BitMask[from] | BitMask[to];
 
-    int cap = stack.capturedpc;
+    const int cap = stack.capturedpc;
     pieces[to] = cap;
     if (cap != EMPTY) {
         piecesBB[cap] ^= BitMask[to];
@@ -179,9 +179,9 @@ void position_t::undoMove(undo_t& undo) {
 }
 
 void position_t::doMove(undo_t& undo, move_t m) {
-    int from = m.moveFrom();
-    int to = m.moveTo();
-    int xside = side ^ 1;
+    const int from = m.moveFrom();
+    const int to = m.moveTo();
+    const int xside = side ^ 1;
 
     ASSERT(pieces[to] != KING);
 
@@ -199,7 +199,7 @@ void position_t::doMove(undo_t& undo, move_t m) {
     stack.capturedpc = pieces[to];
     stack.hash ^= ZobColor;
 
-    int pc = pieces[from];
+    const int pc = pieces[from];
     pieces[to] = pieces[from];
     pieces[from] = EMPTY;
     piecesBB[pc] ^= BitMask[from] | BitMask[to];
@@ -213,7 +213,7 @@ void position_t::doMove(undo_t& undo, move_t m) {
     }
     if (pc == KING) kpos[side] = to;
 
-    int cap = stack.capturedpc;
+    const int cap = stack.capturedpc;
     if (cap != EMPTY) {
         piecesBB[cap] ^= BitMask[to];
         colorBB[xside] ^= BitMask[to];
@@ -234,8 +234,8 @@ void position_t::doMove(undo_t& undo, move_t m) {
         stack.fifty = 0;
     } break;
     case MF_CASTLE: {
-        int rook_from = RookFrom[to / 56][(to % 8) > 5];
-        int rook_to = RookTo[to / 56][(to % 8) > 5];
+        const int rook_from = RookFrom[to / 56][(to % 8) > 5];
+        const int rook_to = RookTo[to / 56][(to % 8) > 5];
         pieces[rook_to] = ROOK;
         pieces[rook_from] = EMPTY;
         piecesBB[ROOK] ^= BitMask[rook_from] | BitMask[rook_to];
@@ -245,7 +245,7 @@ void position_t::doMove(undo_t& undo, move_t m) {
         stack.hash ^= ZobPiece[side][ROOK][rook_from] ^ ZobPiece[side][ROOK][rook_to];
     } break;
     case MF_ENPASSANT: {
-        int epsq = (sqRank(from) << 3) + sqFile(to);
+        const int epsq = (sqRank(from) << 3) + sqFile(to);
         pieces[epsq] = EMPTY;
         piecesBB[PAWN] ^= BitMask[epsq];
         colorBB[xside] ^= BitMask[epsq];
@@ -256,7 +256,7 @@ void position_t::doMove(undo_t& undo, move_t m) {
         stack.fifty = 0;
     } break;
     case MF_PROMQ: case MF_PROMR: case MF_PROMB: case MF_PROMN: {
-        int prom = m.movePromote();
+        const int prom = m.movePromote();
         piecesBB[PAWN] ^= BitMask[to]; // remove pawn
         stack.hash ^= ZobPiece[side][PAWN][to];
         stack.phash ^= ZobPiece[side][PAWN][to];
@@ -360,8 +360,8 @@ std::string position_t::positionToFEN() {
 
 std::string position_t::to_str() {
     std::string str;
-    const std::string piecestr = " PNBRQK pnbrqk";
-    const std::string board = "\n  +---+---+---+---+---+---+---+---+\n";
+    static const std::string piecestr = " PNBRQK pnbrqk";
+    static const std::string board = "\n  +---+---+---+---+---+---+---+---+\n";
     str += positionToFEN() + "\n";
     str += "incheck: " + std::to_string(kingIsInCheck());
     str += " capt: " + std::to_string(stack.capturedpc);
@@ -409,18 +409,18 @@ int position_t::getSide(int sq) {
     return BLACK;
 }
 
-uint64_t  position_t::getPieceBB(int pc, int c) {
+uint64_t  position_t::pieceBB(int pc, int c) {
     return piecesBB[pc] & colorBB[c];
 }
 
-uint64_t position_t::getBishopSlidersBB(int c) {
+uint64_t position_t::bishopSlidersBB(int c) {
     return (piecesBB[QUEEN] | piecesBB[BISHOP]) & colorBB[c];
 }
-uint64_t position_t::getRookSlidersBB(int c) {
+uint64_t position_t::rookSlidersBB(int c) {
     return (piecesBB[QUEEN] | piecesBB[ROOK]) & colorBB[c];
 }
 
-uint64_t position_t::allAttackersToSquare(int sq, uint64_t occupied) {
+uint64_t position_t::allAttackersToSqBB(int sq, uint64_t occupied) {
     return
         (colorBB[WHITE] & pawnAttacksBB(sq, BLACK) & piecesBB[PAWN]) |
         (colorBB[BLACK] & pawnAttacksBB(sq, WHITE) & piecesBB[PAWN]) |
@@ -428,6 +428,66 @@ uint64_t position_t::allAttackersToSquare(int sq, uint64_t occupied) {
         (kingMovesBB(sq) & piecesBB[KING]) |
         (bishopAttacksBB(sq, occupied) & (piecesBB[BISHOP] | piecesBB[QUEEN])) |
         (rookAttacksBB(sq, occupied) & (piecesBB[ROOK] | piecesBB[QUEEN]));
+}
+
+uint64_t position_t::safeSqsBB(int c, uint64_t occ, uint64_t target) {
+    uint64_t bits = target;
+    while (target) {
+        int sq = popFirstBit(target);
+        if (sqIsAttacked(occ, sq, c))
+            bits ^= BitMask[sq];
+    }
+    return bits;
+}
+
+uint64_t position_t::pieceAttacksFromBB(int pc, int sq, uint64_t occ) {
+    switch (pc) {
+    case PAWN: return pawnAttacksBB(sq, side);
+    case KNIGHT: return knightMovesBB(sq);
+    case BISHOP: return bishopAttacksBB(sq, occ);
+    case ROOK: return rookAttacksBB(sq, occ);
+    case QUEEN: return queenAttacksBB(sq, occ);
+    case KING: return kingMovesBB(sq);
+    }
+    return 0;
+}
+
+uint64_t position_t::getAttacksBB(int sq, int c) {
+    return colorBB[c] & ((pawnAttacksBB(sq, c ^ 1) & piecesBB[PAWN]) |
+        (knightMovesBB(sq) & piecesBB[KNIGHT]) |
+        (kingMovesBB(sq) & piecesBB[KING]) |
+        (bishopAttacksBB(sq, occupiedBB) & (piecesBB[BISHOP] | piecesBB[QUEEN])) |
+        (rookAttacksBB(sq, occupiedBB) & (piecesBB[ROOK] | piecesBB[QUEEN])));
+}
+
+uint64_t position_t::pinnedPiecesBB(int c) {
+    uint64_t pinned = 0;
+    const int ksq = kpos[c];
+
+    uint64_t pinners = rookSlidersBB(c ^ 1);
+    pinners &= pinners ? rookAttacksBBX(ksq, occupiedBB) : 0;
+    while (pinners) pinned |= InBetween[popFirstBit(pinners)][ksq] & colorBB[c];
+
+    pinners = bishopSlidersBB(c ^ 1);
+    pinners &= pinners ? bishopAttacksBBX(ksq, occupiedBB) : 0;
+    while (pinners) pinned |= InBetween[popFirstBit(pinners)][ksq] & colorBB[c];
+
+    return pinned;
+}
+
+uint64_t position_t::discoveredPiecesBB(int c) {
+    uint64_t pinned = 0;
+    const int ksq = kpos[c ^ 1];
+
+    uint64_t pinners = rookSlidersBB(c);
+    pinners &= pinners ? rookAttacksBBX(ksq, occupiedBB) : 0;
+    while (pinners) pinned |= InBetween[popFirstBit(pinners)][ksq] & colorBB[c] & ~rookSlidersBB(c);
+
+    pinners = bishopSlidersBB(c);
+    pinners &= pinners ? bishopAttacksBBX(ksq, occupiedBB) : 0;
+    while (pinners) pinned |= InBetween[popFirstBit(pinners)][ksq] & colorBB[c] & ~bishopSlidersBB(c);
+
+    return pinned;
 }
 
 bool position_t::statExEval(move_t m, int threshold) {
@@ -450,7 +510,7 @@ bool position_t::statExEval(move_t m, int threshold) {
     uint64_t rooks = piecesBB[ROOK] | piecesBB[QUEEN];
     uint64_t occupied = occupiedBB ^ (BitMask[from] | BitMask[to]);
     if (flag == MF_ENPASSANT && stack.epsq != -1) occupied ^= BitMask[stack.epsq];
-    uint64_t attackers = allAttackersToSquare(to, occupied) & occupied;
+    uint64_t attackers = allAttackersToSqBB(to, occupied) & occupied;
     int color = side ^ 1;
 
     while (true) {
@@ -479,6 +539,10 @@ bool position_t::statExEval(move_t m, int threshold) {
     return side != color;
 }
 
+bool position_t::kingIsInCheck() {
+    return sqIsAttacked(occupiedBB, kpos[side], side ^ 1);
+}
+
 bool position_t::areaIsAttacked(int c, uint64_t target) {
     while (target)
         if (sqIsAttacked(occupiedBB, popFirstBit(target), c))
@@ -486,77 +550,13 @@ bool position_t::areaIsAttacked(int c, uint64_t target) {
     return false;
 }
 
-uint64_t position_t::areaSafe(int c, uint64_t occ, uint64_t target) {
-    uint64_t bits = target;
-    while (target) {
-        int sq = popFirstBit(target);
-        if (sqIsAttacked(occ, sq, c))
-            bits ^= BitMask[sq];
-    }
-    return bits;
-}
-
 bool position_t::sqIsAttacked(uint64_t occ, int sq, int c) {
     return
-        (rookAttacksBB(sq, occ) & getRookSlidersBB(c)) ||
-        (bishopAttacksBB(sq, occ) & getBishopSlidersBB(c)) ||
+        (rookAttacksBB(sq, occ) & rookSlidersBB(c)) ||
+        (bishopAttacksBB(sq, occ) & bishopSlidersBB(c)) ||
         (knightMovesBB(sq) & piecesBB[KNIGHT] & colorBB[c]) ||
         ((pawnAttacksBB(sq, c ^ 1) & piecesBB[PAWN] & colorBB[c])) ||
         (kingMovesBB(sq) & piecesBB[KING] & colorBB[c]);
-}
-
-uint64_t position_t::pieceAttacksFromBB(int pc, int sq, uint64_t occ) {
-    switch (pc) {
-    case PAWN: return pawnAttacksBB(sq, side);
-    case KNIGHT: return knightMovesBB(sq);
-    case BISHOP: return bishopAttacksBB(sq, occ);
-    case ROOK: return rookAttacksBB(sq, occ);
-    case QUEEN: return queenAttacksBB(sq, occ);
-    case KING: return kingMovesBB(sq);
-    }
-    return 0;
-}
-
-uint64_t position_t::getAttacksBB(int sq, int c) {
-    return colorBB[c] & ((pawnAttacksBB(sq, c ^ 1) & piecesBB[PAWN]) |
-        (knightMovesBB(sq) & piecesBB[KNIGHT]) |
-        (kingMovesBB(sq) & piecesBB[KING]) |
-        (bishopAttacksBB(sq, occupiedBB) & (piecesBB[BISHOP] | piecesBB[QUEEN])) |
-        (rookAttacksBB(sq, occupiedBB) & (piecesBB[ROOK] | piecesBB[QUEEN])));
-}
-
-bool position_t::kingIsInCheck() {
-    return sqIsAttacked(occupiedBB, kpos[side], side ^ 1);
-}
-
-uint64_t position_t::pinnedPieces(int c) {
-    uint64_t pinned = 0;
-    const int ksq = kpos[c];
-
-    uint64_t pinners = getRookSlidersBB(c ^ 1);
-    pinners &= pinners ? rookAttacksBBX(ksq, occupiedBB) : 0;
-    while (pinners) pinned |= InBetween[popFirstBit(pinners)][ksq] & colorBB[c];
-
-    pinners = getBishopSlidersBB(c ^ 1);
-    pinners &= pinners ? bishopAttacksBBX(ksq, occupiedBB) : 0;
-    while (pinners) pinned |= InBetween[popFirstBit(pinners)][ksq] & colorBB[c];
-
-    return pinned;
-}
-
-uint64_t position_t::discoveredCheckCandidates(int c) {
-    uint64_t pinned = 0;
-    const int ksq = kpos[c ^ 1];
-
-    uint64_t pinners = getRookSlidersBB(c);
-    pinners &= pinners ? rookAttacksBBX(ksq, occupiedBB) : 0;
-    while (pinners) pinned |= InBetween[popFirstBit(pinners)][ksq] & colorBB[c] & ~getRookSlidersBB(c);
-
-    pinners = getBishopSlidersBB(c);
-    pinners &= pinners ? bishopAttacksBBX(ksq, occupiedBB) : 0;
-    while (pinners) pinned |= InBetween[popFirstBit(pinners)][ksq] & colorBB[c] & ~getBishopSlidersBB(c);
-
-    return pinned;
 }
 
 bool position_t::moveIsLegal(move_t move, uint64_t pinned, bool incheck) {
@@ -569,7 +569,7 @@ bool position_t::moveIsLegal(move_t move, uint64_t pinned, bool incheck) {
 
     if (move.isEnPassant()) {
         uint64_t b = occupiedBB ^ BitMask[from] ^ BitMask[(sqRank(from) << 3) + sqFile(to)] ^ BitMask[to];
-        return !(rookAttacksBB(ksq, b) & getRookSlidersBB(xside)) && !(bishopAttacksBB(ksq, b) & getBishopSlidersBB(xside));
+        return !(rookAttacksBB(ksq, b) & rookSlidersBB(xside)) && !(bishopAttacksBB(ksq, b) & bishopSlidersBB(xside));
     }
     if (move.isCastle()) {
         return !areaIsAttacked(xside, CastleSquareMask2[side][to > from ? 0 : 1]);

@@ -57,25 +57,21 @@ struct position_t {
     bool isMatDrawn();
     inline int getPiece(int sq);
     inline int getSide(int sq);
-    uint64_t getPieceBB(int pc, int c);
-    uint64_t getBishopSlidersBB(int c);
-    uint64_t getRookSlidersBB(int c);
-    uint64_t allAttackersToSquare(int sq, uint64_t occupied);
-    bool statExEval(move_t m, int threshold);
 
-    void genLegal(movelist_t<256>& mvlist);
-    void genQuietMoves(movelist_t<256>& mvlist);
-    void genTacticalMoves(movelist_t<256>& mvlist);
-    void genCheckEvasions(movelist_t<256>& mvlist);
-
-    bool areaIsAttacked(int c, uint64_t area);
-    uint64_t areaSafe(int c, uint64_t occ, uint64_t target);
-    bool sqIsAttacked(uint64_t occ, int sq, int c);
-    bool kingIsInCheck();
+    uint64_t pieceBB(int pc, int c);
+    uint64_t bishopSlidersBB(int c);
+    uint64_t rookSlidersBB(int c);
+    uint64_t allAttackersToSqBB(int sq, uint64_t occupied);
+    uint64_t safeSqsBB(int c, uint64_t occ, uint64_t target);
     uint64_t pieceAttacksFromBB(int pc, int sq, uint64_t occ);
     uint64_t getAttacksBB(int sq, int c);
-    uint64_t pinnedPieces(int c);
-    uint64_t discoveredCheckCandidates(int c);
+    uint64_t pinnedPiecesBB(int c);
+    uint64_t discoveredPiecesBB(int c);
+
+    bool statExEval(move_t m, int threshold);
+    bool kingIsInCheck();
+    bool areaIsAttacked(int c, uint64_t target);
+    bool sqIsAttacked(uint64_t occ, int sq, int c);
     bool moveIsLegal(move_t move, uint64_t pinned, bool incheck);
     bool moveIsCheck(move_t m, uint64_t dcc);
     bool moveIsValid(move_t move, uint64_t pinned);
@@ -83,6 +79,11 @@ struct position_t {
 
     bool hashIsValid();
     bool phashIsValid();
+
+    void genLegal(movelist_t<256>& mvlist);
+    void genQuietMoves(movelist_t<256>& mvlist);
+    void genTacticalMoves(movelist_t<256>& mvlist);
+    void genCheckEvasions(movelist_t<256>& mvlist);
 
     uint64_t occupiedBB;
     uint64_t history[1024];

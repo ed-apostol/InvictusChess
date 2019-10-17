@@ -14,7 +14,7 @@ movepicker_t::movepicker_t(search_t& search, bool inCheck, bool skipq, int ply, 
     hashmove = hmove;
     killer1 = k1;
     killer2 = k2;
-    pinned = pos.pinnedPieces(pos.side);
+    pinned = pos.pinnedPiecesBB(pos.side);
     skipquiet = skipq;
     if (inCheck) {
         pos.genCheckEvasions(mvlist);

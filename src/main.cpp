@@ -17,12 +17,14 @@ int main(void) {
 // TODO:
 //-history moves and other new history ideas
 //-LMP
-//-king safety eval
 //-threats
 //-passed pawn eval
-//-mobility
 //-pawn structure
 //-razoring, delta pruning, futility,
+//-better time management
+//-outposts, open files, 7th rank, double bishop,
 
 //DONE:
 //-sync iter depth
+//-king safety eval
+//-mobility

@@ -46,20 +46,24 @@ namespace {
 }
 
 namespace EvalPar {
-    const score_t mat_values[7] = { { 0,0 },{ 100, 125 },{ 460, 390 },{ 470, 420 },{ 640, 720 },{ 1310,1350 },{ 0,0 } };
-    score_t KnightMob = { 6,8 };
-    score_t BishopMob = { 3,3 };
-    score_t RookMob = { 1,2 };
-    score_t QueenMob = { 1,2 };
-    score_t NumAttackers = { 10,10 };
-    score_t NumKZoneAttacks = { 10,5 };
-    score_t AttackWeights = { 5,3 };
+    static const int FileWing[8] = { 0, 0, 0, 1, 1, 2, 2, 2 };
+    const score_t mat_values[7] = { { 0, 0 },{ 100, 125 },{ 460, 390 },{ 470, 420 },{ 640, 720 },{ 1310, 1350 },{ 0, 0 } };
+    score_t KnightMob = { 6, 8 };
+    score_t BishopMob = { 3, 3 };
+    score_t RookMob = { 1, 2 };
+    score_t QueenMob = { 1, 2 };
+    score_t NumAttackers = { 10, 10 };
+    score_t NumKZoneAttacks = { 10, 5 };
+    score_t AttackWeights = { 5, 3 };
+    score_t ShelterBonus = { 5, 0 };
     int KnightAtk = 2;
     int BishopAtk = 2;
     int RookAtk = 3;
     int QueenAtk = 5;
     score_t pst[2][8][64];
-    uint64_t KingZoneMask[2][64];
+    uint64_t KingZoneBB[2][64];
+    uint64_t KingShelterBB[2][3];
+    uint64_t KingShelter2BB[2][3];
 
     void initArr() {
         std::function<score_t(int)> pstInit[] = { pawnPST, knightPST,bishopPST,rookPST,queenPST,kingPST };
@@ -72,12 +76,18 @@ namespace EvalPar {
             }
         }
         for (int sq = 0; sq < 64; ++sq) {
-            KingZoneMask[WHITE][sq] = kingMovesBB(sq) | (1ull << sq) | (kingMovesBB(sq) << 8);
-            KingZoneMask[BLACK][sq] = kingMovesBB(sq) | (1ull << sq) | (kingMovesBB(sq) >> 8);
-            KingZoneMask[WHITE][sq] |= sqFile(sq) == FileA ? KingZoneMask[WHITE][sq] << 1 : 0;
-            KingZoneMask[BLACK][sq] |= sqFile(sq) == FileA ? KingZoneMask[BLACK][sq] << 1 : 0;
-            KingZoneMask[WHITE][sq] |= sqFile(sq) == FileH ? KingZoneMask[WHITE][sq] >> 1 : 0;
-            KingZoneMask[BLACK][sq] |= sqFile(sq) == FileH ? KingZoneMask[BLACK][sq] >> 1 : 0;
+            for (int color = WHITE; color <= BLACK; ++color) {
+                KingZoneBB[color][sq] = kingMovesBB(sq) | (1ull << sq) | ShiftPtr[color](kingMovesBB(sq), 8);
+                KingZoneBB[color][sq] |= sqFile(sq) == FileA ? KingZoneBB[color][sq] << 1 : 0;
+                KingZoneBB[color][sq] |= sqFile(sq) == FileH ? KingZoneBB[color][sq] >> 1 : 0;
+            }
+        }
+        const int KingSquare[2][3] = { {B1, E1, G1}, {B8, E8, G8} };
+        for (int color = WHITE; color <= BLACK; ++color) {
+            for (int castle = 0; castle <= 2; ++castle) {
+                KingShelterBB[color][castle] = kingMovesBB(KingSquare[color][castle]) & Rank2ByColorBB[color];
+                KingShelter2BB[color][castle] = ShiftPtr[color](KingShelterBB[color][castle], 8);
+            }
         }
     }
     void displayPSTbyPC(score_t A[], std::string piece, bool midgame) {
@@ -109,25 +119,25 @@ using namespace EvalPar;
 void eval_t::mobility(position_t& p, score_t& scr, int side) {
     int xside = side ^ 1;
     uint64_t mobmask = ~p.colorBB[side] & ~pawnatks[xside];
-    for (uint64_t pcbits = p.getPieceBB(KNIGHT, side); pcbits;) {
+    for (uint64_t pcbits = p.pieceBB(KNIGHT, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = knightMovesBB(sq);
         scr += KnightMob * bitCnt(atk & mobmask);
         if (atk & kingzone[xside]) kingzoneatks[side] += (1 << 20) + (KnightAtk << 10) + bitCnt(atk & kingzone[xside]);
     }
-    for (uint64_t pcbits = p.getPieceBB(BISHOP, side); pcbits;) {
+    for (uint64_t pcbits = p.pieceBB(BISHOP, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = bishopAttacksBB(sq, p.occupiedBB);
         scr += BishopMob * bitCnt(atk & mobmask);
         if (atk & kingzone[xside]) kingzoneatks[side] += (1 << 20) + (BishopAtk << 10) + bitCnt(atk & kingzone[xside]);
     }
-    for (uint64_t pcbits = p.getPieceBB(ROOK, side); pcbits;) {
+    for (uint64_t pcbits = p.pieceBB(ROOK, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = rookAttacksBB(sq, p.occupiedBB);
         scr += RookMob * bitCnt(atk & mobmask);
         if (atk & kingzone[xside]) kingzoneatks[side] += (1 << 20) + (RookAtk << 10) + bitCnt(atk & kingzone[xside]);
     }
-    for (uint64_t pcbits = p.getPieceBB(QUEEN, side); pcbits;) {
+    for (uint64_t pcbits = p.pieceBB(QUEEN, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = queenAttacksBB(sq, p.occupiedBB);
         scr += QueenMob * bitCnt(atk & mobmask);
@@ -136,9 +146,28 @@ void eval_t::mobility(position_t& p, score_t& scr, int side) {
 }
 
 void eval_t::kingsafety(position_t& p, score_t& scr, int side) {
+    if (!p.pieceBB(QUEEN, side)) return;
+    if (!p.pieceBB(ROOK, side) || !p.pieceBB(BISHOP, side) || !p.pieceBB(KNIGHT, side)) return;
+
+    int xside = side ^ 1;
+    int best_shelter = bitCnt(KingShelterBB[xside][FileWing[sqFile(p.kpos[xside])]] & p.pieceBB(PAWN, xside)) * 2;
+    best_shelter += bitCnt(KingShelter2BB[xside][FileWing[sqFile(p.kpos[xside])]] & p.pieceBB(PAWN, xside));
+
+    if (p.stack.castle & (xside ? BCQS : WCQS)) {
+        int shelter = bitCnt(KingShelterBB[xside][0] & p.pieceBB(PAWN, xside)) * 2;
+        shelter += bitCnt(KingShelter2BB[xside][0] & p.pieceBB(PAWN, xside));
+        if (shelter > best_shelter) best_shelter = shelter;
+    }
+    if (p.stack.castle & (xside ? BCKS : WCKS)) {
+        int shelter = bitCnt(KingShelterBB[xside][2] & p.pieceBB(PAWN, xside)) * 2;
+        shelter += bitCnt(KingShelter2BB[xside][2] & p.pieceBB(PAWN, xside));
+        if (shelter > best_shelter) best_shelter = shelter;
+    }
+    scr -= ShelterBonus * best_shelter;
+
     int tot_atkrs = kingzoneatks[side] >> 20;
     int kzone_atkcnt = kingzoneatks[side] & ((1 << 10) - 1);
-    if (tot_atkrs >= 2 && kzone_atkcnt >= 1 && p.getPieceBB(QUEEN, side)) {
+    if (tot_atkrs >= 2 && kzone_atkcnt >= 1) {
         scr += NumAttackers * tot_atkrs;
         scr += NumKZoneAttacks * kzone_atkcnt;
         scr += AttackWeights * ((kingzoneatks[side] & ((1 << 20) - 1)) >> 10);
@@ -147,18 +176,17 @@ void eval_t::kingsafety(position_t& p, score_t& scr, int side) {
 
 int eval_t::score(position_t& p) {
     const int side = p.side, xside = side ^ 1;
-
-    pawnatks[side] = pawnAttackBB(p.getPieceBB(PAWN, side), side);
-    pawnatks[xside] = pawnAttackBB(p.getPieceBB(PAWN, xside), xside);
-    kingzone[side] = KingZoneMask[side][p.kpos[side]];
-    kingzone[xside] = KingZoneMask[xside][p.kpos[xside]];
-    kingzoneatks[side] = kingzoneatks[xside] = 0;
     score_t scr[2] = { p.stack.score[0], p.stack.score[1] };
 
-    mobility(p, scr[side], side);
-    mobility(p, scr[xside], xside);
-    kingsafety(p, scr[side], side);
-    kingsafety(p, scr[xside], xside);
+    for (int color = WHITE; color <= BLACK; ++color) {
+        pawnatks[color] = pawnAttackBB(p.pieceBB(PAWN, color), color);
+        kingzone[color] = KingZoneBB[color][p.kpos[color]];
+        kingzoneatks[color] = 0;
+    }
+    for (int color = WHITE; color <= BLACK; ++color) {
+        mobility(p, scr[color], color);
+        kingsafety(p, scr[color], color);
+    }
 
     int phase = 4 * bitCnt(p.piecesBB[QUEEN]) + 2 * bitCnt(p.piecesBB[ROOK]) + 1 * bitCnt(p.piecesBB[KNIGHT] | p.piecesBB[BISHOP]);
     score_t s = scr[side] - scr[xside];

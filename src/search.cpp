@@ -63,7 +63,7 @@ uint64_t search_t::perft(size_t depth) {
         pos.genTacticalMoves(mvlist);
         pos.genQuietMoves(mvlist);
     }
-    uint64_t pinned = pos.pinnedPieces(pos.side);
+    uint64_t pinned = pos.pinnedPiecesBB(pos.side);
     for (move_t m : mvlist) {
         if (!pos.moveIsLegal(m, pinned, inCheck)) continue;
         pos.doMove(undo, m);
@@ -95,7 +95,7 @@ void search_t::extractPV(move_t rmove, bool fillhash) {
     pvlist.add(rmove);
     pos.doMove(undo[ply++], rmove);
     for (pv_hash_entry_t entry; e.pvt.retrievePV(pos.stack.hash, entry);) {
-        uint64_t pinned = pos.pinnedPieces(pos.side);
+        uint64_t pinned = pos.pinnedPiecesBB(pos.side);
         if (!pos.moveIsValid(entry.move, pinned)) break;
         if (!pos.moveIsLegal(entry.move, pinned, false)) break;
         pvlist.add(entry.move);
@@ -272,7 +272,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
     int score;
     uint32_t move_hash;
     movepicker_t mp(*this, inCheck, false, ply, tte.move.m, killer1[ply], killer2[ply]);
-    uint64_t dcc = pos.discoveredCheckCandidates(pos.side);
+    uint64_t dcc = pos.discoveredPiecesBB(pos.side);
     playedmoves[ply].size = 0;
     for (move_t m; mp.getMoves(m);) {
         if (e.doSMP && mp.stage == STG_DEFERRED) {
@@ -387,7 +387,7 @@ int search_t::qsearch(int alpha, int beta, int ply, bool inCheck) {
     undo_t undo;
     move_t best_move(0);
     int movestried = 0;
-    uint64_t dcc = pos.discoveredCheckCandidates(pos.side);
+    uint64_t dcc = pos.discoveredPiecesBB(pos.side);
     for (move_t m; mp.getMoves(m);) {
         ++movestried;
         bool moveGivesCheck = pos.moveIsCheck(m, dcc);
