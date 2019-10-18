@@ -124,7 +124,16 @@ namespace {
     uint64_t shiftRight(uint64_t b, int i) {
         return (b >> i);
     }
-    std::function<uint64_t(uint64_t, int)> ShiftPtr[] = { shiftLeft, shiftRight };
+    uint64_t fillUp(uint64_t b) {
+        b |= b << 8;
+        b |= b << 16;
+        return (b | (b << 32));
+    }
+    uint64_t fillDown(uint64_t b) {
+        b |= b >> 8;
+        b |= b >> 16;
+        return (b | (b >> 32));
+    }
 }
 
 namespace Attacks {
@@ -179,12 +188,13 @@ namespace Attacks {
         return KingMoves[from];
     }
 
-    std::function<uint64_t(uint64_t, int)> ShiftPtr[] = { shiftLeft, shiftRight };
+    std::function<uint64_t(uint64_t, int)> shiftBB[] = { shiftLeft, shiftRight };
+    std::function<uint64_t(uint64_t)> fillBB[] = { fillUp, fillDown };
 
     uint64_t pawnAttackBB(uint64_t pawns, size_t color) {
         const int Shift[] = { 9, 7 };
-        uint64_t pawnAttackLeft = ShiftPtr[color](pawns, Shift[color ^ 1]) & ~FileHBB;
-        uint64_t pawnAttackright = ShiftPtr[color](pawns, Shift[color]) & ~FileABB;
+        uint64_t pawnAttackLeft = shiftBB[color](pawns, Shift[color ^ 1]) & ~FileHBB;
+        uint64_t pawnAttackright = shiftBB[color](pawns, Shift[color]) & ~FileABB;
         return (pawnAttackLeft | pawnAttackright);
     }
 }

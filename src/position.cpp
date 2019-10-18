@@ -413,6 +413,10 @@ uint64_t  position_t::pieceBB(int pc, int c) {
     return piecesBB[pc] & colorBB[c];
 }
 
+uint64_t  position_t::pieceBB(int pc) {
+    return piecesBB[pc];
+}
+
 uint64_t position_t::bishopSlidersBB(int c) {
     return (piecesBB[QUEEN] | piecesBB[BISHOP]) & colorBB[c];
 }

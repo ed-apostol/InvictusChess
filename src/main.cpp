@@ -18,7 +18,6 @@ int main(void) {
 //-history moves and other new history ideas
 //-LMP
 //-threats
-//-passed pawn eval
 //-pawn structure
 //-razoring, delta pruning, futility,
 //-better time management
@@ -28,3 +27,4 @@ int main(void) {
 //-sync iter depth
 //-king safety eval
 //-mobility
+//-passed pawn eval

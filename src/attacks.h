@@ -21,6 +21,7 @@ namespace Attacks {
 
     extern inline uint64_t knightMovesBB(int from);
     extern inline uint64_t kingMovesBB(int from);
-    extern std::function<uint64_t(uint64_t, int)> ShiftPtr[];
+    extern std::function<uint64_t(uint64_t, int)> shiftBB[];
+    extern std::function<uint64_t(uint64_t)> fillBB[];
     extern inline uint64_t pawnAttackBB(uint64_t pawns, size_t color);
 }

@@ -61,8 +61,8 @@ void position_t::genQuietMoves(movelist_t<256>& mvlist) {
     if (stack.castle & (side ? BCQS : WCQS) && !(occupiedBB & CastleSquareMask1[side][1]))
         mvlist.add(move_t(CastleSquareFrom[side], CastleSquareTo[side][1], MF_CASTLE));
 
-    genMoves(MT_PAWN, ~Rank7ByColorBB[side] & ShiftPtr[side ^ 1](~occupiedBB, 8), side, ~occupiedBB);
-    genMoves(MT_PAWN2, Rank2ByColorBB[side] & ShiftPtr[side ^ 1](~occupiedBB, 8) & ShiftPtr[side ^ 1](~occupiedBB, 16), side, ~occupiedBB);
+    genMoves(MT_PAWN, ~Rank7ByColorBB[side] & shiftBB[side ^ 1](~occupiedBB, 8), side, ~occupiedBB);
+    genMoves(MT_PAWN2, Rank2ByColorBB[side] & shiftBB[side ^ 1](~occupiedBB, 8) & shiftBB[side ^ 1](~occupiedBB, 16), side, ~occupiedBB);
     genMovesPcs(occupiedBB, ~occupiedBB);
     genMoves(MT_KING, occupiedBB, 0, ~occupiedBB & ~kingMovesBB(kpos[side ^ 1]));
 }
@@ -104,9 +104,9 @@ void position_t::genCheckEvasions(movelist_t<256>& mvlist) {
 
     if (!inbetweenBB) return;
 
-    pcbits = notpinned & ShiftPtr[side ^ 1](inbetweenBB, 8);
+    pcbits = notpinned & shiftBB[side ^ 1](inbetweenBB, 8);
     genMoves(MT_PAWN, pcbits & ~Rank7ByColorBB[side], side, inbetweenBB);
     genMoves(MT_PAWNPROM, pcbits & Rank7ByColorBB[side], side, inbetweenBB);
-    pcbits = notpinned & ShiftPtr[side ^ 1](~occupiedBB, 8) & ShiftPtr[side ^ 1](~occupiedBB, 16) & ShiftPtr[side ^ 1](inbetweenBB, 16);
+    pcbits = notpinned & shiftBB[side ^ 1](~occupiedBB, 8) & shiftBB[side ^ 1](~occupiedBB, 16) & shiftBB[side ^ 1](inbetweenBB, 16);
     genMoves(MT_PAWN2, pcbits & Rank2ByColorBB[side], side, inbetweenBB);
 }

@@ -59,6 +59,7 @@ struct position_t {
     inline int getSide(int sq);
 
     uint64_t pieceBB(int pc, int c);
+    uint64_t pieceBB(int pc);
     uint64_t bishopSlidersBB(int c);
     uint64_t rookSlidersBB(int c);
     uint64_t allAttackersToSqBB(int sq, uint64_t occupied);
