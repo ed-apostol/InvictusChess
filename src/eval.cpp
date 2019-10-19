@@ -46,7 +46,7 @@ namespace {
         return file[sqFile(sq)] + rank[sqRank(sq)];
     }
     inline int distance(int a, int b) {
-        return std::max(abs((sqFile(a)) - (sqRank(b))), abs((sqFile(a)) - (sqRank(b))));
+        return std::max(abs(sqFile(a) - sqFile(b)), abs(sqRank(a) - sqRank(b)));
     }
     inline score_t hyperbolic(score_t min, score_t max, int r) {
         static const int bonus[8] = { 0, 0, 0, 13, 34, 77, 128, 0 };
@@ -57,12 +57,17 @@ namespace {
 namespace EvalPar {
     static const int FileWing[8] = { 0, 0, 0, 1, 1, 2, 2, 2 };
     const score_t mat_values[7] = { { 0, 0 },{ 100, 125 },{ 460, 390 },{ 470, 420 },{ 640, 720 },{ 1310, 1350 },{ 0, 0 } };
-    score_t PasserBonusMin = { 20, 10 };
-    score_t PasserBonusMax = { 140, 70 };
-    score_t PasserDistOwn = { 0, 40 };
-    score_t PasserDistEnemy = { 0, 25 };
-    score_t PasserBlocked[2] = { { 20, 20 }, { -20, -20 } };
-    score_t PasserUnsafe[2] = { { 20, 20 }, { -20, -20 } };
+    score_t PawnConnected = { 3, 3 };
+    score_t PawnDoubled = { 8, 10 };
+    score_t PawnIsolated = { 12, 16 };
+    score_t PawnBackward = { 15, 10 };
+
+    score_t PasserBonusMin = { 20, 20 };
+    score_t PasserBonusMax = { 140, 140 };
+    score_t PasserDistOwn = { 0, 20 };
+    score_t PasserDistEnemy = { 0, 40 };
+    score_t PasserNotBlocked = { 40, 60 };
+    score_t PasserSafePush = { 40, 60 };
     score_t KnightMob = { 6, 8 };
     score_t BishopMob = { 3, 3 };
     score_t RookMob = { 1, 2 };
@@ -130,8 +135,23 @@ namespace EvalPar {
 
 using namespace EvalPar;
 
+void eval_t::pawnstructure(position_t& p, score_t& scr, int side) {
+    const int xside = side ^ 1;
+    const uint64_t pawns = p.pieceBB(PAWN, side), xpawns = p.pieceBB(PAWN, xside);
+
+    uint64_t connected = pawns & (pawnatks[side] | shiftBB[xside](pawnatks[side], 8));
+    uint64_t doubled = pawns & fillBBEx[xside](pawns);
+    uint64_t isolated = pawns & ~fillBB[xside](pawnatks[side]);
+    uint64_t backward = shiftBB[xside](shiftBB[side](pawns, 8) & (fillBB[xside](pawnatks[xside]) | xpawns) & ~fillBB[side](pawnatks[side]), 8) & isolated;
+
+    scr += PawnConnected * bitCnt(connected);
+    scr -= PawnDoubled * bitCnt(doubled);
+    scr -= PawnIsolated * bitCnt(isolated);
+    scr -= PawnBackward * bitCnt(backward);
+}
+
 void eval_t::mobility(position_t& p, score_t& scr, int side) {
-    int xside = side ^ 1;
+    const int xside = side ^ 1;
     uint64_t mobmask = ~p.colorBB[side] & ~pawnatks[xside];
     for (uint64_t pcbits = p.pieceBB(KNIGHT, side); pcbits;) {
         int sq = popFirstBit(pcbits);
@@ -167,7 +187,7 @@ void eval_t::kingsafety(position_t& p, score_t& scr, int side) {
     if (!p.pieceBB(QUEEN, side)) return;
     if (!p.pieceBB(ROOK, side) || !p.pieceBB(BISHOP, side) || !p.pieceBB(KNIGHT, side)) return;
 
-    int xside = side ^ 1;
+    const int xside = side ^ 1;
     int curr_shelter = bitCnt(KingShelterBB[xside][FileWing[sqFile(p.kpos[xside])]] & p.pieceBB(PAWN, xside)) * 2;
     curr_shelter += bitCnt(KingShelter2BB[xside][FileWing[sqFile(p.kpos[xside])]] & p.pieceBB(PAWN, xside));
     int best_shelter = curr_shelter;
@@ -193,15 +213,15 @@ void eval_t::kingsafety(position_t& p, score_t& scr, int side) {
 
 void eval_t::passedpawns(position_t& p, score_t& scr, int side) {
     const int xside = side ^ 1;
-    uint64_t passers = p.pieceBB(PAWN, side) & ~fillBB[xside](shiftBB[xside](p.pieceBB(PAWN), 8)) & ~fillBB[xside](pawnatks[xside]);
+    uint64_t passers = p.pieceBB(PAWN, side) & ~fillBBEx[xside](p.pieceBB(PAWN)) & ~fillBB[xside](pawnatks[xside]);
     while (passers) {
         score_t local_scr;
         int sq = popFirstBit(passers);
         int rank = side == WHITE ? sqRank(sq) : 7 - sqRank(sq);
         local_scr -= PasserDistOwn * distance(p.kpos[side], sq);
         local_scr += PasserDistEnemy * distance(p.kpos[xside], sq);
-        local_scr += PasserBlocked[bool(pawnMovesBB(sq, side) & p.occupiedBB)];
-        local_scr += PasserUnsafe[bool(pawnMovesBB(sq, side) & allatks[xside])];
+        if (pawnMovesBB(sq, side) & ~p.occupiedBB) local_scr += PasserNotBlocked;
+        if (pawnMovesBB(sq, side) & ~allatks[xside]) local_scr += PasserSafePush;
         scr += hyperbolic({ 0, 0 }, local_scr, rank);
         scr += hyperbolic(PasserBonusMin, PasserBonusMax, rank);
     }
@@ -218,6 +238,7 @@ int eval_t::score(position_t& p) {
         kingzoneatks[color] = 0;
     }
     for (int color = WHITE; color <= BLACK; ++color) {
+        pawnstructure(p, scr[color], color);
         mobility(p, scr[color], color);
         kingsafety(p, scr[color], color);
         passedpawns(p, scr[color], color);

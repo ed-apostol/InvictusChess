@@ -125,14 +125,16 @@ namespace {
         return (b >> i);
     }
     uint64_t fillUp(uint64_t b) {
-        b |= b << 8;
-        b |= b << 16;
-        return (b | (b << 32));
+        return b |= b << 8, b |= b << 16, b |= b << 32;
     }
     uint64_t fillDown(uint64_t b) {
-        b |= b >> 8;
-        b |= b >> 16;
-        return (b | (b >> 32));
+        return b |= b >> 8, b |= b >> 16, b |= b >> 32;
+    }
+    uint64_t fillUpEx(uint64_t b) {
+        return b |= b << 8, b |= b << 16, (b |= b << 32) << 8;
+    }
+    uint64_t fillDownEx(uint64_t b) {
+        return b |= b >> 8, b |= b >> 16, (b |= b >> 32) >> 8;
     }
 }
 
@@ -188,8 +190,9 @@ namespace Attacks {
         return KingMoves[from];
     }
 
-    std::function<uint64_t(uint64_t, int)> shiftBB[] = { shiftLeft, shiftRight };
-    std::function<uint64_t(uint64_t)> fillBB[] = { fillUp, fillDown };
+    std::function<uint64_t(uint64_t, int)> shiftBB[2] = { shiftLeft, shiftRight };
+    std::function<uint64_t(uint64_t)> fillBB[2] = { fillUp, fillDown };
+    std::function<uint64_t(uint64_t)> fillBBEx[2] = { fillUpEx, fillDownEx };
 
     uint64_t pawnAttackBB(uint64_t pawns, size_t color) {
         const int Shift[] = { 9, 7 };

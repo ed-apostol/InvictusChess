@@ -17,6 +17,7 @@ namespace EvalPar {
 }
 
 struct eval_t {
+    void pawnstructure(position_t& p, score_t& scr, int side);
     void mobility(position_t& p, score_t& scr, int side);
     void kingsafety(position_t& p, score_t& scr, int side);
     void passedpawns(position_t& p, score_t& scr, int side);
