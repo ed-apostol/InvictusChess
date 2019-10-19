@@ -141,8 +141,8 @@ void eval_t::pawnstructure(position_t& p, score_t& scr, int side) {
 
     uint64_t connected = pawns & (pawnatks[side] | shiftBB[xside](pawnatks[side], 8));
     uint64_t doubled = pawns & fillBBEx[xside](pawns);
-    uint64_t isolated = pawns & ~fillBB[xside](pawnatks[side]);
-    uint64_t backward = shiftBB[xside](shiftBB[side](pawns, 8) & (fillBB[xside](pawnatks[xside]) | xpawns) & ~fillBB[side](pawnatks[side]), 8) & isolated;
+    uint64_t isolated = pawns & ~fillBB[side](fillBB[xside](pawnatks[side]));
+    uint64_t backward = shiftBB[xside](shiftBB[side](pawns, 8) & (fillBB[xside](pawnatks[xside]) | xpawns) & ~fillBB[side](pawnatks[side]), 8) & ~isolated;
 
     scr += PawnConnected * bitCnt(connected);
     scr -= PawnDoubled * bitCnt(doubled);
