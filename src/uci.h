@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019						          */
+/*  Invictus 2019                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -32,6 +32,7 @@ private:
     void newgame();
     void displayID();
     void quit();
+    void tune();
     void perftbench(iss& stream);
     void perft(iss& stream);
     void eval();

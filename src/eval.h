@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019						          */
+/*  Invictus 2019                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -8,13 +8,6 @@
 
 #include "typedefs.h"
 #include "position.h"
-
-namespace EvalPar {
-    extern const score_t mat_values[7];
-    extern score_t pst[2][8][64];
-    extern void initArr();
-    extern void displayPST();
-}
 
 struct eval_t {
     void pawnstructure(position_t& p, int side);

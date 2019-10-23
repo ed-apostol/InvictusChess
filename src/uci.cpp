@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019						          */
+/*  Invictus 2019                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -10,11 +10,13 @@
 #include "search.h"
 #include "attacks.h"
 #include "eval.h"
+#include "params.h"
+#include "tune.h"
 
 const std::string uci_t::name = "Invictus";
 const std::string uci_t::author = "Edsel Apostol";
-const std::string uci_t::year = "2018";
-const std::string uci_t::version = "r258";
+const std::string uci_t::year = "2019";
+const std::string uci_t::version = "r262";
 
 void uci_t::info() {
     LogAndPrintOutput() << name << " " << version;
@@ -26,9 +28,9 @@ uci_t::uci_t() {
     std::cout.setf(std::ios::unitbuf);
     Attacks::initArr();
     PositionData::initArr();
-    EvalPar::initArr();
+    EvalParam::initArr();
     Search::initArr();
-    //EvalPar::displayPST();
+    //EvalParam::displayPST();
     engine.origpos.setPosition(StartFEN);
 }
 
@@ -60,6 +62,7 @@ bool uci_t::input(iss& stream) {
     else if (cmd == "moves") moves();
     else if (cmd == "d") displaypos();
     else if (cmd == "speedup") speedup(stream);
+    else if (cmd == "tune") tune();
     else LogAndPrintOutput() << "Invalid cmd: " << cmd;
 
     return true;
@@ -160,6 +163,10 @@ void uci_t::newgame() {
 }
 
 uci_t::~uci_t() {}
+
+void uci_t::tune() {
+    Tune("quiet-labeled.epd");
+}
 
 void uci_t::perftbench(iss& stream) {
     size_t depth;

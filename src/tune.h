@@ -5,11 +5,5 @@
 /**************************************************/
 
 #pragma once
-#include "typedefs.h"
-#include "position.h"
 
-namespace Utils {
-    extern void printBitBoard(uint64_t n);
-    extern uint64_t getTime(void);
-    extern void bindThisThread(int index);
-}
+extern void Tune(const std::string& filename);

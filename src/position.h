@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019						          */
+/*  Invictus 2019                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -43,6 +43,8 @@ struct undo_t {
 };
 
 struct position_t {
+    position_t() {}
+    position_t(const std::string & fen) { setPosition(fen); }
     void initPosition();
     void undoNullMove(undo_t& undo);
     void doNullMove(undo_t& undo);
@@ -88,6 +90,7 @@ struct position_t {
 
     uint64_t occupiedBB;
     uint64_t history[1024];
+    //uint64_t history[1];
     uint64_t piecesBB[7];
     uint64_t colorBB[2];
     int pieces[64];

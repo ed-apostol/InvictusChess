@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019						          */
+/*  Invictus 2019                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -13,6 +13,7 @@
 #include "attacks.h"
 #include "log.h"
 #include "eval.h"
+#include "params.h"
 
 namespace PositionData {
     const uint64_t  CastleSquareMask1[2][2] = { { F1BB | G1BB, B1BB | C1BB | D1BB }, { F8BB | G8BB, B8BB | C8BB | D8BB } };
@@ -97,7 +98,7 @@ namespace PositionData {
 using namespace Attacks;
 using namespace BitUtils;
 using namespace PositionData;
-using namespace EvalPar;
+using namespace EvalParam;
 
 void position_t::initPosition() {
     for (auto& p : piecesBB) p = EmptyBoardBB;
@@ -321,8 +322,8 @@ void position_t::setPosition(const std::string& fenStr) {
     if (side == WHITE) stack.hash ^= ZobColor;
     stack.hash ^= ZobCastle[stack.castle];
 
-    ASSERT(hashIsValid());
-    ASSERT(phashIsValid());
+    //ASSERT(hashIsValid());
+    //ASSERT(phashIsValid());
 }
 
 std::string position_t::positionToFEN() {

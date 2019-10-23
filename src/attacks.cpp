@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019						          */
+/*  Invictus 2019                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -118,22 +118,22 @@ namespace {
             }
         }
     }
-    uint64_t shiftLeft(uint64_t b, int i) {
+    inline uint64_t shiftLeft(uint64_t b, int i) {
         return (b << i);
     }
-    uint64_t shiftRight(uint64_t b, int i) {
+    inline uint64_t shiftRight(uint64_t b, int i) {
         return (b >> i);
     }
-    uint64_t fillUp(uint64_t b) {
+    inline uint64_t fillUp(uint64_t b) {
         return b |= b << 8, b |= b << 16, b |= b << 32;
     }
-    uint64_t fillDown(uint64_t b) {
+    inline uint64_t fillDown(uint64_t b) {
         return b |= b >> 8, b |= b >> 16, b |= b >> 32;
     }
-    uint64_t fillUpEx(uint64_t b) {
+    inline uint64_t fillUpEx(uint64_t b) {
         return b |= b << 8, b |= b << 16, (b |= b << 32) << 8;
     }
-    uint64_t fillDownEx(uint64_t b) {
+    inline uint64_t fillDownEx(uint64_t b) {
         return b |= b >> 8, b |= b >> 16, (b |= b >> 32) >> 8;
     }
 }
