@@ -15,28 +15,26 @@
 #include "eval.h"
 #include "params.h"
 
-double K = 1.0;
-const int num_threads = 8;
+double K = 1.15889;
+const int num_threads = 7;
 
 struct PositionResults {
     position_t* p;
     double result;
 };
 
-template < typename T >
 struct TunerParam {
 public:
-    TunerParam(T & val, const T& lower, const T& upper, const std::string & name)
+    TunerParam(int16_t & val, const int16_t& lower, const int16_t& upper, const std::string & name)
         : val(&val), lower(lower), upper(upper), name(name) {}
-    T *val, lower, upper;
+    int16_t *val, lower, upper;
     std::string name;
-    operator T&() { return *val; }
-    operator const T&()const { return *val; }
-    void operator=(const T& value) { *val = std::min(std::max(lower, value), upper); }
+    operator int16_t&() { return *val; }
+    operator const int16_t&()const { return *val; }
+    void operator=(const int16_t& value) { *val = std::min(std::max(lower, value), upper); }
 };
 
-template <typename T>
-std::ostream& operator<<(std::ostream& os, const TunerParam<T>& p) { const T& t = p; os << t; return os; }
+std::ostream& operator<<(std::ostream& os, const TunerParam& p) { const int16_t& t = p; os << t; return os; }
 
 void Sigmoid(std::vector<PositionResults> &data, std::vector<double>& errors, size_t batchsize, int t, int numthreads) {
     for (size_t k = t; k < batchsize; k += numthreads) {
@@ -66,24 +64,30 @@ void Randomize(std::vector<PositionResults>& data) {
 }
 
 void FindBestK(std::vector<PositionResults>& data) {
-    double min = 0.5, max = 1.5, delta = 0.01, best = 1;
+    double min = -10, max = 10, delta = 1, best = 1;
     double error = 100;
-    while (min < max) {
-        PrintOutput() << "\nFindBestK: " << min;
-        K = min;
-        double e = Error(data, data.size());
-        if (e < error) {
-            error = e, best = K;
-            PrintOutput() << "  new best K = " << K << ", E = " << error;
+    for (int precision = 0; precision < 10; ++precision) {
+        PrintOutput() << "\nFindBestK: min:" << min << " max:" << max << " delta:" << delta;
+        while (min < max) {
+            K = min;
+            double e = Error(data, data.size());
+            if (e < error) {
+                error = e, best = K;
+                PrintOutput() << "  new best K = " << K << ", E = " << error;
+            }
+            min += delta;
         }
-        min += delta;
+        min = best - delta;
+        max = best + delta;
+        delta /= 10;
     }
     K = best;
 }
 
-std::vector<double> CalculateGradient(std::vector<TunerParam<int16_t>>& params, std::vector<PositionResults> &data, size_t batchsize) {
-    std::vector<double> gradients;
+void CalculateGradient(std::vector<double>& gradients, std::vector<TunerParam>& params, std::vector<PositionResults> &data, size_t batchsize) {
     const int16_t dx = 1;
+    const double alpha = 0.1;
+    int idx = 0;
     for (auto par : params) {
         const int16_t oldvalue = par;
         par = oldvalue + dx;
@@ -91,40 +95,38 @@ std::vector<double> CalculateGradient(std::vector<TunerParam<int16_t>>& params, 
         par = oldvalue - dx;
         double Em1 = Error(data, batchsize);
         par = oldvalue;
-        double grad = (Ep1 - Em1) / (2 * dx);
-        gradients.push_back(grad);
+        gradients[idx] = (gradients[idx] * alpha) + (Ep1 - Em1);
+        //PrintOutput() << "gradient: " << gradients[idx];
+        ++idx;
     }
-    return gradients;
 }
 
-std::vector<TunerParam<int16_t>> GradientDescent(const std::vector<TunerParam<int16_t>>& origParam, std::vector<PositionResults> &data, const size_t batchsize) {
+std::vector<TunerParam> GradientDescent(const std::vector<TunerParam>& origParam, std::vector<PositionResults> &data, const size_t batchsize) {
     std::ofstream str("tuned.txt");
-    std::vector<TunerParam<int16_t>> bestParam = origParam;
-    std::vector<TunerParam<int16_t>> currentParam = bestParam;
-    std::vector<int16_t> previousUpdate(bestParam.size(), 0);
+    std::vector<TunerParam> bestParam = origParam;
+    std::vector<TunerParam> currentParam = bestParam;
+    std::vector<double> gradients(bestParam.size(), 0);
 
     double bestError = Error(data, data.size());
     PrintOutput() << "Base Error: " << bestError;
 
-    for (int it = 0; it < 100000; ++it) {
-        PrintOutput() << "\nComputing gradient: " << it;
+    for (int epoch = 0; epoch < 100000; ++epoch) {
+        PrintOutput() << "\nComputing gradient: " << epoch;
         Randomize(data);
-        std::vector<double> gradients = CalculateGradient(currentParam, data, batchsize);
+        CalculateGradient(gradients, currentParam, data, batchsize);
 
         double maxgradient = -100;
         for (auto grad : gradients) maxgradient = std::max(maxgradient, std::fabs(grad));
-        PrintOutput() << "gmax " << maxgradient;
-        //if (maxgradient < 0.0000001) break;
+        PrintOutput() << "gmax: " << maxgradient;
+        if (maxgradient < 0.0000001) break;
 
-        double learningRate = 2.0 / maxgradient; // 2 is the max step, TODO: experiment with other values
-        double alpha = 0.1;
+        double learningRate = 3.0 / maxgradient; // 2 is the max step, TODO: experiment with other values
 
-        PrintOutput() << "Applying gradients, learning rate = " << learningRate << ", alpha " << alpha;
+        PrintOutput() << "Applying gradients, learning rate = " << learningRate;
         for (size_t k = 0; k < currentParam.size(); ++k) {
-            const int16_t oldValue = currentParam[k];
-            const int16_t currentUpdate = int16_t(((1.0 - alpha) * learningRate * gradients[k]) + (alpha * previousUpdate[k]));
-            currentParam[k] = int16_t(oldValue - currentUpdate);
-            previousUpdate[k] = currentUpdate;
+            const double currentUpdate = learningRate * gradients[k];
+            //PrintOutput() << "update: " << currentUpdate;
+            currentParam[k] = currentParam[k] - int16_t(currentUpdate);
         }
 
         double currError = Error(data, data.size());
@@ -133,14 +135,13 @@ std::vector<TunerParam<int16_t>> GradientDescent(const std::vector<TunerParam<in
         if (currError < bestError) {
             bestError = currError;
             bestParam = currentParam;
-            str << it << " " << bestError << std::endl;
-            for (auto param : currentParam) {
+            str << "\nEpoch: " << epoch << " " << bestError << std::endl;
+            for (auto param : bestParam) {
                 str << param.name << " " << param << std::endl;
                 PrintOutput() << param.name << " " << param;
             }
             str << std::endl;
         }
-        else PrintOutput() << "Didn't improve on best!";
     }
     return bestParam;
 }
@@ -168,83 +169,85 @@ void Tune(const std::string& filename) {
     }
     PrintOutput() << "Data size : " << data.size();
 
-    //size_t batchSize = data.size();
+    size_t batchSize = data.size() / 10;
     //size_t batchSize = data.size() / 100;
-    size_t batchSize = 16384;
+    //size_t batchSize = 16384;
     //size_t batchSize = 1;
 
-    std::vector<TunerParam<int16_t>> input;
+    std::vector<TunerParam> input;
 
-    //input.push_back(TunerParam<int16_t>(EvalParam::mat_values[PAWN].m, 0, 2000, "PawnVal Mid")); // peg to 100
-    input.push_back(TunerParam<int16_t>(EvalParam::mat_values[PAWN].e, 0, 2000, "PawnValEnd"));
-    input.push_back(TunerParam<int16_t>(EvalParam::mat_values[KNIGHT].m, 0, 2000, "KnightVal Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::mat_values[KNIGHT].e, 0, 2000, "KnightVal End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::mat_values[BISHOP].m, 0, 2000, "BishopVal Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::mat_values[BISHOP].e, 0, 2000, "BishopVal End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::mat_values[ROOK].m, 0, 2000, "RookVal Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::mat_values[ROOK].e, 0, 2000, "RookVal End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::mat_values[QUEEN].m, 0, 2000, "QueenVal Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::mat_values[QUEEN].e, 0, 2000, "QueenVal End"));
+    using namespace EvalParam;
 
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnConnected.m, 0, 100, "PawnConnected Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnConnected.e, 0, 100, "PawnConnected End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnDoubled.m, 0, 100, "PawnDoubled Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnDoubled.e, 0, 100, "PawnDoubled End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnIsolated.m, 0, 100, "PawnIsolated Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnIsolated.e, 0, 100, "PawnIsolated End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnBackward.m, 0, 100, "PawnBackward Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnBackward.e, 0, 100, "PawnBackward End"));
+    //input.push_back({mat_values[PAWN].m, 0, 2000, "PawnVal Mid"}); // peg to 100
+    //input.push_back({ MaterialValues[PAWN].e, 0, 2000, "PawnValEnd" });
+    //input.push_back({ MaterialValues[KNIGHT].m, 0, 2000, "KnightVal Mid" });
+    //input.push_back({ MaterialValues[KNIGHT].e, 0, 2000, "KnightVal End" });
+    //input.push_back({ MaterialValues[BISHOP].m, 0, 2000, "BishopVal Mid" });
+    //input.push_back({ MaterialValues[BISHOP].e, 0, 2000, "BishopVal End" });
+    //input.push_back({ MaterialValues[ROOK].m, 0, 2000, "RookVal Mid" });
+    //input.push_back({ MaterialValues[ROOK].e, 0, 2000, "RookVal End" });
+    //input.push_back({ MaterialValues[QUEEN].m, 0, 2000, "QueenVal Mid" });
+    //input.push_back({ MaterialValues[QUEEN].e, 0, 2000, "QueenVal End" });
 
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserBonusMin.m, 0, 100, "PasserBonusMin Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserBonusMin.e, 0, 100, "PasserBonusMin End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserBonusMax.m, 0, 200, "PasserBonusMax Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserBonusMax.e, 0, 200, "PasserBonusMax End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserDistOwn.m, 0, 100, "PasserDistOwn Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserDistOwn.e, 0, 100, "PasserDistOwn End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserDistEnemy.m, 0, 100, "PasserDistEnemy Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserDistEnemy.e, 0, 100, "PasserDistEnemy End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserNotBlocked.m, 0, 100, "PasserNotBlocked Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserNotBlocked.e, 0, 100, "PasserNotBlocked End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserSafePush.m, 0, 100, "PasserSafePush Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PasserSafePush.e, 0, 100, "PasserSafePush End"));
+    input.push_back({ PawnConnected.m, 0, 100, "PawnConnected Mid" });
+    input.push_back({ PawnConnected.e, 0, 100, "PawnConnected End" });
+    input.push_back({ PawnDoubled.m, 0, 100, "PawnDoubled Mid" });
+    input.push_back({ PawnDoubled.e, 0, 100, "PawnDoubled End" });
+    input.push_back({ PawnIsolated.m, 0, 100, "PawnIsolated Mid" });
+    input.push_back({ PawnIsolated.e, 0, 100, "PawnIsolated End" });
+    input.push_back({ PawnBackward.m, 0, 100, "PawnBackward Mid" });
+    input.push_back({ PawnBackward.e, 0, 100, "PawnBackward End" });
 
-    input.push_back(TunerParam<int16_t>(EvalParam::KnightMob.m, 0, 100, "KnightMob Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::KnightMob.e, 0, 100, "KnightMob End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::BishopMob.m, 0, 100, "BishopMob Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::BishopMob.e, 0, 100, "BishopMob End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::RookMob.m, 0, 100, "RookMob Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::RookMob.e, 0, 100, "RookMob End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::QueenMob.m, 0, 100, "QueenMob Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::QueenMob.e, 0, 100, "QueenMob End"));
+    input.push_back({ PasserBonusMin.m, 0, 100, "PasserBonusMin Mid" });
+    input.push_back({ PasserBonusMin.e, 0, 100, "PasserBonusMin End" });
+    input.push_back({ PasserBonusMax.m, 0, 200, "PasserBonusMax Mid" });
+    input.push_back({ PasserBonusMax.e, 0, 200, "PasserBonusMax End" });
+    input.push_back({ PasserDistOwn.m, 0, 100, "PasserDistOwn Mid" });
+    input.push_back({ PasserDistOwn.e, 0, 100, "PasserDistOwn End" });
+    input.push_back({ PasserDistEnemy.m, 0, 100, "PasserDistEnemy Mid" });
+    input.push_back({ PasserDistEnemy.e, 0, 100, "PasserDistEnemy End" });
+    input.push_back({ PasserNotBlocked.m, 0, 100, "PasserNotBlocked Mid" });
+    input.push_back({ PasserNotBlocked.e, 0, 100, "PasserNotBlocked End" });
+    input.push_back({ PasserSafePush.m, 0, 100, "PasserSafePush Mid" });
+    input.push_back({ PasserSafePush.e, 0, 100, "PasserSafePush End" });
 
-    input.push_back(TunerParam<int16_t>(EvalParam::KnightAtk, 0, 100, "KnightAtk"));
-    input.push_back(TunerParam<int16_t>(EvalParam::BishopAtk, 0, 100, "BishopAtk"));
-    input.push_back(TunerParam<int16_t>(EvalParam::RookAtk, 0, 100, "RookAtk"));
-    input.push_back(TunerParam<int16_t>(EvalParam::QueenAtk, 0, 100, "QueenAtk"));
+    input.push_back({ KnightMob.m, 0, 100, "KnightMob Mid" });
+    input.push_back({ KnightMob.e, 0, 100, "KnightMob End" });
+    input.push_back({ BishopMob.m, 0, 100, "BishopMob Mid" });
+    input.push_back({ BishopMob.e, 0, 100, "BishopMob End" });
+    input.push_back({ RookMob.m, 0, 100, "RookMob Mid" });
+    input.push_back({ RookMob.e, 0, 100, "RookMob End" });
+    input.push_back({ QueenMob.m, 0, 100, "QueenMob Mid" });
+    input.push_back({ QueenMob.e, 0, 100, "QueenMob End" });
 
-    input.push_back(TunerParam<int16_t>(EvalParam::NumKZoneAttacks.m, 0, 100, "NumKZoneAttacks Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::NumKZoneAttacks.e, 0, 100, "NumKZoneAttacks End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::ShelterBonus.m, 0, 100, "ShelterBonus Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::ShelterBonus.e, 0, 100, "ShelterBonus End"));
+    input.push_back({ KnightAtk, 0, 100, "KnightAtk" });
+    input.push_back({ BishopAtk, 0, 100, "BishopAtk" });
+    input.push_back({ RookAtk, 0, 100, "RookAtk" });
+    input.push_back({ QueenAtk, 0, 100, "QueenAtk" });
 
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnsxMinors.m, 0, 100, "PawnsxMinors Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnsxMinors.e, 0, 100, "PawnsxMinors End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::MinorsxMinors.m, 0, 100, "MinorsxMinors Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::MinorsxMinors.e, 0, 100, "MinorsxMinors End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::MajorsxWeakMinors.m, 0, 100, "MajorsxWeakMinors Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::MajorsxWeakMinors.e, 0, 100, "MajorsxWeakMinors End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnsMinorsxMajors.m, 0, 100, "PawnsMinorsxMajors Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::PawnsMinorsxMajors.e, 0, 100, "PawnsMinorsxMajors End"));
-    input.push_back(TunerParam<int16_t>(EvalParam::AllxQueens.m, 0, 100, "AllxQueens Mid"));
-    input.push_back(TunerParam<int16_t>(EvalParam::AllxQueens.e, 0, 100, "AllxQueens End"));
+    input.push_back({ NumKZoneAttacks.m, 0, 100, "NumKZoneAttacks Mid" });
+    input.push_back({ NumKZoneAttacks.e, 0, 100, "NumKZoneAttacks End" });
+    input.push_back({ ShelterBonus.m, 0, 100, "ShelterBonus Mid" });
+    input.push_back({ ShelterBonus.e, 0, 100, "ShelterBonus End" });
 
-    FindBestK(data);
+    input.push_back({ PawnsxMinors.m, 0, 100, "PawnsxMinors Mid" });
+    input.push_back({ PawnsxMinors.e, 0, 100, "PawnsxMinors End" });
+    input.push_back({ MinorsxMinors.m, 0, 100, "MinorsxMinors Mid" });
+    input.push_back({ MinorsxMinors.e, 0, 100, "MinorsxMinors End" });
+    input.push_back({ MajorsxWeakMinors.m, 0, 100, "MajorsxWeakMinors Mid" });
+    input.push_back({ MajorsxWeakMinors.e, 0, 100, "MajorsxWeakMinors End" });
+    input.push_back({ PawnsMinorsxMajors.m, 0, 100, "PawnsMinorsxMajors Mid" });
+    input.push_back({ PawnsMinorsxMajors.e, 0, 100, "PawnsMinorsxMajors End" });
+    input.push_back({ AllxQueens.m, 0, 100, "AllxQueens Mid" });
+    input.push_back({ AllxQueens.e, 0, 100, "AllxQueens End" });
+
+    //FindBestK(data);
     PrintOutput() << "Best K " << K;
 
     PrintOutput() << "Initial values:";
     for (auto par : input) PrintOutput() << par.name << " " << par;
 
-    std::vector<TunerParam<int16_t>> tuned = GradientDescent(input, data, batchSize);
+    std::vector<TunerParam> tuned = GradientDescent(input, data, batchSize);
 
     PrintOutput() << "Tuned values:";
     for (auto par : tuned) PrintOutput() << par.name << " " << par;

@@ -218,7 +218,7 @@ void position_t::doMove(undo_t& undo, move_t m) {
     if (cap != EMPTY) {
         piecesBB[cap] ^= BitMask[to];
         colorBB[xside] ^= BitMask[to];
-        stack.score[xside] -= mat_values[cap];
+        stack.score[xside] -= MaterialValues[cap];
         stack.score[xside] -= pst[xside][cap][to];
         stack.fifty = 0;
         stack.hash ^= ZobPiece[xside][cap][to];
@@ -250,7 +250,7 @@ void position_t::doMove(undo_t& undo, move_t m) {
         pieces[epsq] = EMPTY;
         piecesBB[PAWN] ^= BitMask[epsq];
         colorBB[xside] ^= BitMask[epsq];
-        stack.score[xside] -= mat_values[PAWN];
+        stack.score[xside] -= MaterialValues[PAWN];
         stack.score[xside] -= pst[xside][PAWN][epsq];
         stack.hash ^= ZobPiece[xside][PAWN][epsq];
         stack.phash ^= ZobPiece[xside][PAWN][epsq];
@@ -263,8 +263,8 @@ void position_t::doMove(undo_t& undo, move_t m) {
         stack.phash ^= ZobPiece[side][PAWN][to];
         pieces[to] = prom;
         piecesBB[prom] ^= BitMask[to];
-        stack.score[side] += mat_values[prom];
-        stack.score[side] -= mat_values[PAWN];
+        stack.score[side] += MaterialValues[prom];
+        stack.score[side] -= MaterialValues[PAWN];
         stack.score[side] += pst[side][prom][to];
         stack.score[side] -= pst[side][PAWN][to];
         stack.hash ^= ZobPiece[side][prom][to];
@@ -284,7 +284,7 @@ void position_t::setPiece(int sq, int c, int pc) {
     piecesBB[pc] |= BitMask[sq];
     colorBB[c] |= BitMask[sq];
     occupiedBB |= BitMask[sq];
-    stack.score[c] += mat_values[pc];
+    stack.score[c] += MaterialValues[pc];
     stack.score[c] += pst[c][pc][sq];
     stack.hash ^= ZobPiece[c][pc][sq];
     if (pc == PAWN) stack.phash ^= ZobPiece[c][pc][sq];

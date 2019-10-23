@@ -9,7 +9,7 @@
 #include "typedefs.h"
 
 namespace EvalParam {
-    extern score_t mat_values[7];
+    extern score_t MaterialValues[7];
 
     extern score_t PawnConnected;
     extern score_t PawnDoubled;
