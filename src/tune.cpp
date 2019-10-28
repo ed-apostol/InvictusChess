@@ -104,13 +104,74 @@ void CalculateGradient(std::vector<Ldouble>& gradients, std::vector<TunerParam>&
     }
 }
 
+void PrintParams(std::ofstream& outfile, std::vector<TunerParam>& params, Ldouble start, Ldouble end, int epoch) {
+    std::ostringstream  out;
+    out << "\n";
+    for (auto param : params) {
+        out << param.name << " " << param << "\n";
+    }
+    out << "\nEpoch = " << epoch << " start error = " << start << " new error = " << end;
+    out << " improved by = " << (start - end) * 10e6 << "\n";
+    PrintOutput() << out.str();
+    outfile << out.str();
+    outfile.flush();
+}
+
+void AdamGD(std::vector<TunerParam>& params, std::vector<PositionResults> &data, const size_t batchsize) {
+    std::ofstream str("tuned.txt");
+    std::vector<Ldouble> gradients(params.size(), 0);
+    std::vector<Ldouble> M(params.size(), 0);
+    std::vector<Ldouble> V(params.size(), 0);
+    const Ldouble Alpha = 0.015;
+    const Ldouble Beta1 = 0.9;
+    const Ldouble Beta2 = 0.999;
+    const Ldouble Epsilon = 1.0e-8;
+
+    Ldouble best = Error(data, data.size());
+
+    for (int epoch = 1; epoch <= 100000; ++epoch) {
+        PrintOutput() << "\n\nEpoch = " << epoch;
+        Randomize(data);
+
+        const Ldouble baseError = Error(data, batchsize);
+
+        PrintOutput() << "Computing gradients...";
+        CalculateGradient(gradients, params, data, batchsize, baseError);
+
+        PrintOutput() << "Applying gradients...";
+        int k = 0;
+        for (auto par : params) {
+            int16_t oldpar = par;
+            Ldouble grad = gradients[k];
+            M[k] = Beta1 * M[k] + (1.0 - Beta1) * grad;
+            V[k] = Beta2 * V[k] + (1.0 - Beta2) * grad * grad;
+            Ldouble M_t = M[k] / (1.0 - pow(Beta1, epoch));
+            Ldouble V_t = V[k] / (1.0 - pow(Beta2, epoch));
+            Ldouble delta = Alpha * M_t / (sqrt(V_t) + Epsilon);
+            par = par - delta;
+            if (par != oldpar)
+                PrintOutput() << par.name << " " << oldpar << " --> " << par;
+            ++k;
+        }
+
+        Ldouble currError = Error(data, batchsize);
+        PrintOutput() << "Base error = " << baseError << " Current error = " << currError << " diff = " << (baseError - currError) * 10e6;
+
+        if (epoch % 10 == 0) {
+            Ldouble completeError = Error(data, data.size());
+            PrintParams(str, params, best, completeError, epoch);
+            best = completeError;
+        }
+    }
+}
+
 void GradientDescent(std::vector<TunerParam>& params, std::vector<PositionResults> &data, const size_t batchsize) {
     std::ofstream str("tuned.txt");
     std::vector<Ldouble> gradients(params.size(), 0);
 
     Ldouble best = Error(data, data.size());
 
-    for (int epoch = 0; epoch <= 100000; ++epoch) {
+    for (int epoch = 1; epoch <= 100000; ++epoch) {
         PrintOutput() << "\n\nEpoch = " << epoch;
         Randomize(data);
 
@@ -123,7 +184,6 @@ void GradientDescent(std::vector<TunerParam>& params, std::vector<PositionResult
         for (auto g : gradients) maxgrad = std::max(maxgrad, std::fabs(g));
 
         Ldouble learningRate = 2.0 / maxgrad;
-        //Ldouble learningRate = 100000;
 
         PrintOutput() << "Applying gradients: learning rate = " << learningRate << " max gradient = " << maxgrad * 10e6;
         int k = 0;
@@ -138,16 +198,8 @@ void GradientDescent(std::vector<TunerParam>& params, std::vector<PositionResult
         PrintOutput() << "Base error = " << baseError << " Current error = " << currError << " diff = " << (baseError - currError) * 10e6;
 
         if (epoch % 10 == 0) {
-            std::ostringstream  out;
-            out << "\n";
-            for (auto param : params) {
-                out << param.name << " " << param << "\n";
-            }
             Ldouble completeError = Error(data, data.size());
-            out << "\nEpoch = " << epoch << " Start error = " << best << " New error = " << completeError;
-            out << " improved by = " << (best - completeError) * 10e6;
-            PrintOutput() << out.str();
-            str << out.str();
+            PrintParams(str, params, best, completeError, epoch);
             best = completeError;
         }
     }
@@ -160,7 +212,7 @@ void LocalSearch(std::vector<TunerParam>& params, std::vector<PositionResults> &
     Ldouble bestError = Error(data, data.size());
     PrintOutput() << "Base Error: " << bestError;
 
-    int epoch = 0;
+    int epoch = 1;
     while (true) {
         ++epoch;
         PrintOutput() << "\n\nEpoch = " << epoch << " start error = " << bestError;
@@ -172,38 +224,20 @@ void LocalSearch(std::vector<TunerParam>& params, std::vector<PositionResults> &
             for (auto d : delta) {
                 if (improved) break;
                 par = orig + d;
-                if (orig != par) {
-                    Ldouble error = Error(data, data.size());
-                    if (error < bestError) {
-                        bestError = error;
-                        improved = true;
-                        PrintOutput() << par.name << " " << orig << " --> " << par;
-                    }
+                if (orig == par) continue; // reached upper or lower
+                Ldouble error = Error(data, data.size());
+                if (error < bestError) {
+                    bestError = error;
+                    improved = true;
+                    PrintOutput() << par.name << " " << orig << " --> " << par;
                 }
             }
             if (!improved) par = orig;
         }
-        std::ostringstream  out;
-        out << "\n";
-        for (auto param : params) {
-            out << param.name << " " << param << "\n";
-        }
-        out << "\nEpoch = " << epoch << " end: start error = " << startError << " new error = " << bestError;
-        out << " improved by = " << (bestError - startError) * 10e7 << " x 10-7\n";
-        PrintOutput() << out.str();
-        str << out.str();
-
+        PrintParams(str, params, startError, bestError, epoch);
         if (startError == bestError) break;
     }
 }
-
-//Ldouble getResult(const std::string & s) {
-//    if (s == "\"1-0\";") return 1.0;
-//    if (s == "\"0-1\";") return 0.0;
-//    if (s == "\"1/2-1/2\";") return 0.5;
-//    PrintOutput() << "Bad position result " << s;
-//    return 0.5;
-//}
 
 Ldouble getResult(const std::string & s) {
     if (s == "White") return 1.0;
@@ -224,7 +258,6 @@ void Tune(const std::string& filename) {
     }
     std::string line;
     while (getline(file, line)) {
-        //data.push_back({ new position_t(line), getResult(line.substr(line.find("c9") + 3)) });
         data.push_back({ new position_t(line), getResult(line.substr(line.find("|") + 1)) });
     }
     PrintOutput() << "Data size : " << data.size();
@@ -307,11 +340,14 @@ void Tune(const std::string& filename) {
     PrintOutput() << "\nInitial values:";
     for (auto par : input) PrintOutput() << par.name << " " << par;
 
-    GradientDescent(input, data, batchSize);
+    AdamGD(input, data, batchSize);
+    //GradientDescent(input, data, batchSize);
     //LocalSearch(input, data);
 
     PrintOutput() << "\nTuned values:";
     for (auto par : input) PrintOutput() << par.name << " " << par;
 
     for (auto &d : data) delete d.p;
+
+    if (file) file.close();
 }

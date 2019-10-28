@@ -42,18 +42,18 @@ namespace EvalParam {
         return file[sqFile(sq)] + rank[sqRank(sq)];
     }
 
-    score_t MaterialValues[7] = { { 0, 0 },{ 100, 133 },{ 434, 420 },{ 473, 443 },{ 596, 773 },{ 1363, 1420 },{ 0, 0 } };
+    score_t MaterialValues[7] = { { 0, 0 },{ 100, 134 },{ 430, 431 },{ 469, 454 },{ 589, 789 },{ 1356, 1449 },{ 0, 0 } };
 
     score_t PawnConnected = { 6, 8 };
-    score_t PawnDoubled = { 6, 16 };
+    score_t PawnDoubled = { 7, 16 };
     score_t PawnIsolated = { 19, 10 };
     score_t PawnBackward = { 1, 4 };
 
-    score_t PasserBonusMin = { 0, 23 };
+    score_t PasserBonusMin = { 0, 24 };
     score_t PasserBonusMax = { 131, 45 };
-    score_t PasserDistOwn = { 14, 26 };
-    score_t PasserDistEnemy = { 6, 72 };
-    score_t PasserNotBlocked = { 62, 0 };
+    score_t PasserDistOwn = { 15, 26 };
+    score_t PasserDistEnemy = { 5, 72 };
+    score_t PasserNotBlocked = { 64, 0 };
     score_t PasserSafePush = { 40, 0 };
 
     score_t KnightMob = { 7, 11 };
@@ -64,8 +64,8 @@ namespace EvalParam {
     score_t NumKZoneAttacks = { 5, 13 };
     score_t ShelterBonus = { 10, 11 };
 
-    score_t PawnsxMinors = { 56, 0 };
-    score_t MinorsxMinors = { 23, 38 };
+    score_t PawnsxMinors = { 57, 0 };
+    score_t MinorsxMinors = { 24, 38 };
     score_t MajorsxWeakMinors = { 9, 52 };
     score_t PawnsMinorsxMajors = { 8, 0 };
     score_t AllxQueens = { 39, 25 };
