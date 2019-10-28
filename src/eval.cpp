@@ -27,6 +27,15 @@ namespace {
     }
 }
 
+void eval_t::material(position_t & p, int side)
+{
+    scr[side] += MaterialValues[PAWN] * bitCnt(p.pieceBB(PAWN, side));
+    scr[side] += MaterialValues[KNIGHT] * bitCnt(p.pieceBB(KNIGHT, side));
+    scr[side] += MaterialValues[BISHOP] * bitCnt(p.pieceBB(BISHOP, side));
+    scr[side] += MaterialValues[ROOK] * bitCnt(p.pieceBB(ROOK, side));
+    scr[side] += MaterialValues[QUEEN] * bitCnt(p.pieceBB(QUEEN, side));
+}
+
 void eval_t::pawnstructure(position_t& p, int side) {
     const int xside = side ^ 1;
     const uint64_t pawns = p.pieceBB(PAWN, side);
@@ -150,6 +159,7 @@ int eval_t::score(position_t& p) {
         allatks[color] |= pawnatks[color];
     }
     for (int color = WHITE; color <= BLACK; ++color) {
+        material(p, color);
         pawnstructure(p, color);
         mobility(p, color);
         kingsafety(p, color);

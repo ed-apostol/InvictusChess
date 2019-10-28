@@ -15,12 +15,13 @@
 #include "eval.h"
 #include "params.h"
 
-double K = 1.15889;
+using Ldouble = long double;
+Ldouble K = 1.26235;
 const int num_threads = 7;
 
 struct PositionResults {
     position_t* p;
-    double result;
+    Ldouble result;
 };
 
 struct TunerParam {
@@ -34,19 +35,17 @@ public:
     void operator=(const int16_t& value) { *val = std::min(std::max(lower, value), upper); }
 };
 
-std::ostream& operator<<(std::ostream& os, const TunerParam& p) { const int16_t& t = p; os << t; return os; }
-
-void Sigmoid(std::vector<PositionResults> &data, std::vector<double>& errors, size_t batchsize, int t, int numthreads) {
+void Sigmoid(std::vector<PositionResults> &data, std::vector<Ldouble>& errors, size_t batchsize, int t, int numthreads) {
     for (size_t k = t; k < batchsize; k += numthreads) {
         eval_t eval;
-        double scr = eval.score(*data[k].p) * (data[k].p->side == WHITE ? +1.0 : -1.0);
-        double s = 1.0 / (1.0 + std::pow(10.0, -K * scr / 400.0));
+        Ldouble scr = eval.score(*data[k].p) * (data[k].p->side == WHITE ? +1.0 : -1.0);
+        Ldouble s = 1.0 / (1.0 + std::pow(10.0, -K * scr / 400.0));
         errors[t] += std::pow(data[k].result - s, 2);
     }
 }
 
-double Error(std::vector<PositionResults> &data, size_t batchsize) {
-    std::vector<double> errors(num_threads, 0);
+Ldouble Error(std::vector<PositionResults> &data, size_t batchsize) {
+    std::vector<Ldouble> errors(num_threads, 0);
     std::thread threads[num_threads];
     for (int t = 0; t < num_threads; ++t) {
         threads[t] = std::thread(Sigmoid, std::ref(data), std::ref(errors), batchsize, t, num_threads);
@@ -54,9 +53,15 @@ double Error(std::vector<PositionResults> &data, size_t batchsize) {
     for (int t = 0; t < num_threads; ++t) {
         threads[t].join();
     }
-    double sum = 0;
-    for (auto e : errors) sum += e;
-    return sum / batchsize;
+    // NeumaierSum
+    Ldouble sum = 0.0, c = 0.0;
+    for (auto e : errors) {
+        Ldouble t = sum + e;
+        if (fabs(sum) >= fabs(e)) c += (sum - t) + e;
+        else c += (e - t) + sum;
+        sum = t;
+    }
+    return (sum + c) / batchsize;
 }
 
 void Randomize(std::vector<PositionResults>& data) {
@@ -64,13 +69,13 @@ void Randomize(std::vector<PositionResults>& data) {
 }
 
 void FindBestK(std::vector<PositionResults>& data) {
-    double min = -10, max = 10, delta = 1, best = 1;
-    double error = 100;
+    Ldouble min = -10, max = 10, delta = 1, best = 1;
+    Ldouble error = 100;
     for (int precision = 0; precision < 10; ++precision) {
         PrintOutput() << "\nFindBestK: min:" << min << " max:" << max << " delta:" << delta;
         while (min < max) {
             K = min;
-            double e = Error(data, data.size());
+            Ldouble e = Error(data, data.size());
             if (e < error) {
                 error = e, best = K;
                 PrintOutput() << "  new best K = " << K << ", E = " << error;
@@ -84,88 +89,143 @@ void FindBestK(std::vector<PositionResults>& data) {
     K = best;
 }
 
-void CalculateGradient(std::vector<double>& gradients, std::vector<TunerParam>& params, std::vector<PositionResults> &data, size_t batchsize) {
-    const int16_t dx = 1;
-    const double alpha = 0.1;
-    int idx = 0;
+void CalculateGradient(std::vector<Ldouble>& gradients, std::vector<TunerParam>& params, std::vector<PositionResults> &data, size_t batchsize, Ldouble baseError) {
+    int k = 0;
     for (auto par : params) {
         const int16_t oldvalue = par;
-        par = oldvalue + dx;
-        double Ep1 = Error(data, batchsize);
-        par = oldvalue - dx;
-        double Em1 = Error(data, batchsize);
+        par = oldvalue + 1;
+        Ldouble ep1 = Error(data, batchsize);
+        par = oldvalue - 1;
+        Ldouble em1 = Error(data, batchsize);
+        gradients[k] = (ep1 - em1) / 2;
         par = oldvalue;
-        gradients[idx] = (gradients[idx] * alpha) + (Ep1 - Em1);
-        //PrintOutput() << "gradient: " << gradients[idx];
-        ++idx;
+        //PrintOutput() << "gradient: " << gradients[k];
+        ++k;
     }
 }
 
-std::vector<TunerParam> GradientDescent(const std::vector<TunerParam>& origParam, std::vector<PositionResults> &data, const size_t batchsize) {
+void GradientDescent(std::vector<TunerParam>& params, std::vector<PositionResults> &data, const size_t batchsize) {
     std::ofstream str("tuned.txt");
-    std::vector<TunerParam> bestParam = origParam;
-    std::vector<TunerParam> currentParam = bestParam;
-    std::vector<double> gradients(bestParam.size(), 0);
+    std::vector<Ldouble> gradients(params.size(), 0);
 
-    double bestError = Error(data, data.size());
+    Ldouble best = Error(data, data.size());
+
+    for (int epoch = 0; epoch <= 100000; ++epoch) {
+        PrintOutput() << "\n\nEpoch = " << epoch;
+        Randomize(data);
+
+        const Ldouble baseError = Error(data, batchsize);
+
+        PrintOutput() << "Computing gradients...";
+        CalculateGradient(gradients, params, data, batchsize, baseError);
+
+        Ldouble maxgrad = 0;
+        for (auto g : gradients) maxgrad = std::max(maxgrad, std::fabs(g));
+
+        Ldouble learningRate = 2.0 / maxgrad;
+        //Ldouble learningRate = 100000;
+
+        PrintOutput() << "Applying gradients: learning rate = " << learningRate << " max gradient = " << maxgrad * 10e6;
+        int k = 0;
+        for (auto par : params) {
+            int16_t oldpar = par;
+            par = int16_t(Ldouble(par) - (learningRate * gradients[k++]));
+            /*if (par != oldpar)
+                PrintOutput() << par.name << " " << oldpar << " --> " << par;*/
+        }
+
+        Ldouble currError = Error(data, batchsize);
+        PrintOutput() << "Base error = " << baseError << " Current error = " << currError << " diff = " << (baseError - currError) * 10e6;
+
+        if (epoch % 10 == 0) {
+            std::ostringstream  out;
+            out << "\n";
+            for (auto param : params) {
+                out << param.name << " " << param << "\n";
+            }
+            Ldouble completeError = Error(data, data.size());
+            out << "\nEpoch = " << epoch << " Start error = " << best << " New error = " << completeError;
+            out << " improved by = " << (best - completeError) * 10e6;
+            PrintOutput() << out.str();
+            str << out.str();
+            best = completeError;
+        }
+    }
+}
+
+void LocalSearch(std::vector<TunerParam>& params, std::vector<PositionResults> &data) {
+    std::ofstream str("tuned.txt");
+    const std::vector<int16_t> delta = { 1, -1 };
+
+    Ldouble bestError = Error(data, data.size());
     PrintOutput() << "Base Error: " << bestError;
 
-    for (int epoch = 0; epoch < 100000; ++epoch) {
-        PrintOutput() << "\nComputing gradient: " << epoch;
+    int epoch = 0;
+    while (true) {
+        ++epoch;
+        PrintOutput() << "\n\nEpoch = " << epoch << " start error = " << bestError;
+        Ldouble startError = bestError;
         Randomize(data);
-        CalculateGradient(gradients, currentParam, data, batchsize);
-
-        double maxgradient = -100;
-        for (auto grad : gradients) maxgradient = std::max(maxgradient, std::fabs(grad));
-        PrintOutput() << "gmax: " << maxgradient;
-        if (maxgradient < 0.0000001) break;
-
-        double learningRate = 3.0 / maxgradient; // 2 is the max step, TODO: experiment with other values
-
-        PrintOutput() << "Applying gradients, learning rate = " << learningRate;
-        for (size_t k = 0; k < currentParam.size(); ++k) {
-            const double currentUpdate = learningRate * gradients[k];
-            //PrintOutput() << "update: " << currentUpdate;
-            currentParam[k] = currentParam[k] - int16_t(currentUpdate);
-        }
-
-        double currError = Error(data, data.size());
-        PrintOutput() << "Current error: " << currError << " Best error: " << bestError;
-
-        if (currError < bestError) {
-            bestError = currError;
-            bestParam = currentParam;
-            str << "\nEpoch: " << epoch << " " << bestError << std::endl;
-            for (auto param : bestParam) {
-                str << param.name << " " << param << std::endl;
-                PrintOutput() << param.name << " " << param;
+        for (auto par : params) {
+            bool improved = false;
+            int16_t orig = par;
+            for (auto d : delta) {
+                if (improved) break;
+                par = orig + d;
+                if (orig != par) {
+                    Ldouble error = Error(data, data.size());
+                    if (error < bestError) {
+                        bestError = error;
+                        improved = true;
+                        PrintOutput() << par.name << " " << orig << " --> " << par;
+                    }
+                }
             }
-            str << std::endl;
+            if (!improved) par = orig;
         }
+        std::ostringstream  out;
+        out << "\n";
+        for (auto param : params) {
+            out << param.name << " " << param << "\n";
+        }
+        out << "\nEpoch = " << epoch << " end: start error = " << startError << " new error = " << bestError;
+        out << " improved by = " << (bestError - startError) * 10e7 << " x 10-7\n";
+        PrintOutput() << out.str();
+        str << out.str();
+
+        if (startError == bestError) break;
     }
-    return bestParam;
 }
 
-double getResult(const std::string & s) {
-    if (s == "\"1-0\";") return 1.0;
-    if (s == "\"0-1\";") return 0.0;
-    if (s == "\"1/2-1/2\";") return 0.5;
+//Ldouble getResult(const std::string & s) {
+//    if (s == "\"1-0\";") return 1.0;
+//    if (s == "\"0-1\";") return 0.0;
+//    if (s == "\"1/2-1/2\";") return 0.5;
+//    PrintOutput() << "Bad position result " << s;
+//    return 0.5;
+//}
+
+Ldouble getResult(const std::string & s) {
+    if (s == "White") return 1.0;
+    if (s == "Black") return 0.0;
+    if (s == "Draw") return 0.5;
     PrintOutput() << "Bad position result " << s;
     return 0.5;
 }
 
 void Tune(const std::string& filename) {
     std::vector<PositionResults> data;
-    PrintOutput() << "Running tuning with file " << filename;
+    PrintOutput() << "Tuning with file = " << filename;
 
     std::ifstream file = std::ifstream(filename);
     if (!file) {
-        PrintOutput() << "File not found: " << filename;
+        PrintOutput() << "File not found = " << filename;
         return;
     }
     std::string line;
     while (getline(file, line)) {
-        data.push_back({ new position_t(line), getResult(line.substr(line.find("c9") + 3)) });
+        //data.push_back({ new position_t(line), getResult(line.substr(line.find("c9") + 3)) });
+        data.push_back({ new position_t(line), getResult(line.substr(line.find("|") + 1)) });
     }
     PrintOutput() << "Data size : " << data.size();
 
@@ -178,16 +238,16 @@ void Tune(const std::string& filename) {
 
     using namespace EvalParam;
 
-    //input.push_back({mat_values[PAWN].m, 0, 2000, "PawnVal Mid"}); // peg to 100
-    //input.push_back({ MaterialValues[PAWN].e, 0, 2000, "PawnValEnd" });
-    //input.push_back({ MaterialValues[KNIGHT].m, 0, 2000, "KnightVal Mid" });
-    //input.push_back({ MaterialValues[KNIGHT].e, 0, 2000, "KnightVal End" });
-    //input.push_back({ MaterialValues[BISHOP].m, 0, 2000, "BishopVal Mid" });
-    //input.push_back({ MaterialValues[BISHOP].e, 0, 2000, "BishopVal End" });
-    //input.push_back({ MaterialValues[ROOK].m, 0, 2000, "RookVal Mid" });
-    //input.push_back({ MaterialValues[ROOK].e, 0, 2000, "RookVal End" });
-    //input.push_back({ MaterialValues[QUEEN].m, 0, 2000, "QueenVal Mid" });
-    //input.push_back({ MaterialValues[QUEEN].e, 0, 2000, "QueenVal End" });
+    //input.push_back({MaterialValues[PAWN].m, 0, 2000, "PawnVal Mid"}); // peg to 100
+    input.push_back({ MaterialValues[PAWN].e, 0, 2000, "PawnValEnd" });
+    input.push_back({ MaterialValues[KNIGHT].m, 0, 2000, "KnightVal Mid" });
+    input.push_back({ MaterialValues[KNIGHT].e, 0, 2000, "KnightVal End" });
+    input.push_back({ MaterialValues[BISHOP].m, 0, 2000, "BishopVal Mid" });
+    input.push_back({ MaterialValues[BISHOP].e, 0, 2000, "BishopVal End" });
+    input.push_back({ MaterialValues[ROOK].m, 0, 2000, "RookVal Mid" });
+    input.push_back({ MaterialValues[ROOK].e, 0, 2000, "RookVal End" });
+    input.push_back({ MaterialValues[QUEEN].m, 0, 2000, "QueenVal Mid" });
+    input.push_back({ MaterialValues[QUEEN].e, 0, 2000, "QueenVal End" });
 
     input.push_back({ PawnConnected.m, 0, 100, "PawnConnected Mid" });
     input.push_back({ PawnConnected.e, 0, 100, "PawnConnected End" });
@@ -220,11 +280,6 @@ void Tune(const std::string& filename) {
     input.push_back({ QueenMob.m, 0, 100, "QueenMob Mid" });
     input.push_back({ QueenMob.e, 0, 100, "QueenMob End" });
 
-    input.push_back({ KnightAtk, 0, 100, "KnightAtk" });
-    input.push_back({ BishopAtk, 0, 100, "BishopAtk" });
-    input.push_back({ RookAtk, 0, 100, "RookAtk" });
-    input.push_back({ QueenAtk, 0, 100, "QueenAtk" });
-
     input.push_back({ NumKZoneAttacks.m, 0, 100, "NumKZoneAttacks Mid" });
     input.push_back({ NumKZoneAttacks.e, 0, 100, "NumKZoneAttacks End" });
     input.push_back({ ShelterBonus.m, 0, 100, "ShelterBonus Mid" });
@@ -241,16 +296,22 @@ void Tune(const std::string& filename) {
     input.push_back({ AllxQueens.m, 0, 100, "AllxQueens Mid" });
     input.push_back({ AllxQueens.e, 0, 100, "AllxQueens End" });
 
+    input.push_back({ KnightAtk, 0, 100, "KnightAtk" });
+    input.push_back({ BishopAtk, 0, 100, "BishopAtk" });
+    input.push_back({ RookAtk, 0, 100, "RookAtk" });
+    input.push_back({ QueenAtk, 0, 100, "QueenAtk" });
+
     //FindBestK(data);
     PrintOutput() << "Best K " << K;
 
-    PrintOutput() << "Initial values:";
+    PrintOutput() << "\nInitial values:";
     for (auto par : input) PrintOutput() << par.name << " " << par;
 
-    std::vector<TunerParam> tuned = GradientDescent(input, data, batchSize);
+    GradientDescent(input, data, batchSize);
+    //LocalSearch(input, data);
 
-    PrintOutput() << "Tuned values:";
-    for (auto par : tuned) PrintOutput() << par.name << " " << par;
+    PrintOutput() << "\nTuned values:";
+    for (auto par : input) PrintOutput() << par.name << " " << par;
 
     for (auto &d : data) delete d.p;
 }

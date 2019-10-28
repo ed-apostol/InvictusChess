@@ -10,6 +10,7 @@
 #include "position.h"
 
 struct eval_t {
+    void material(position_t& p, int side);
     void pawnstructure(position_t& p, int side);
     void mobility(position_t& p, int side);
     void kingsafety(position_t& p, int side);

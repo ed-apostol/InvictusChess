@@ -103,12 +103,11 @@ using namespace EvalParam;
 void position_t::initPosition() {
     for (auto& p : piecesBB) p = EmptyBoardBB;
     for (auto& c : colorBB) c = EmptyBoardBB;
-    for (auto& h : history) h = 0;
     for (auto& pc : pieces) pc = EMPTY;
     occupiedBB = EmptyBoardBB;
     kpos[0] = kpos[1] = A1;
     side = WHITE;
-    num_moves = 0;
+    history.clear();
     stack.init();
 }
 
@@ -176,7 +175,7 @@ void position_t::undoMove(undo_t& undo) {
     }
     occupiedBB = colorBB[side] | colorBB[xside];
     stack = undo;
-    --num_moves;
+    history.pop_back();
 }
 
 void position_t::doMove(undo_t& undo, move_t m) {
@@ -218,7 +217,6 @@ void position_t::doMove(undo_t& undo, move_t m) {
     if (cap != EMPTY) {
         piecesBB[cap] ^= BitMask[to];
         colorBB[xside] ^= BitMask[to];
-        stack.score[xside] -= MaterialValues[cap];
         stack.score[xside] -= pst[xside][cap][to];
         stack.fifty = 0;
         stack.hash ^= ZobPiece[xside][cap][to];
@@ -250,7 +248,6 @@ void position_t::doMove(undo_t& undo, move_t m) {
         pieces[epsq] = EMPTY;
         piecesBB[PAWN] ^= BitMask[epsq];
         colorBB[xside] ^= BitMask[epsq];
-        stack.score[xside] -= MaterialValues[PAWN];
         stack.score[xside] -= pst[xside][PAWN][epsq];
         stack.hash ^= ZobPiece[xside][PAWN][epsq];
         stack.phash ^= ZobPiece[xside][PAWN][epsq];
@@ -263,8 +260,6 @@ void position_t::doMove(undo_t& undo, move_t m) {
         stack.phash ^= ZobPiece[side][PAWN][to];
         pieces[to] = prom;
         piecesBB[prom] ^= BitMask[to];
-        stack.score[side] += MaterialValues[prom];
-        stack.score[side] -= MaterialValues[PAWN];
         stack.score[side] += pst[side][prom][to];
         stack.score[side] -= pst[side][PAWN][to];
         stack.hash ^= ZobPiece[side][prom][to];
@@ -273,7 +268,7 @@ void position_t::doMove(undo_t& undo, move_t m) {
     }
     occupiedBB = colorBB[side] | colorBB[xside];
     side = xside;
-    history[num_moves++] = stack.hash;
+    history.push_back(stack.hash);
 
     //ASSERT(hashIsValid());
     //ASSERT(phashIsValid());
@@ -284,7 +279,6 @@ void position_t::setPiece(int sq, int c, int pc) {
     piecesBB[pc] |= BitMask[sq];
     colorBB[c] |= BitMask[sq];
     occupiedBB |= BitMask[sq];
-    stack.score[c] += MaterialValues[pc];
     stack.score[c] += pst[c][pc][sq];
     stack.hash ^= ZobPiece[c][pc][sq];
     if (pc == PAWN) stack.phash ^= ZobPiece[c][pc][sq];
@@ -355,7 +349,7 @@ std::string position_t::positionToFEN() {
         fen += sqFile(stack.epsq) + 'a';
         fen += '1' + sqRank(stack.epsq);
     }
-    fen += " " + std::to_string(stack.fifty) + " " + std::to_string(num_moves + 1);
+    fen += " " + std::to_string(stack.fifty) + " " + std::to_string(history.size() + 1);
     return fen;
 }
 
@@ -384,7 +378,7 @@ std::string position_t::to_str() {
 }
 
 bool position_t::isRepeat() {
-    for (int idx = num_moves - 5; idx >= num_moves - stack.fifty; idx -= 2) {
+    for (int idx = history.size() - 5; idx >= 0 && idx >= history.size() - stack.fifty; idx -= 2) {
         if (history[idx] == stack.hash)
             return true;
     }

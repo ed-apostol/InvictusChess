@@ -89,13 +89,11 @@ struct position_t {
     void genCheckEvasions(movelist_t<256>& mvlist);
 
     uint64_t occupiedBB;
-    uint64_t history[1024];
-    //uint64_t history[1];
+    std::vector<uint64_t> history;
     uint64_t piecesBB[7];
     uint64_t colorBB[2];
     int pieces[64];
     int kpos[2];
     undo_t stack;
     int side;
-    int num_moves;
 };
