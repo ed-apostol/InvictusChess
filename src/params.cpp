@@ -42,38 +42,38 @@ namespace EvalParam {
         return file[sqFile(sq)] + rank[sqRank(sq)];
     }
 
-    score_t MaterialValues[7] = { { 0, 0 },{ 100, 134 },{ 430, 431 },{ 469, 454 },{ 589, 789 },{ 1356, 1449 },{ 0, 0 } };
+    score_t MaterialValues[7] = { { 0, 0 },{ 100, 127 },{ 385, 415 },{ 421, 435 },{ 521, 748 },{ 1211, 1380 },{ 0, 0 } };
 
-    score_t PawnConnected = { 6, 8 };
-    score_t PawnDoubled = { 7, 16 };
-    score_t PawnIsolated = { 19, 10 };
-    score_t PawnBackward = { 1, 4 };
+    score_t PawnConnected = { 5, 7 };
+    score_t PawnDoubled = { 4, 16 };
+    score_t PawnIsolated = { 16, 8 };
+    score_t PawnBackward = { 0, 3 };
 
-    score_t PasserBonusMin = { 0, 24 };
-    score_t PasserBonusMax = { 131, 45 };
-    score_t PasserDistOwn = { 15, 26 };
-    score_t PasserDistEnemy = { 5, 72 };
-    score_t PasserNotBlocked = { 64, 0 };
-    score_t PasserSafePush = { 40, 0 };
+    score_t PasserBonusMin = { 0, 19 };
+    score_t PasserBonusMax = { 61, 25 };
+    score_t PasserDistOwn = { 0, 0 };
+    score_t PasserDistEnemy = { 0, 34 };
+    score_t PasserNotBlocked = { 61, 0 };
+    score_t PasserSafePush = { 4, 0 };
 
-    score_t KnightMob = { 7, 11 };
-    score_t BishopMob = { 9, 8 };
-    score_t RookMob = { 6, 8 };
-    score_t QueenMob = { 1, 11 };
+    score_t KnightMob = { 5, 8 };
+    score_t BishopMob = { 7, 6 };
+    score_t RookMob = { 6, 6 };
+    score_t QueenMob = { 0, 9 };
 
-    score_t NumKZoneAttacks = { 5, 13 };
-    score_t ShelterBonus = { 10, 11 };
+    score_t NumKZoneAttacks = { 4, 12 };
+    score_t ShelterBonus = { 8, 7 };
 
-    score_t PawnsxMinors = { 57, 0 };
-    score_t MinorsxMinors = { 24, 38 };
-    score_t MajorsxWeakMinors = { 9, 52 };
-    score_t PawnsMinorsxMajors = { 8, 0 };
-    score_t AllxQueens = { 39, 25 };
+    score_t PawnsxMinors = { 43, 0 };
+    score_t MinorsxMinors = { 22, 33 };
+    score_t MajorsxWeakMinors = { 7, 46 };
+    score_t PawnsMinorsxMajors = { 7, 0 };
+    score_t AllxQueens = { 31, 23 };
 
-    int16_t KnightAtk = 3;
+    int16_t KnightAtk = 2;
     int16_t BishopAtk = 0;
-    int16_t RookAtk = 4;
-    int16_t QueenAtk = 1;
+    int16_t RookAtk = 3;
+    int16_t QueenAtk = 0;
 
     score_t pst[2][8][64];
     uint64_t KingZoneBB[2][64];

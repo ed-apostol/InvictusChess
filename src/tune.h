@@ -6,4 +6,6 @@
 
 #pragma once
 
-extern void Tune(const std::string& filename);
+namespace Tuner {
+    extern void Tune(const std::string& filename);
+}
