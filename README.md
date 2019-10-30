@@ -1,5 +1,14 @@
 # Invictus Chess
 
-Invictus is a state of the art UCI compliant chess engine. It uses magic bitboards with pext optimizations, PVS search on top of alpha-beta and iterative aspiration window search, null move pruning and internal iterative deepening, etc. It also has support for SMP using a modified ABDADA algorithm that should scale well with large number of threads/processors.
+Invictus is a state of the art UCI compliant chess engine. 
 
-Invictus is influenced by other excellent open source projects especially Stokfish and Ethereal.
+Features:
+-magic bitboards with pext optimizations
+-PVS search on top of alpha-beta and iterative aspiration window search
+-null move pruning
+-internal iterative deepening
+-SMP using a modified ABDADA algorithm that should scale well with large number of threads/processors
+-Texel tuning with Stochastic Gradient Descent using Adam optimizer
+-Texel tuning with local search
+
+Invictus is influenced by other excellent open source projects especially Ethereal, Defenchess, Minic (for the Texel tuning).
