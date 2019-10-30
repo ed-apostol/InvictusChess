@@ -16,7 +16,7 @@ struct eval_t {
     void kingsafety(position_t& p, int side);
     void threats(position_t& p, int side);
     void passedpawns(position_t& p, int side);
-    int score(position_t& p);
+    basic_score_t score(position_t& p);
     uint64_t pawnatks[2];
     uint64_t knightatks[2];
     uint64_t bishopatks[2];

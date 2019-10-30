@@ -16,7 +16,7 @@
 const std::string uci_t::name = "Invictus";
 const std::string uci_t::author = "Edsel Apostol";
 const std::string uci_t::year = "2019";
-const std::string uci_t::version = "r268";
+const std::string uci_t::version = "r270";
 
 void uci_t::info() {
     LogAndPrintOutput() << name << " " << version;
@@ -165,8 +165,10 @@ void uci_t::newgame() {
 uci_t::~uci_t() {}
 
 void uci_t::tune() {
-    //Tune("quiet-labeled.epd");
+#ifdef TUNE
     Tuner::Tune("lichess-quiet.txt");
+    //Tuner::Tune("fish2.fens");
+#endif
 }
 
 void uci_t::perftbench(iss& stream) {

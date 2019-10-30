@@ -13,27 +13,27 @@ using namespace Attacks;
 
 namespace EvalParam {
     score_t pawnPST(int sq) {
-        score_t file[8] = { { -4, 5 },{ -2, 3 },{ 0, 1 },{ 2, -1 },{ 2, -1 },{ 0, 1 },{ -2, 3 },{ -4, 5 } };
-        score_t rank[8] = { { 0, 0 },{ -1, -10 },{ 0, -5 },{ 1, 0 },{ 1 ,5 },{ 0, 10 },{ 0, 15 },{ 0, 0 } };
+        score_t file[8] = { { -3, 3 },{ -1, 1 },{ 0, -1 },{ 3, -3 },{ 3, -3 },{ 0, -1 },{ -1, 1 },{ -3, 3 } };
+        score_t rank[8] = { { 0, 0 },{ 0, -20 },{ 0, -10 },{ 1, 0 },{ 1 ,5 },{ 0, 10 },{ 0, 15 },{ 0, 0 } };
         return file[sqFile(sq)] + rank[sqRank(sq)];
     }
     score_t knightPST(int sq) {
-        score_t file[8] = { { -26, -10 },{ -9, -3 },{ 2, 0 },{ 5, 2 },{ 5, 2 },{ 2, 0 },{ -9, -3 },{ -26, -10 } };
-        score_t rank[8] = { { -30, -10 },{ -9, -4 },{ 6, -1 },{ 16, 2 },{ 20, 4 },{ 19, 6 },{ 11, 3 },{ -11, -5 } };
+        score_t file[8] = { { -15, -7 },{ -8, -3 },{ 8, 3 },{ 15, 7 },{ 15, 7 },{ 8, 3 },{ -8, -3 },{ -15, -7 } };
+        score_t rank[8] = { { -30, -10 },{ -14, -4 },{ -2, -1 },{ 8, 3 },{ 16, 7 },{ 22, 12 },{ 11, 3 },{ -11, -10 } };
         return file[sqFile(sq)] + rank[sqRank(sq)];
     }
     score_t bishopPST(int sq) {
-        score_t rank[8] = { { -7, -5 },{ -3, -2 },{ 0, 0 },{ 0, 0 },{ 0, 0 },{ 0, 0 },{ -3, -2 },{ -7, -5 } };
-        score_t file[8] = { { -7, -5 },{ -3, -2 },{ 0, 0 },{ 0, 0 },{ 0, 0 },{ 0, 0 },{ -3, -2 },{ -7, -5 } };
+        score_t rank[8] = { { -4, -5 },{ 0, -1 },{ 0, 1 },{ 4, 5 },{ 4, 5 },{ 0, 1 },{ 0, -1 },{ -4, -5 } };
+        score_t file[8] = { { -4, -5 },{ 0, -1 },{ 0, 1 },{ 4, 5 },{ 4, 5 },{ 0, 1 },{ 0, -1 },{ -4, -5 } };
         return file[sqFile(sq)] + rank[sqRank(sq)];
     }
     score_t rookPST(int sq) {
-        score_t file[8] = { { -1, 0 },{ -1, 0 },{ 4, 0 },{ 7, 0 },{ 7, 0 },{ 4, 0 },{ -1, 0 },{ -1, 0 } };
+        score_t file[8] = { { -4, 0 },{ -1, 0 },{ 1, 0 },{ 4, 0 },{ 4, 0 },{ 1, 0 },{ -1, 0 },{ -4, 0 } };
         return file[sqFile(sq)];
     }
     score_t queenPST(int sq) {
-        score_t file[8] = { { -3, -3 },{ 0, 0 },{ 1, 1 },{ 3, 3 },{ 3, 3 },{ 1, 1 },{ 0, 0 },{ -3, -3 } };
-        score_t rank[8] = { { -7, -3 },{ 0, 0 },{ 0, 1 },{ 1, 3 },{ 1, 3 },{ 0, 1 },{ 0, 0 },{ -1, -3 } };
+        score_t file[8] = { { -3, -3 },{ -1, -1 },{ 1, 1 },{ 3, 3 },{ 3, 3 },{ 1, 1 },{ -1, -1 },{ -3, -3 } };
+        score_t rank[8] = { { -4, -5 },{ 0, 0 },{ 1, 1 },{ 2, 3 },{ 2, 3 },{ 1, 1 },{ 1, 0 },{ -3, -3 } };
         return file[sqFile(sq)] + rank[sqRank(sq)];
     }
     score_t kingPST(int sq) {
@@ -42,33 +42,33 @@ namespace EvalParam {
         return file[sqFile(sq)] + rank[sqRank(sq)];
     }
 
-    score_t MaterialValues[7] = { { 0, 0 },{ 100, 127 },{ 385, 415 },{ 421, 435 },{ 521, 748 },{ 1211, 1380 },{ 0, 0 } };
+    score_t MaterialValues[7] = { { 0, 0 },{ 100, 120 },{ 358, 430 },{ 393, 447 },{ 489, 768 },{ 1099, 1461 },{ 0, 0 } };
 
-    score_t PawnConnected = { 5, 7 };
-    score_t PawnDoubled = { 4, 16 };
-    score_t PawnIsolated = { 16, 8 };
-    score_t PawnBackward = { 0, 3 };
+    score_t PawnConnected = { 0, 15 };
+    score_t PawnDoubled = { 10, 9 };
+    score_t PawnIsolated = { 17, 9 };
+    score_t PawnBackward = { 6, 0 };
 
-    score_t PasserBonusMin = { 0, 19 };
-    score_t PasserBonusMax = { 61, 25 };
-    score_t PasserDistOwn = { 0, 0 };
-    score_t PasserDistEnemy = { 0, 34 };
-    score_t PasserNotBlocked = { 61, 0 };
-    score_t PasserSafePush = { 4, 0 };
+    score_t PasserBonusMin = { 0, 14 };
+    score_t PasserBonusMax = { 48, 74 };
+    score_t PasserDistOwn = { 0, 40 };
+    score_t PasserDistEnemy = { 0, 62 };
+    score_t PasserNotBlocked = { 15, 100 };
+    score_t PasserSafePush = { 0, 83 };
 
-    score_t KnightMob = { 5, 8 };
+    score_t KnightMob = { 5, 7 };
     score_t BishopMob = { 7, 6 };
-    score_t RookMob = { 6, 6 };
-    score_t QueenMob = { 0, 9 };
+    score_t RookMob = { 5, 6 };
+    score_t QueenMob = { 2, 7 };
 
-    score_t NumKZoneAttacks = { 4, 12 };
-    score_t ShelterBonus = { 8, 7 };
+    score_t NumKZoneAttacks = { 4, 25 };
+    score_t ShelterBonus = { 7, 19 };
 
-    score_t PawnsxMinors = { 43, 0 };
-    score_t MinorsxMinors = { 22, 33 };
-    score_t MajorsxWeakMinors = { 7, 46 };
+    score_t PawnsxMinors = { 45, 0 };
+    score_t MinorsxMinors = { 19, 35 };
+    score_t MajorsxWeakMinors = { 9, 47 };
     score_t PawnsMinorsxMajors = { 7, 0 };
-    score_t AllxQueens = { 31, 23 };
+    score_t AllxQueens = { 34, 23 };
 
     int16_t KnightAtk = 2;
     int16_t BishopAtk = 0;
@@ -84,11 +84,14 @@ namespace EvalParam {
         std::function<score_t(int)> pstInit[] = { pawnPST, knightPST,bishopPST,rookPST,queenPST,kingPST };
         memset(pst, 0, sizeof(pst));
         for (int pc = PAWN; pc <= KING; ++pc) {
+            score_t total;
             for (int sq = 0; sq < 64; ++sq) {
                 int rsq = ((7 - sqRank(sq)) * 8) + sqFile(sq);
                 pst[WHITE][pc][sq] = pstInit[pc - 1](sq);
                 pst[BLACK][pc][sq] = pstInit[pc - 1](rsq);
+                //total += pst[WHITE][pc][sq];
             }
+            //PrintOutput() << "pc: " << pc << " Mid: " << total.m << " End: " << total.e;
         }
         for (int sq = 0; sq < 64; ++sq) {
             for (int color = WHITE; color <= BLACK; ++color) {

@@ -148,7 +148,7 @@ void eval_t::passedpawns(position_t& p, int side) {
     }
 }
 
-int eval_t::score(position_t& p) {
+basic_score_t eval_t::score(position_t& p) {
     for (int color = WHITE; color <= BLACK; ++color) {
         scr[color] = p.stack.score[color];
         allatks2[color] = kingzoneatks[color] = knightatks[color] = bishopatks[color] = rookatks[color] = queenatks[color] = 0;

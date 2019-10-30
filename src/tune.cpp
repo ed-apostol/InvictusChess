@@ -17,22 +17,22 @@
 
 namespace Tuner {
     using Ldouble = long double;
-    Ldouble K = 1.26088;
+    Ldouble K = 1.39259;
     const int num_threads = 7;
 
     struct PositionResults {
         position_t* p;
-        Ldouble result;
+        float result;
     };
 
     struct TunerParam {
     public:
-        TunerParam(int16_t& v, const int16_t& l, const int16_t& u, const std::string& n) : val(&v), lower(l), upper(u), name(n) {}
-        int16_t *val, lower, upper;
+        TunerParam(basic_score_t& v, basic_score_t l, basic_score_t u, std::string n) : val(&v), lower(l), upper(u), name(n) {}
+        basic_score_t *val, lower, upper;
         std::string name;
-        operator int16_t&() { return *val; }
-        operator const int16_t&()const { return *val; }
-        void operator=(const int16_t& value) { *val = std::min(std::max(lower, value), upper); }
+        operator basic_score_t&() { return *val; }
+        operator const basic_score_t&()const { return *val; }
+        void operator=(const basic_score_t& value) { *val = std::min(std::max(lower, value), upper); }
     };
 
     Ldouble Sigmoid(Ldouble score) {
@@ -42,7 +42,7 @@ namespace Tuner {
     void RunOnThread(std::vector<PositionResults>& data, std::vector<Ldouble>& errors, size_t batchsize, int t, int numthreads) {
         for (size_t k = t; k < batchsize; k += numthreads) {
             eval_t eval;
-            Ldouble scr = eval.score(*data[k].p) * (data[k].p->side == WHITE ? +1.0 : -1.0);
+            basic_score_t scr = eval.score(*data[k].p) * (data[k].p->side == WHITE ? +1.0 : -1.0);
             errors[k] = std::pow(data[k].result - Sigmoid(scr), 2);
         }
     }
@@ -95,7 +95,7 @@ namespace Tuner {
     void CalculateGradients(std::vector<Ldouble>& gradients, std::vector<TunerParam>& params, std::vector<PositionResults>& data, size_t batchsize, Ldouble baseError) {
         int k = 0;
         for (auto par : params) {
-            const int16_t oldvalue = par;
+            const basic_score_t oldvalue = par;
             par = oldvalue + 1;
             if (par != oldvalue) { // reached upper value
                 Ldouble ep1 = Error(data, batchsize);
@@ -116,7 +116,7 @@ namespace Tuner {
         std::ostringstream  out;
         out << "\n";
         for (auto param : params) {
-            out << param.name << " " << param << "\n";
+            out << param.name << "\t" << param << "\n";
         }
         out << "\nEpoch = " << epoch << " start error = " << start << " new error = " << end;
         out << " improved by = " << (start - end) * 10e6 << "\n";
@@ -127,10 +127,10 @@ namespace Tuner {
 
     void AdamSGD(std::vector<TunerParam>& params, std::vector<PositionResults>& data, const size_t batchsize) {
         std::ofstream str("tuned.txt");
-        std::vector<Ldouble> gradients(params.size(), 0);
-        std::vector<Ldouble> M(params.size(), 0);
-        std::vector<Ldouble> V(params.size(), 0);
-        const Ldouble Alpha = 0.015;
+        std::vector<Ldouble> gradients(params.size(), 0.0);
+        std::vector<Ldouble> M(params.size(), 0.0);
+        std::vector<Ldouble> V(params.size(), 0.0);
+        const Ldouble Alpha = 3.0;
         const Ldouble Beta1 = 0.9;
         const Ldouble Beta2 = 0.999;
         const Ldouble Epsilon = 1.0e-8;
@@ -147,18 +147,18 @@ namespace Tuner {
             CalculateGradients(gradients, params, data, batchsize, baseError);
 
             PrintOutput() << "Applying gradients...";
+
             int k = 0;
             for (auto par : params) {
                 Ldouble grad = gradients[k];
                 M[k] = Beta1 * M[k] + (1.0 - Beta1) * grad;
                 V[k] = Beta2 * V[k] + (1.0 - Beta2) * grad * grad;
-                Ldouble M_t = M[k] / (1.0 - pow(Beta1, epoch));
-                Ldouble V_t = V[k] / (1.0 - pow(Beta2, epoch));
-                Ldouble delta = Alpha * M_t / (sqrt(V_t) + Epsilon);
-                int16_t oldpar = par;
+                Ldouble learnrate = Alpha * (1.0 - pow(Beta2, epoch)) / (1.0 - pow(Beta1, epoch));
+                Ldouble delta = learnrate * M[k] / (sqrt(V[k]) + Epsilon);
+                const basic_score_t oldpar = par;
                 par = par - delta;
                 if (par != oldpar)
-                    PrintOutput() << par.name << " " << oldpar << " --> " << par;
+                    PrintOutput() << par.name << "\t\t\t" << oldpar << " --> " << par;
                 ++k;
             }
 
@@ -176,12 +176,12 @@ namespace Tuner {
 
     void LocalSearch(std::vector<TunerParam>& params, std::vector<PositionResults>& data) {
         std::ofstream str("tuned.txt");
-        const std::vector<int16_t> delta = { 1, -1 };
+        const std::vector<Ldouble> delta = { 1, -1 };
 
         Ldouble currError = Error(data, data.size());
         PrintOutput() << "Base Error: " << currError;
 
-        int epoch = 1;
+        int epoch = 0;
         while (true) {
             ++epoch;
             PrintOutput() << "\n\nEpoch = " << epoch << " start error = " << currError;
@@ -189,26 +189,26 @@ namespace Tuner {
             Randomize(data);
             for (auto par : params) {
                 bool improved = false;
-                int16_t orig = par;
+                const basic_score_t oldpar = par;
                 for (auto d : delta) {
                     if (improved) break;
-                    par = orig + d;
-                    if (orig == par) continue; // reached upper or lower
+                    par = oldpar + d;
+                    if (oldpar == par) continue; // reached upper or lower
                     Ldouble error = Error(data, data.size());
                     if (error < currError) {
                         currError = error;
                         improved = true;
-                        PrintOutput() << par.name << " " << orig << " --> " << par;
+                        PrintOutput() << par.name << " " << oldpar << " --> " << par;
                     }
                 }
-                if (!improved) par = orig;
+                if (!improved) par = oldpar;
             }
             PrintParams(str, params, baseError, currError, epoch);
             if (baseError == currError) break;
         }
     }
 
-    Ldouble getResult(const std::string& s) {
+    float getResult(const std::string& s) {
         if (s == "White") return 1.0;
         if (s == "Black") return 0.0;
         if (s == "Draw") return 0.5;
@@ -297,10 +297,10 @@ namespace Tuner {
         input.push_back({ AllxQueens.m, 0, 100, "AllxQueens Mid" });
         input.push_back({ AllxQueens.e, 0, 100, "AllxQueens End" });
 
-        input.push_back({ KnightAtk, 0, 100, "KnightAtk" });
-        input.push_back({ BishopAtk, 0, 100, "BishopAtk" });
-        input.push_back({ RookAtk, 0, 100, "RookAtk" });
-        input.push_back({ QueenAtk, 0, 100, "QueenAtk" });
+        //input.push_back({ KnightAtk, 0, 100, "KnightAtk" });
+        //input.push_back({ BishopAtk, 0, 100, "BishopAtk" });
+        //input.push_back({ RookAtk, 0, 100, "RookAtk" });
+        //input.push_back({ QueenAtk, 0, 100, "QueenAtk" });
 
         //FindBestK(data);
         PrintOutput() << "Best K " << K;

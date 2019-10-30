@@ -12,6 +12,8 @@
 #include <atomic>
 #include <condition_variable>
 
+//#define TUNE
+
 //#define ASSERT(a)
 #define ASSERT(a) if (!(a)) \
 {LogAndPrintInfo() << "file " << __FILE__ << ", line " << __LINE__  << " : " << "assertion \"" #a "\" failed";}
@@ -118,9 +120,15 @@ private:
     move_t tab[N];
 };
 
+#ifdef TUNE
+typedef long double basic_score_t;
+#else
+typedef int basic_score_t;
+#endif
+
 struct score_t {
     score_t() : m(0), e(0) {};
-    score_t(int mm, int ee) : m(mm), e(ee) {}
+    score_t(basic_score_t mm, basic_score_t ee) : m(mm), e(ee) {}
     inline score_t operator+(const score_t &d) { return score_t(m + d.m, e + d.e); }
     inline score_t operator-(const score_t &d) { return score_t(m - d.m, e - d.e); }
     inline score_t operator/(const score_t &d) { return score_t(m / d.m, e / d.e); }
@@ -139,8 +147,8 @@ struct score_t {
     inline score_t& operator*=(const int x) { m *= x, e *= x; return *this; }
     inline bool operator==(const score_t &d) { return (d.e == e) && (d.m == m); }
 
-    int16_t m;
-    int16_t e;
+    basic_score_t m;
+    basic_score_t e;
 };
 
 class spinlock_t {
