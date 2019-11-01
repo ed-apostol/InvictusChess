@@ -25,6 +25,9 @@ struct eval_t {
     uint64_t allatks[2];
     uint64_t allatks2[2];
     uint64_t kingzone[2];
-    uint64_t kingzoneatks[2];
+    int katkrscnt[2];
+    int atkweights[2];
+    basic_score_t kzoneatks[2];
+
     score_t scr[2];
 };

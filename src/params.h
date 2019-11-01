@@ -44,6 +44,12 @@ namespace EvalParam {
     extern basic_score_t RookAtk;
     extern basic_score_t QueenAtk;
 
+    extern basic_score_t Tempo;
+    extern score_t BishopPair;
+    extern score_t RookOn7th;
+    extern score_t RookOnSemiOpenFile;
+    extern score_t RookOnOpenFile;
+
     extern score_t pst[2][8][64];
     extern uint64_t KingZoneBB[2][64];
     extern uint64_t KingShelterBB[2][3];

@@ -301,6 +301,16 @@ namespace Tuner {
         input.push_back({ RookAtk, 0, 100, "RookAtk" });
         input.push_back({ QueenAtk, 0, 100, "QueenAtk" });
 
+        input.push_back({ Tempo, 0, 100, "Tempo" });
+        input.push_back({ BishopPair.m, 0, 100, "BishopPair.m" });
+        input.push_back({ BishopPair.e, 0, 100, "BishopPair.e" });
+        input.push_back({ RookOn7th.m, 0, 100, "RookOn7th.m" });
+        input.push_back({ RookOn7th.e, 0, 100, "RookOn7th.e" });
+        input.push_back({ RookOnSemiOpenFile.m, 0, 100, "RookOnSemiOpenFile.m" });
+        input.push_back({ RookOnSemiOpenFile.e, 0, 100, "RookOnSemiOpenFile.e" });
+        input.push_back({ RookOnOpenFile.m, 0, 100, "RookOnOpenFile.m" });
+        input.push_back({ RookOnOpenFile.e, 0, 100, "RookOnOpenFile.e" });
+
         //FindBestK(data);
         PrintOutput() << "Best K " << K;
 

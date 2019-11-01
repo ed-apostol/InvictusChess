@@ -148,5 +148,6 @@ const uint64_t FullBoardBB = 0xFFFFFFFFFFFFFFFFULL;
 const uint64_t WhiteSquaresBB = 0x55AA55AA55AA55AAULL;
 const uint64_t BlackSquaresBB = 0xAA55AA55AA55AA55ULL;
 
+const uint64_t Rank8ByColorBB[2] = { Rank8BB, Rank1BB };
 const uint64_t Rank7ByColorBB[2] = { Rank7BB, Rank2BB };
 const uint64_t Rank2ByColorBB[2] = { Rank2BB, Rank7BB };

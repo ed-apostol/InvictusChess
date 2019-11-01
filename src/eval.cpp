@@ -62,10 +62,16 @@ void eval_t::mobility(position_t& p, int side) {
         allatks2[side] |= allatks[side] & atk;
         allatks[side] |= atk;
         scr[side] += KnightMob * bitCnt(atk & mobmask);
-        if (atk & kingzone[xside]) kingzoneatks[side] += (1 << 20) + (int(KnightAtk) << 10) + bitCnt(atk & kingzone[xside]);
+        if (atk & kingzone[xside]) {
+            katkrscnt[side] += 1;
+            kzoneatks[side] += bitCnt(atk & kingzone[xside]);
+            atkweights[side] += KnightAtk;
+        }
         // TODO: knight outpost
     }
-    // TODO: bishop pair
+    if (bitCnt(p.pieceBB(BISHOP, side)) == 2) {
+        scr[side] += BishopPair;
+    }
     for (uint64_t pcbits = p.pieceBB(BISHOP, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = bishopAttacksBB(sq, p.occupiedBB);
@@ -73,7 +79,11 @@ void eval_t::mobility(position_t& p, int side) {
         allatks2[side] |= allatks[side] & atk;
         allatks[side] |= atk;
         scr[side] += BishopMob * bitCnt(atk & mobmask);
-        if (atk & kingzone[xside]) kingzoneatks[side] += (1 << 20) + (int(BishopAtk) << 10) + bitCnt(atk & kingzone[xside]);
+        if (atk & kingzone[xside]) {
+            katkrscnt[side] += 1;
+            kzoneatks[side] += bitCnt(atk & kingzone[xside]);
+            atkweights[side] += BishopAtk;
+        }
         // TODO: bishop outpost
         // TODO: pawns on same color penalty
     }
@@ -84,9 +94,18 @@ void eval_t::mobility(position_t& p, int side) {
         allatks2[side] |= allatks[side] & atk;
         allatks[side] |= atk;
         scr[side] += RookMob * bitCnt(atk & mobmask);
-        if (atk & kingzone[xside]) kingzoneatks[side] += (1 << 20) + (int(RookAtk) << 10) + bitCnt(atk & kingzone[xside]);
-        // TODO: rook open file
-        // TODO: rook 7th rank
+        if (atk & kingzone[xside]) {
+            katkrscnt[side] += 1;
+            kzoneatks[side] += bitCnt(atk & kingzone[xside]);
+            atkweights[side] += RookAtk;
+        }
+        if ((BitMask[sq] & Rank7ByColorBB[side]) && (BitMask[p.kpos[xside]] & (Rank7ByColorBB[side] | Rank8ByColorBB[side]))) {
+            scr[side] += RookOn7th;
+        }
+        if (!(FileBB[sqFile(sq)] & p.pieceBB(PAWN, side))) {
+            if (!(FileBB[sqFile(sq)] & p.pieceBB(PAWN, xside))) scr[side] += RookOnOpenFile;
+            else scr[side] += RookOnSemiOpenFile;
+        }
     }
     for (uint64_t pcbits = p.pieceBB(QUEEN, side); pcbits;) {
         int sq = popFirstBit(pcbits);
@@ -95,7 +114,11 @@ void eval_t::mobility(position_t& p, int side) {
         allatks2[side] |= allatks[side] & atk;
         allatks[side] |= atk;
         scr[side] += QueenMob * bitCnt(atk & mobmask);
-        if (atk & kingzone[xside]) kingzoneatks[side] += (1 << 20) + (int(QueenAtk) << 10) + bitCnt(atk & kingzone[xside]);
+        if (atk & kingzone[xside]) {
+            katkrscnt[side] += 1;
+            kzoneatks[side] += bitCnt(atk & kingzone[xside]);
+            atkweights[side] += QueenAtk;
+        }
     }
 }
 
@@ -121,12 +144,9 @@ void eval_t::kingsafety(position_t& p, int side) {
     }
     scr[side] -= ShelterBonus * ((best_shelter + curr_shelter) / 2);
 
-    int tot_atkrs = kingzoneatks[side] >> 20;
-    int kzone_atkcnt = kingzoneatks[side] & ((1 << 10) - 1);
-    int pc_atkweights = (kingzoneatks[side] >> 10) & ((1 << 10) - 1);
-    int penalty = ((pc_atkweights * tot_atkrs) / 2) + kzone_atkcnt;
+    basic_score_t penalty = ((atkweights[side] * katkrscnt[side]) / 2) + kzoneatks[side];
 
-    if (tot_atkrs >= 2 && kzone_atkcnt >= 1) {
+    if (katkrscnt[side] >= 2 && kzoneatks[side] >= 1) {
         scr[side] += KingAttacks * penalty;
     }
     // TODO: pawn storm
@@ -175,31 +195,27 @@ void eval_t::passedpawns(position_t& p, int side) {
 basic_score_t eval_t::score(position_t& p) {
     for (int color = WHITE; color <= BLACK; ++color) {
         scr[color] = p.stack.score[color];
-        allatks2[color] = kingzoneatks[color] = knightatks[color] = bishopatks[color] = rookatks[color] = queenatks[color] = 0;
+        katkrscnt[color] = kzoneatks[color] = atkweights[color] = 0;
+        allatks2[color] = knightatks[color] = bishopatks[color] = rookatks[color] = queenatks[color] = 0;
         kingzone[color] = KingZoneBB[color][p.kpos[color]];
         allatks[color] = kingMovesBB(p.kpos[color]);
         pawnatks[color] = pawnAttackBB(p.pieceBB(PAWN, color), color);
         allatks2[color] |= allatks[color] & pawnatks[color];
         allatks[color] |= pawnatks[color];
     }
+    for (int color = WHITE; color <= BLACK; ++color) {
+        material(p, color);
+        pawnstructure(p, color);
+        mobility(p, color);
+    }
+    for (int color = WHITE; color <= BLACK; ++color) {
+        kingsafety(p, color);
+        passedpawns(p, color);
+        threats(p, color);
+    }
 
-    material(p, WHITE);
-    material(p, BLACK);
-    pawnstructure(p, WHITE);
-    pawnstructure(p, BLACK);
-    mobility(p, WHITE);
-    mobility(p, BLACK);
-    kingsafety(p, WHITE);
-    kingsafety(p, BLACK);
-    passedpawns(p, WHITE);
-    passedpawns(p, BLACK);
-    threats(p, WHITE);
-    threats(p, BLACK);
-
-    // TODO: improve phase scoring
     int phase = 4 * bitCnt(p.piecesBB[QUEEN]) + 2 * bitCnt(p.piecesBB[ROOK]) + 1 * bitCnt(p.piecesBB[KNIGHT] | p.piecesBB[BISHOP]);
-    score_t s = scr[p.side] - scr[p.side ^ 1];
-
-    // TODO: add tempo
-    return ((s.m*phase) + (s.e*(24 - phase))) / 24;
+    score_t score = scr[p.side] - scr[p.side ^ 1];
+    basic_score_t scaled = ((score.m*phase + 12) + (score.e*(24 - phase))) / 24;
+    return scaled + Tempo;
 }
