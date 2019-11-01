@@ -17,7 +17,7 @@
 
 namespace Tuner {
     using Ldouble = long double;
-    Ldouble K = 1.39259;
+    Ldouble K = 1.41988;
     const int num_threads = 7;
 
     struct PositionResults {
@@ -26,7 +26,6 @@ namespace Tuner {
     };
 
     struct TunerParam {
-    public:
         TunerParam(basic_score_t& v, basic_score_t l, basic_score_t u, std::string n) : val(&v), lower(l), upper(u), name(n) {}
         basic_score_t *val, lower, upper;
         std::string name;
@@ -72,8 +71,7 @@ namespace Tuner {
     }
 
     void FindBestK(std::vector<PositionResults>& data) {
-        Ldouble min = -10, max = 10, delta = 1, best = 1;
-        Ldouble error = 100;
+        Ldouble min = -10, max = 10, delta = 1, best = 1, error = 100;
         for (int precision = 0; precision < 10; ++precision) {
             PrintOutput() << "\nFindBestK: min:" << min << " max:" << max << " delta:" << delta;
             while (min < max) {
@@ -115,8 +113,8 @@ namespace Tuner {
     void PrintParams(std::ofstream& outfile, std::vector<TunerParam>& params, Ldouble start, Ldouble end, int epoch) {
         std::ostringstream  out;
         out << "\n";
-        for (auto param : params) {
-            out << param.name << "\t" << param << "\n";
+        for (auto par : params) {
+            out << par.name << "\t\t" << par << "\n";
         }
         out << "\nEpoch = " << epoch << " start error = " << start << " new error = " << end;
         out << " improved by = " << (start - end) * 10e6 << "\n";
@@ -130,7 +128,7 @@ namespace Tuner {
         std::vector<Ldouble> gradients(params.size(), 0.0);
         std::vector<Ldouble> M(params.size(), 0.0);
         std::vector<Ldouble> V(params.size(), 0.0);
-        const Ldouble Alpha = 3.0;
+        const Ldouble Alpha = 0.3;
         const Ldouble Beta1 = 0.9;
         const Ldouble Beta2 = 0.999;
         const Ldouble Epsilon = 1.0e-8;
@@ -146,8 +144,6 @@ namespace Tuner {
             PrintOutput() << "Computing gradients...";
             CalculateGradients(gradients, params, data, batchsize, baseError);
 
-            PrintOutput() << "Applying gradients...";
-
             int k = 0;
             for (auto par : params) {
                 Ldouble grad = gradients[k];
@@ -157,8 +153,7 @@ namespace Tuner {
                 Ldouble delta = learnrate * M[k] / (sqrt(V[k]) + Epsilon);
                 const basic_score_t oldpar = par;
                 par = par - delta;
-                if (par != oldpar)
-                    PrintOutput() << par.name << "\t\t\t" << oldpar << " --> " << par;
+                if (par != oldpar) PrintOutput() << par.name << "\t\t" << oldpar << " --> " << par;
                 ++k;
             }
 
@@ -229,6 +224,7 @@ namespace Tuner {
         while (getline(file, line)) {
             data.push_back({ new position_t(line), getResult(line.substr(line.find("|") + 1)) });
         }
+        file.close();
         PrintOutput() << "Data size : " << data.size();
 
         size_t batchSize = data.size() / 10;
@@ -239,83 +235,84 @@ namespace Tuner {
         using namespace EvalParam;
 
         std::vector<TunerParam> input;
-        //input.push_back({MaterialValues[PAWN].m, 0, 2000, "PawnVal Mid"}); // peg to 100
-        input.push_back({ MaterialValues[PAWN].e, 0, 2000, "PawnVal End" });
-        input.push_back({ MaterialValues[KNIGHT].m, 0, 2000, "KnightVal Mid" });
-        input.push_back({ MaterialValues[KNIGHT].e, 0, 2000, "KnightVal End" });
-        input.push_back({ MaterialValues[BISHOP].m, 0, 2000, "BishopVal Mid" });
-        input.push_back({ MaterialValues[BISHOP].e, 0, 2000, "BishopVal End" });
-        input.push_back({ MaterialValues[ROOK].m, 0, 2000, "RookVal Mid" });
-        input.push_back({ MaterialValues[ROOK].e, 0, 2000, "RookVal End" });
-        input.push_back({ MaterialValues[QUEEN].m, 0, 2000, "QueenVal Mid" });
-        input.push_back({ MaterialValues[QUEEN].e, 0, 2000, "QueenVal End" });
+        //input.push_back({MaterialValues[PAWN].m, 0, 2000, "PawnVal.m"}); // peg to 100
+        input.push_back({ MaterialValues[PAWN].e, 0, 2000, "PawnVal.e" });
+        input.push_back({ MaterialValues[KNIGHT].m, 0, 2000, "KnightVal.m" });
+        input.push_back({ MaterialValues[KNIGHT].e, 0, 2000, "KnightVal.e" });
+        input.push_back({ MaterialValues[BISHOP].m, 0, 2000, "BishopVal.m" });
+        input.push_back({ MaterialValues[BISHOP].e, 0, 2000, "BishopVal.e" });
+        input.push_back({ MaterialValues[ROOK].m, 0, 2000, "RookVal.m" });
+        input.push_back({ MaterialValues[ROOK].e, 0, 2000, "RookVal.e" });
+        input.push_back({ MaterialValues[QUEEN].m, 0, 2000, "QueenVal.m" });
+        input.push_back({ MaterialValues[QUEEN].e, 0, 2000, "QueenVal.e" });
 
-        input.push_back({ PawnConnected.m, 0, 100, "PawnConnected Mid" });
-        input.push_back({ PawnConnected.e, 0, 100, "PawnConnected End" });
-        input.push_back({ PawnDoubled.m, 0, 100, "PawnDoubled Mid" });
-        input.push_back({ PawnDoubled.e, 0, 100, "PawnDoubled End" });
-        input.push_back({ PawnIsolated.m, 0, 100, "PawnIsolated Mid" });
-        input.push_back({ PawnIsolated.e, 0, 100, "PawnIsolated End" });
-        input.push_back({ PawnBackward.m, 0, 100, "PawnBackward Mid" });
-        input.push_back({ PawnBackward.e, 0, 100, "PawnBackward End" });
+        input.push_back({ PawnConnected.m, 0, 100, "PawnConnected.m" });
+        input.push_back({ PawnConnected.e, 0, 100, "PawnConnected.e" });
+        input.push_back({ PawnDoubled.m, 0, 100, "PawnDoubled.m" });
+        input.push_back({ PawnDoubled.e, 0, 100, "PawnDoubled.e" });
+        input.push_back({ PawnIsolated.m, 0, 100, "PawnIsolated.m" });
+        input.push_back({ PawnIsolated.e, 0, 100, "PawnIsolated.e" });
+        input.push_back({ PawnBackward.m, 0, 100, "PawnBackward.m" });
+        input.push_back({ PawnBackward.e, 0, 100, "PawnBackward.e" });
 
-        input.push_back({ PasserBonusMin.m, 0, 100, "PasserBonusMin Mid" });
-        input.push_back({ PasserBonusMin.e, 0, 100, "PasserBonusMin End" });
-        input.push_back({ PasserBonusMax.m, 0, 200, "PasserBonusMax Mid" });
-        input.push_back({ PasserBonusMax.e, 0, 200, "PasserBonusMax End" });
-        input.push_back({ PasserDistOwn.m, 0, 100, "PasserDistOwn Mid" });
-        input.push_back({ PasserDistOwn.e, 0, 100, "PasserDistOwn End" });
-        input.push_back({ PasserDistEnemy.m, 0, 100, "PasserDistEnemy Mid" });
-        input.push_back({ PasserDistEnemy.e, 0, 100, "PasserDistEnemy End" });
-        input.push_back({ PasserNotBlocked.m, 0, 100, "PasserNotBlocked Mid" });
-        input.push_back({ PasserNotBlocked.e, 0, 100, "PasserNotBlocked End" });
-        input.push_back({ PasserSafePush.m, 0, 100, "PasserSafePush Mid" });
-        input.push_back({ PasserSafePush.e, 0, 100, "PasserSafePush End" });
+        input.push_back({ PasserBonusMin.m, 0, 200, "PasserBonusMin.m" });
+        input.push_back({ PasserBonusMin.e, 0, 200, "PasserBonusMin.e" });
+        input.push_back({ PasserBonusMax.m, 0, 200, "PasserBonusMax.m" });
+        input.push_back({ PasserBonusMax.e, 0, 200, "PasserBonusMax.e" });
+        input.push_back({ PasserDistOwn.m, 0, 200, "PasserDistOwn.m" });
+        input.push_back({ PasserDistOwn.e, 0, 200, "PasserDistOwn.e" });
+        input.push_back({ PasserDistEnemy.m, 0, 200, "PasserDistEnemy.m" });
+        input.push_back({ PasserDistEnemy.e, 0, 200, "PasserDistEnemy.e" });
+        input.push_back({ PasserNotBlocked.m, 0, 200, "PasserNotBlocked.m" });
+        input.push_back({ PasserNotBlocked.e, 0, 200, "PasserNotBlocked.e" });
+        input.push_back({ PasserSafePush.m, 0, 200, "PasserSafePush.m" });
+        input.push_back({ PasserSafePush.e, 0, 200, "PasserSafePush.e" });
+        input.push_back({ PasserSafeProm.m, 0, 200, "PasserSafeProm.m" });
+        input.push_back({ PasserSafeProm.e, 0, 200, "PasserSafeProm.e" });
 
-        input.push_back({ KnightMob.m, 0, 100, "KnightMob Mid" });
-        input.push_back({ KnightMob.e, 0, 100, "KnightMob End" });
-        input.push_back({ BishopMob.m, 0, 100, "BishopMob Mid" });
-        input.push_back({ BishopMob.e, 0, 100, "BishopMob End" });
-        input.push_back({ RookMob.m, 0, 100, "RookMob Mid" });
-        input.push_back({ RookMob.e, 0, 100, "RookMob End" });
-        input.push_back({ QueenMob.m, 0, 100, "QueenMob Mid" });
-        input.push_back({ QueenMob.e, 0, 100, "QueenMob End" });
+        input.push_back({ KnightMob.m, 0, 100, "KnightMob.m" });
+        input.push_back({ KnightMob.e, 0, 100, "KnightMob.e" });
+        input.push_back({ BishopMob.m, 0, 100, "BishopMob.m" });
+        input.push_back({ BishopMob.e, 0, 100, "BishopMob.e" });
+        input.push_back({ RookMob.m, 0, 100, "RookMob.m" });
+        input.push_back({ RookMob.e, 0, 100, "RookMob.e" });
+        input.push_back({ QueenMob.m, 0, 100, "QueenMob.m" });
+        input.push_back({ QueenMob.e, 0, 100, "QueenMob.e" });
 
-        input.push_back({ NumKZoneAttacks.m, 0, 100, "NumKZoneAttacks Mid" });
-        input.push_back({ NumKZoneAttacks.e, 0, 100, "NumKZoneAttacks End" });
-        input.push_back({ ShelterBonus.m, 0, 100, "ShelterBonus Mid" });
-        input.push_back({ ShelterBonus.e, 0, 100, "ShelterBonus End" });
+        input.push_back({ WeakPawns.m, 0, 100, "WeakPawns.m" });
+        input.push_back({ WeakPawns.e, 0, 100, "WeakPawns.e" });
+        input.push_back({ PawnsxMinors.m, 0, 100, "PawnsxMinors.m" });
+        input.push_back({ PawnsxMinors.e, 0, 100, "PawnsxMinors.e" });
+        input.push_back({ MinorsxMinors.m, 0, 100, "MinorsxMinors.m" });
+        input.push_back({ MinorsxMinors.e, 0, 100, "MinorsxMinors.e" });
+        input.push_back({ MajorsxWeakMinors.m, 0, 100, "MajorsxWeakMinors.m" });
+        input.push_back({ MajorsxWeakMinors.e, 0, 100, "MajorsxWeakMinors.e" });
+        input.push_back({ PawnsMinorsxMajors.m, 0, 100, "PawnsMinorsxMajors.m" });
+        input.push_back({ PawnsMinorsxMajors.e, 0, 100, "PawnsMinorsxMajors.e" });
+        input.push_back({ AllxQueens.m, 0, 100, "AllxQueens.m" });
+        input.push_back({ AllxQueens.e, 0, 100, "AllxQueens.e" });
 
-        input.push_back({ PawnsxMinors.m, 0, 100, "PawnsxMinors Mid" });
-        input.push_back({ PawnsxMinors.e, 0, 100, "PawnsxMinors End" });
-        input.push_back({ MinorsxMinors.m, 0, 100, "MinorsxMinors Mid" });
-        input.push_back({ MinorsxMinors.e, 0, 100, "MinorsxMinors End" });
-        input.push_back({ MajorsxWeakMinors.m, 0, 100, "MajorsxWeakMinors Mid" });
-        input.push_back({ MajorsxWeakMinors.e, 0, 100, "MajorsxWeakMinors End" });
-        input.push_back({ PawnsMinorsxMajors.m, 0, 100, "PawnsMinorsxMajors Mid" });
-        input.push_back({ PawnsMinorsxMajors.e, 0, 100, "PawnsMinorsxMajors End" });
-        input.push_back({ AllxQueens.m, 0, 100, "AllxQueens Mid" });
-        input.push_back({ AllxQueens.e, 0, 100, "AllxQueens End" });
-
-        //input.push_back({ KnightAtk, 0, 100, "KnightAtk" });
-        //input.push_back({ BishopAtk, 0, 100, "BishopAtk" });
-        //input.push_back({ RookAtk, 0, 100, "RookAtk" });
-        //input.push_back({ QueenAtk, 0, 100, "QueenAtk" });
+        input.push_back({ KingAttacks.m, 0, 100, "KingAttacks.m" });
+        input.push_back({ KingAttacks.e, 0, 100, "KingAttacks.e" });
+        input.push_back({ ShelterBonus.m, 0, 100, "ShelterBonus.m" });
+        input.push_back({ ShelterBonus.e, 0, 100, "ShelterBonus.e" });
+        input.push_back({ KnightAtk, 0, 100, "KnightAtk" });
+        input.push_back({ BishopAtk, 0, 100, "BishopAtk" });
+        input.push_back({ RookAtk, 0, 100, "RookAtk" });
+        input.push_back({ QueenAtk, 0, 100, "QueenAtk" });
 
         //FindBestK(data);
         PrintOutput() << "Best K " << K;
 
         PrintOutput() << "\nInitial values:";
-        for (auto par : input) PrintOutput() << par.name << " " << par;
+        for (auto par : input) PrintOutput() << par.name << "\t\t\t" << par;
 
         AdamSGD(input, data, batchSize);
         //LocalSearch(input, data);
 
         PrintOutput() << "\nTuned values:";
-        for (auto par : input) PrintOutput() << par.name << " " << par;
+        for (auto par : input) PrintOutput() << par.name << "\t\t\t" << par;
 
         for (auto &d : data) delete d.p;
-
-        if (file) file.close();
     }
 }

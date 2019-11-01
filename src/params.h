@@ -22,25 +22,27 @@ namespace EvalParam {
     extern score_t PasserDistEnemy;
     extern score_t PasserNotBlocked;
     extern score_t PasserSafePush;
+    extern score_t PasserSafeProm;
 
     extern score_t KnightMob;
     extern score_t BishopMob;
     extern score_t RookMob;
     extern score_t QueenMob;
 
-    extern score_t NumKZoneAttacks;
+    extern score_t KingAttacks;
     extern score_t ShelterBonus;
 
+    extern score_t WeakPawns;
     extern score_t PawnsxMinors;
     extern score_t MinorsxMinors;
     extern score_t MajorsxWeakMinors;
     extern score_t PawnsMinorsxMajors;
     extern score_t AllxQueens;
 
-    extern int16_t KnightAtk;
-    extern int16_t BishopAtk;
-    extern int16_t RookAtk;
-    extern int16_t QueenAtk;
+    extern basic_score_t KnightAtk;
+    extern basic_score_t BishopAtk;
+    extern basic_score_t RookAtk;
+    extern basic_score_t QueenAtk;
 
     extern score_t pst[2][8][64];
     extern uint64_t KingZoneBB[2][64];
