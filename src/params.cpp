@@ -69,12 +69,22 @@ namespace EvalParam {
     score_t PawnsMinorsxMajors = { 29, 33 };
     score_t AllxQueens = { 44, 39 };
 
-    score_t KingAttacks = { 3, 31 };
-    score_t ShelterBonus = { 5, 13 };
-    basic_score_t KnightAtk = 1;
-    basic_score_t BishopAtk = 0;
-    basic_score_t RookAtk = 3;
-    basic_score_t QueenAtk = 0;
+    score_t KingAttacks = { 19, 29 };
+    score_t ShelterBonus = { 4, 11 };
+
+    basic_score_t KnightAtk = 7;
+    basic_score_t BishopAtk = 8;
+    basic_score_t RookAtk = 17;
+    basic_score_t QueenAtk = 3;
+    basic_score_t AttackValue = 4;
+    basic_score_t WeakSquares = 47;
+    basic_score_t NoEnemyQueens = 19;
+    basic_score_t EnemyPawns = 25;
+    basic_score_t QueenSafeContactCheckValue = 58;
+    basic_score_t QueenSafeCheckValue = 60;
+    basic_score_t RookSafeCheckValue = 130;
+    basic_score_t BishopSafeCheckValue = 79;
+    basic_score_t KnightSafeCheckValue = 116;
 
     basic_score_t Tempo = 33;
     score_t BishopPair = { 14, 61 };

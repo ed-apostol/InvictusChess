@@ -144,19 +144,29 @@ void eval_t::kingsafety(position_t& p, int side) {
     }
     scr[side] -= ShelterBonus * ((best_shelter + curr_shelter) / 2);
 
-    basic_score_t penalty = ((atkweights[side] * katkrscnt[side]) / 2) + kzoneatks[side];
-
     if (katkrscnt[side] >= 2 && kzoneatks[side] >= 1) {
+        uint64_t king_atkmask = kingMovesBB(p.kpos[xside]);
+        uint64_t pc_defenders_mask = queenatks[xside] | rookatks[xside] | bishopatks[xside] | knightatks[xside] | pawnatks[xside];
+        uint64_t weaksqs = allatks[side] & ~allatks2[xside] & (~allatks[xside] | queenatks[xside] | king_atkmask);
+        uint64_t safesqs = ~p.colorBB[side] & (~allatks[xside] | (weaksqs & allatks2[side]));
+        uint64_t knightthreats = knightMovesBB(p.kpos[xside]);
+        uint64_t bishopthreats = bishopAttacksBB(p.kpos[xside], p.occupiedBB);
+        uint64_t rookthreats = rookAttacksBB(p.kpos[xside], p.occupiedBB);
+        uint64_t queenthreats = bishopthreats | rookthreats;
+        basic_score_t penalty = atkweights[side] * katkrscnt[side];
+        penalty += AttackValue * kzoneatks[side];
+        penalty += WeakSquares * bitCnt(king_atkmask & weaksqs);
+        penalty += NoEnemyQueens * !p.pieceBB(QUEEN, xside);
+        penalty -= EnemyPawns * bitCnt(p.pieceBB(PAWN, xside) & kingzone[xside] & ~weaksqs);
+        penalty += QueenSafeContactCheckValue * bitCnt(king_atkmask & queenatks[side] & ~allatks2[xside] & allatks2[side]) * ((p.side == (side)) ? 2 : 1);
+        penalty += QueenSafeCheckValue * bitCnt(queenthreats & queenatks[side] & safesqs);
+        penalty += RookSafeCheckValue * bitCnt(rookthreats & rookatks[side] & safesqs);
+        penalty += BishopSafeCheckValue * bitCnt(bishopthreats & bishopatks[side] & safesqs);
+        penalty += KnightSafeCheckValue * bitCnt(knightthreats & knightatks[side] & safesqs);
+        penalty = penalty / 32;
         scr[side] += KingAttacks * penalty;
     }
     // TODO: pawn storm
-    // TODO: weak squares
-    // TODO: friendly pawns
-    // TODO: no enemy queens
-    // TODO: queen safe check
-    // TODO: rook safe check
-    // TODO: bishop safe check
-    // TODO: knight safe check
 }
 
 void eval_t::threats(position_t& p, int side) {
@@ -216,6 +226,6 @@ basic_score_t eval_t::score(position_t& p) {
 
     int phase = 4 * bitCnt(p.piecesBB[QUEEN]) + 2 * bitCnt(p.piecesBB[ROOK]) + 1 * bitCnt(p.piecesBB[KNIGHT] | p.piecesBB[BISHOP]);
     score_t score = scr[p.side] - scr[p.side ^ 1];
-    basic_score_t scaled = ((score.m*phase + 12) + (score.e*(24 - phase))) / 24;
+    basic_score_t scaled = (score.m*phase + (score.e*(24 - phase) + 12)) / 24;
     return scaled + Tempo;
 }
