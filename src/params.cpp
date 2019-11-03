@@ -57,8 +57,8 @@ namespace EvalParam {
     score_t PasserSafePush = { 0, 34 };
     score_t PasserSafeProm = { 0, 150 };
 
-    score_t KnightMob = { 7, 7 };
-    score_t BishopMob = { 6, 6 };
+    score_t KnightMob = { 6, 7 };
+    score_t BishopMob = { 7, 6 };
     score_t RookMob = { 4, 5 };
     score_t QueenMob = { 3, 7 };
 
@@ -69,44 +69,42 @@ namespace EvalParam {
     score_t PawnsMinorsxMajors = { 29, 33 };
     score_t AllxQueens = { 44, 39 };
 
-    score_t KingAttacks = { 19, 29 };
     score_t ShelterBonus = { 4, 11 };
 
-    basic_score_t KnightAtk = 7;
-    basic_score_t BishopAtk = 8;
-    basic_score_t RookAtk = 17;
-    basic_score_t QueenAtk = 3;
-    basic_score_t AttackValue = 4;
+    basic_score_t KnightAtk = 9;
+    basic_score_t BishopAtk = 4;
+    basic_score_t RookAtk = 12;
+    basic_score_t QueenAtk = 2;
+    basic_score_t AttackValue = 20;
     basic_score_t WeakSquares = 47;
-    basic_score_t NoEnemyQueens = 19;
+    basic_score_t NoEnemyQueens = 92;
     basic_score_t EnemyPawns = 25;
-    basic_score_t QueenSafeContactCheckValue = 58;
-    basic_score_t QueenSafeCheckValue = 60;
-    basic_score_t RookSafeCheckValue = 130;
-    basic_score_t BishopSafeCheckValue = 79;
-    basic_score_t KnightSafeCheckValue = 116;
+    basic_score_t QueenSafeCheckValue = 56;
+    basic_score_t RookSafeCheckValue = 112;
+    basic_score_t BishopSafeCheckValue = 70;
+    basic_score_t KnightSafeCheckValue = 113;
 
-    basic_score_t Tempo = 33;
+    basic_score_t Tempo = 34;
     score_t BishopPair = { 14, 61 };
-    score_t RookOn7th = { 1, 47 };
-    score_t RookOnSemiOpenFile = { 20, 8 };
-    score_t RookOnOpenFile = { 42, 14 };
+    score_t RookOn7th = { 0, 55 };
+    score_t RookOnSemiOpenFile = { 20, 9 };
+    score_t RookOnOpenFile = { 43, 13 };
 
-    score_t pst[2][8][64];
+    score_t PcSqTab[2][8][64];
     uint64_t KingZoneBB[2][64];
     uint64_t KingShelterBB[2][3];
     uint64_t KingShelter2BB[2][3];
 
     void initArr() {
         std::function<score_t(int)> pstInit[] = { pawnPST, knightPST,bishopPST,rookPST,queenPST,kingPST };
-        memset(pst, 0, sizeof(pst));
+        memset(PcSqTab, 0, sizeof(PcSqTab));
         for (int pc = PAWN; pc <= KING; ++pc) {
             score_t total;
             for (int sq = 0; sq < 64; ++sq) {
                 int rsq = ((7 - sqRank(sq)) * 8) + sqFile(sq);
-                pst[WHITE][pc][sq] = pstInit[pc - 1](sq);
-                pst[BLACK][pc][sq] = pstInit[pc - 1](rsq);
-                //total += pst[WHITE][pc][sq];
+                PcSqTab[WHITE][pc][sq] = pstInit[pc - 1](sq);
+                PcSqTab[BLACK][pc][sq] = pstInit[pc - 1](rsq);
+                //total += PcSqTab[WHITE][pc][sq];
             }
             //PrintOutput() << "pc: " << pc << " Mid: " << total.m << " End: " << total.e;
         }
@@ -141,9 +139,9 @@ namespace EvalParam {
         for (int c = 0; c <= 1; ++c) {
             for (int pc = 1; pc <= 6; ++pc) {
                 LogAndPrintOutput() << "MIDGAME";
-                displayPSTbyPC(pst[c][pc], colstr[c] + " " + pcstr[pc], true);
+                displayPSTbyPC(PcSqTab[c][pc], colstr[c] + " " + pcstr[pc], true);
                 LogAndPrintOutput() << "ENDGAME";
-                displayPSTbyPC(pst[c][pc], colstr[c] + " " + pcstr[pc], false);
+                displayPSTbyPC(PcSqTab[c][pc], colstr[c] + " " + pcstr[pc], false);
             }
         }
     }

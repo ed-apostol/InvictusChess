@@ -204,8 +204,8 @@ void position_t::doMove(undo_t& undo, move_t m) {
     pieces[from] = EMPTY;
     piecesBB[pc] ^= BitMask[from] | BitMask[to];
     colorBB[side] ^= BitMask[from] | BitMask[to];
-    stack.score[side] += pst[side][pc][to];
-    stack.score[side] -= pst[side][pc][from];
+    stack.score[side] += PcSqTab[side][pc][to];
+    stack.score[side] -= PcSqTab[side][pc][from];
     stack.hash ^= ZobPiece[side][pc][from] ^ ZobPiece[side][pc][to];
     if (pc == PAWN) {
         stack.phash ^= ZobPiece[side][pc][from] ^ ZobPiece[side][pc][to];
@@ -217,7 +217,7 @@ void position_t::doMove(undo_t& undo, move_t m) {
     if (cap != EMPTY) {
         piecesBB[cap] ^= BitMask[to];
         colorBB[xside] ^= BitMask[to];
-        stack.score[xside] -= pst[xside][cap][to];
+        stack.score[xside] -= PcSqTab[xside][cap][to];
         stack.fifty = 0;
         stack.hash ^= ZobPiece[xside][cap][to];
         if (cap == PAWN)
@@ -239,8 +239,8 @@ void position_t::doMove(undo_t& undo, move_t m) {
         pieces[rook_from] = EMPTY;
         piecesBB[ROOK] ^= BitMask[rook_from] | BitMask[rook_to];
         colorBB[side] ^= BitMask[rook_from] | BitMask[rook_to];
-        stack.score[side] += pst[side][ROOK][rook_to];
-        stack.score[side] -= pst[side][ROOK][rook_from];
+        stack.score[side] += PcSqTab[side][ROOK][rook_to];
+        stack.score[side] -= PcSqTab[side][ROOK][rook_from];
         stack.hash ^= ZobPiece[side][ROOK][rook_from] ^ ZobPiece[side][ROOK][rook_to];
     } break;
     case MF_ENPASSANT: {
@@ -248,7 +248,7 @@ void position_t::doMove(undo_t& undo, move_t m) {
         pieces[epsq] = EMPTY;
         piecesBB[PAWN] ^= BitMask[epsq];
         colorBB[xside] ^= BitMask[epsq];
-        stack.score[xside] -= pst[xside][PAWN][epsq];
+        stack.score[xside] -= PcSqTab[xside][PAWN][epsq];
         stack.hash ^= ZobPiece[xside][PAWN][epsq];
         stack.phash ^= ZobPiece[xside][PAWN][epsq];
         stack.fifty = 0;
@@ -260,8 +260,8 @@ void position_t::doMove(undo_t& undo, move_t m) {
         stack.phash ^= ZobPiece[side][PAWN][to];
         pieces[to] = prom;
         piecesBB[prom] ^= BitMask[to];
-        stack.score[side] += pst[side][prom][to];
-        stack.score[side] -= pst[side][PAWN][to];
+        stack.score[side] += PcSqTab[side][prom][to];
+        stack.score[side] -= PcSqTab[side][PAWN][to];
         stack.hash ^= ZobPiece[side][prom][to];
         stack.fifty = 0;
     } break;
@@ -279,7 +279,7 @@ void position_t::setPiece(int sq, int c, int pc) {
     piecesBB[pc] |= BitMask[sq];
     colorBB[c] |= BitMask[sq];
     occupiedBB |= BitMask[sq];
-    stack.score[c] += pst[c][pc][sq];
+    stack.score[c] += PcSqTab[c][pc][sq];
     stack.hash ^= ZobPiece[c][pc][sq];
     if (pc == PAWN) stack.phash ^= ZobPiece[c][pc][sq];
     if (pc == KING) kpos[c] = sq;
@@ -404,12 +404,8 @@ int position_t::getSide(int sq) {
     return BLACK;
 }
 
-uint64_t  position_t::pieceBB(int pc, int c) {
+uint64_t  position_t::pieceByColorBB(int pc, int c) {
     return piecesBB[pc] & colorBB[c];
-}
-
-uint64_t  position_t::pieceBB(int pc) {
-    return piecesBB[pc];
 }
 
 uint64_t position_t::bishopSlidersBB(int c) {

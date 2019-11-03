@@ -22,4 +22,4 @@ int main(void) {
 //-LMP
 //-razoring, delta pruning, futility,
 //-better time management
-//-outposts, open files, 7th rank, double bishop,
+//-outposts

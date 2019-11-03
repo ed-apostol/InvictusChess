@@ -36,7 +36,6 @@ namespace EvalParam {
     extern score_t PawnsMinorsxMajors;
     extern score_t AllxQueens;
 
-    extern score_t KingAttacks;
     extern score_t ShelterBonus;
 
     extern basic_score_t KnightAtk;
@@ -47,7 +46,6 @@ namespace EvalParam {
     extern basic_score_t WeakSquares;
     extern basic_score_t NoEnemyQueens;
     extern basic_score_t EnemyPawns;
-    extern basic_score_t QueenSafeContactCheckValue;
     extern basic_score_t QueenSafeCheckValue;
     extern basic_score_t RookSafeCheckValue;
     extern basic_score_t BishopSafeCheckValue;
@@ -59,7 +57,7 @@ namespace EvalParam {
     extern score_t RookOnSemiOpenFile;
     extern score_t RookOnOpenFile;
 
-    extern score_t pst[2][8][64];
+    extern score_t PcSqTab[2][8][64];
     extern uint64_t KingZoneBB[2][64];
     extern uint64_t KingShelterBB[2][3];
     extern uint64_t KingShelter2BB[2][3];

@@ -29,7 +29,7 @@ static const MoveFlags Flags[11] = {
 };
 
 #define genMoves(mt, PCB, SP, TBB)\
-    for (uint64_t from, bits = pieceBB(Pieces[mt], side) & PCB; bits;) {\
+    for (uint64_t from, bits = pieceByColorBB(Pieces[mt], side) & PCB; bits;) {\
         for (uint64_t mvbits = AttackFuncs[mt](int(from = popFirstBit(bits)), SP) & TBB; mvbits;) {\
             for (int to = popFirstBit(mvbits), fl = Flags[mt], fll = (Flags[mt] == MF_PROMN ? MF_PROMQ : Flags[mt]); fl <= fll; ++fl)\
                 mvlist.add(move_t(int(from), to, fl));}}
@@ -97,7 +97,7 @@ void position_t::genCheckEvasions(movelist_t<256>& mvlist) {
     genMoves(MT_PAWNCAP, pcbits & ~Rank7ByColorBB[side], side, checkersBB);
     genMoves(MT_PAWNCAPPROM, pcbits & Rank7ByColorBB[side], side, checkersBB);
 
-    if (checkersBB & pieceBB(PAWN, xside) && (sqchecker + ((side == WHITE) ? 8 : -8)) == stack.epsq)
+    if (checkersBB & pieceByColorBB(PAWN, xside) && (sqchecker + ((side == WHITE) ? 8 : -8)) == stack.epsq)
         genMoves(MT_EP, notpinned, side, BitMask[stack.epsq]);
 
     genMovesPcs(notpinned, (inbetweenBB | checkersBB));
