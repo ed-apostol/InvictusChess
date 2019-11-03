@@ -22,7 +22,7 @@ namespace Tuner {
     Ldouble K = 1.41988;
     const int num_threads = 7;
 
-    const bool TuneAll = false;
+    const bool TuneAll = true;
     const bool TuneMaterial = false;
     const bool TuneMobility = true;
     const bool TunePawnStructure = false;
@@ -333,7 +333,7 @@ namespace Tuner {
             input.push_back({ KnightSafeCheckValue, 0, 200, "KnightSafeCheckValue" });
         }
 
-        //FindBestK(data);
+        FindBestK(data);
         PrintOutput() << "Best K " << K;
 
         PrintOutput() << "\nInitial values:";

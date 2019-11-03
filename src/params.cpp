@@ -42,53 +42,52 @@ namespace EvalParam {
         return file[sqFile(sq)] + rank[sqRank(sq)];
     }
 
-    score_t MaterialValues[7] = { { 0, 0 },{ 100, 113 },{ 334, 434 },{ 357, 441 },{ 456, 775 },{ 1019, 1484 },{ 0, 0 } };
+    score_t MaterialValues[7] = { { 0, 0 },{ 100, 113 },{ 335, 433 },{ 351, 436 },{ 453, 765 },{ 996, 1523 },{ 0, 0 } };
+    score_t BishopPair = { 15, 69 };
 
-    score_t PawnConnected = { 0, 13 };
-    score_t PawnDoubled = { 12, 0 };
+    score_t PawnConnected = { 0, 14 };
+    score_t PawnDoubled = { 9, 0 };
     score_t PawnIsolated = { 14, 14 };
     score_t PawnBackward = { 6, 0 };
 
     score_t PasserBonusMin = { 0, 0 };
-    score_t PasserBonusMax = { 26, 105 };
+    score_t PasserBonusMax = { 27, 117 };
     score_t PasserDistOwn = { 0, 23 };
     score_t PasserDistEnemy = { 0, 41 };
-    score_t PasserNotBlocked = { 0, 85 };
-    score_t PasserSafePush = { 0, 34 };
-    score_t PasserSafeProm = { 0, 150 };
+    score_t PasserNotBlocked = { 0, 71 };
+    score_t PasserSafePush = { 0, 23 };
+    score_t PasserSafeProm = { 0, 166 };
 
-    score_t KnightMob = { 6, 7 };
+    score_t KnightMob = { 6, 6 };
     score_t BishopMob = { 7, 6 };
-    score_t RookMob = { 4, 5 };
-    score_t QueenMob = { 3, 7 };
+    score_t RookMob = { 3, 6 };
+    score_t QueenMob = { 3, 5 };
+    score_t RookOn7th = { 0, 54 };
+    score_t RookOnSemiOpenFile = { 20, 10 };
+    score_t RookOnOpenFile = { 43, 13 };
+    basic_score_t Tempo = 34;
 
-    score_t WeakPawns = { 2, 52 };
-    score_t PawnsxMinors = { 70, 17 };
-    score_t MinorsxMinors = { 24, 42 };
-    score_t MajorsxWeakMinors = { 27, 66 };
-    score_t PawnsMinorsxMajors = { 29, 33 };
-    score_t AllxQueens = { 44, 39 };
+    score_t WeakPawns = { 2, 56 };
+    score_t PawnsxMinors = { 64, 17 };
+    score_t MinorsxMinors = { 28, 43 };
+    score_t MajorsxWeakMinors = { 27, 72 };
+    score_t PawnsMinorsxMajors = { 26, 33 };
+    score_t AllxQueens = { 44, 35 };
 
-    score_t ShelterBonus = { 4, 11 };
+    score_t ShelterBonus = { 3, 13 };
 
-    basic_score_t KnightAtk = 9;
-    basic_score_t BishopAtk = 4;
-    basic_score_t RookAtk = 12;
-    basic_score_t QueenAtk = 2;
-    basic_score_t AttackValue = 20;
+    basic_score_t KnightAtk = 8;
+    basic_score_t BishopAtk = 5;
+    basic_score_t RookAtk = 13;
+    basic_score_t QueenAtk = 3;
+    basic_score_t AttackValue = 19;
     basic_score_t WeakSquares = 47;
     basic_score_t NoEnemyQueens = 92;
     basic_score_t EnemyPawns = 25;
     basic_score_t QueenSafeCheckValue = 56;
-    basic_score_t RookSafeCheckValue = 112;
-    basic_score_t BishopSafeCheckValue = 70;
-    basic_score_t KnightSafeCheckValue = 113;
-
-    basic_score_t Tempo = 34;
-    score_t BishopPair = { 14, 61 };
-    score_t RookOn7th = { 0, 55 };
-    score_t RookOnSemiOpenFile = { 20, 9 };
-    score_t RookOnOpenFile = { 43, 13 };
+    basic_score_t RookSafeCheckValue = 113;
+    basic_score_t BishopSafeCheckValue = 67;
+    basic_score_t KnightSafeCheckValue = 114;
 
     score_t PcSqTab[2][8][64];
     uint64_t KingZoneBB[2][64];
