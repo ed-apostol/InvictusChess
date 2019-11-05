@@ -19,13 +19,13 @@
 namespace Tuner {
     using Ldouble = long double;
 
-    Ldouble K = 1.41988;
+    Ldouble K = 1.41981;
     const int num_threads = 7;
 
-    const int TuneAll = 1;
+    const int TuneAll = 0;
     const int TuneMaterial = 0;
     const int TuneActivity = 0;
-    const int TunePawnStructure = 0;
+    const int TunePawnStructure = 1;
     const int TuneThreats = 0;
     const int TuneKingSafety = 0;
     const int TunePassedPawns = 0;
@@ -268,6 +268,10 @@ namespace Tuner {
             input.push_back({ PawnIsolated.e, 0, 100, "PawnIsolated.e" });
             input.push_back({ PawnBackward.m, 0, 100, "PawnBackward.m" });
             input.push_back({ PawnBackward.e, 0, 100, "PawnBackward.e" });
+            input.push_back({ PawnIsolatedOpen.m, 0, 100, "PawnIsolatedOpen.m" });
+            input.push_back({ PawnIsolatedOpen.e, 0, 100, "PawnIsolatedOpen.e" });
+            input.push_back({ PawnBackwardOpen.m, 0, 100, "PawnBackwardOpen.m" });
+            input.push_back({ PawnBackwardOpen.e, 0, 100, "PawnBackwardOpen.e" });
         }
         if (TuneAll || TunePassedPawns) {
             input.push_back({ PasserBonusMin.m, 0, 200, "PasserBonusMin.m" });

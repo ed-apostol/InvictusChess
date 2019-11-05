@@ -16,6 +16,8 @@ namespace EvalParam {
     extern score_t PawnDoubled;
     extern score_t PawnIsolated;
     extern score_t PawnBackward;
+    extern score_t PawnIsolatedOpen;
+    extern score_t PawnBackwardOpen;
 
     extern score_t PasserBonusMin;
     extern score_t PasserBonusMax;

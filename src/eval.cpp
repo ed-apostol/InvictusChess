@@ -44,21 +44,24 @@ void eval_t::pawnstructure(position_t& p, int side) {
     const int xside = side ^ 1;
     const uint64_t pawns = p.pieceByColorBB(PAWN, side);
     const uint64_t xpawns = p.pieceByColorBB(PAWN, xside);
+    const uint64_t open = pawns & ~(pawns & fillBB[xside](xpawns));
     const uint64_t connected = pawns & (pawnatks[side] | shiftBB[xside](pawnatks[side], 8));
     const uint64_t doubled = pawns & fillBBEx[xside](pawns);
     const uint64_t isolated = pawns & ~fillBB[side](fillBB[xside](pawnatks[side]));
-    const uint64_t backward = shiftBB[xside](shiftBB[side](pawns, 8) & (pawnspan[side] | xpawns) & ~fillBB[side](pawnatks[side]), 8) & ~isolated;
+    const uint64_t backward = shiftBB[xside](shiftBB[side](pawns, 8) & (pawnatks[xside] | xpawns) & ~fillBB[side](pawnatks[side]), 8) & ~isolated;
     scr[side] += PawnConnected * bitCnt(connected);
     scr[side] -= PawnDoubled * bitCnt(doubled);
-    scr[side] -= PawnIsolated * bitCnt(isolated);
-    scr[side] -= PawnBackward * bitCnt(backward);
+    scr[side] -= PawnIsolated * bitCnt(isolated & ~open);
+    scr[side] -= PawnBackward * bitCnt(backward & ~open);
+    scr[side] -= PawnIsolatedOpen * bitCnt(isolated & open);
+    scr[side] -= PawnBackwardOpen * bitCnt(backward & open);
 }
 
 void eval_t::pieceactivity(position_t& p, int side) {
     static const uint64_t OutpostMask[2] = { Rank4BB | Rank5BB | Rank6BB, Rank5BB | Rank4BB | Rank3BB };
     const int xside = side ^ 1;
     const uint64_t mobmask = ~p.pieceByColorBB(KING, side) & ~pawnatks[xside] & ~(shiftBB[xside](p.occupiedBB, 8) & p.pieceByColorBB(PAWN, side));
-    const uint64_t outpostsqs = OutpostMask[side] & pawnatks[side] & ~pawnspan[side];
+    const uint64_t outpostsqs = OutpostMask[side] & pawnatks[side] & ~pawnspan[xside];
 
     for (uint64_t pcbits = p.pieceByColorBB(KNIGHT, side); pcbits;) {
         int sq = popFirstBit(pcbits);
@@ -183,7 +186,7 @@ void eval_t::threats(position_t& p, int side) {
 
 void eval_t::passedpawns(position_t& p, int side) {
     const int xside = side ^ 1;
-    uint64_t passers = p.pieceByColorBB(PAWN, side) & ~fillBBEx[xside](p.piecesBB[PAWN]) & ~pawnspan[side];
+    uint64_t passers = p.pieceByColorBB(PAWN, side) & ~fillBBEx[xside](p.piecesBB[PAWN]) & ~pawnspan[xside];
     if (!passers) return;
     const uint64_t notblocked = ~shiftBB[xside](p.occupiedBB, 8);
     const uint64_t safepush = ~shiftBB[xside](allatks[xside], 8);
@@ -208,11 +211,9 @@ basic_score_t eval_t::score(position_t& p) {
         kingzone[color] = KingZoneBB[color][p.kpos[color]];
         allatks[color] = kingMovesBB(p.kpos[color]);
         pawnatks[color] = pawnAttackBB(p.pieceByColorBB(PAWN, color), color);
+        pawnspan[color] = fillBB[color](pawnatks[color]);
         allatks2[color] |= allatks[color] & pawnatks[color];
         allatks[color] |= pawnatks[color];
-    }
-    for (int color = WHITE; color <= BLACK; ++color) {
-        pawnspan[color] = fillBB[color ^ 1](pawnatks[color ^ 1]);
     }
     for (int color = WHITE; color <= BLACK; ++color) {
         material(p, color);

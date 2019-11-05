@@ -45,10 +45,12 @@ namespace EvalParam {
     score_t MaterialValues[7] = { { 0, 0 },{ 100, 115 },{ 341, 425 },{ 377, 454 },{ 460, 772 },{ 1004, 1535 },{ 0, 0 } };
     score_t BishopPair = { 14, 68 };
 
-    score_t PawnConnected = { 2, 13 };
-    score_t PawnDoubled = { 8, 0 };
-    score_t PawnIsolated = { 13, 14 };
-    score_t PawnBackward = { 3, 1 };
+    score_t PawnConnected = { 5, 13 };
+    score_t PawnDoubled = { 11, 1 };
+    score_t PawnIsolated = { 1, 2 };
+    score_t PawnBackward = { 2, 16 };
+    score_t PawnIsolatedOpen = { 27, 15 };
+    score_t PawnBackwardOpen = { 23, 14 };
 
     score_t PasserBonusMin = { 0, 0 };
     score_t PasserBonusMax = { 33, 114 };
