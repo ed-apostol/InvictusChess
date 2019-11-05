@@ -22,13 +22,13 @@ namespace Tuner {
     Ldouble K = 1.41988;
     const int num_threads = 7;
 
-    const bool TuneAll = true;
-    const bool TuneMaterial = false;
-    const bool TuneMobility = true;
-    const bool TunePawnStructure = false;
-    const bool TuneThreats = false;
-    const bool TuneKingSafety = true;
-    const bool TunePassedPawns = false;
+    const int TuneAll = 1;
+    const int TuneMaterial = 0;
+    const int TuneActivity = 0;
+    const int TunePawnStructure = 0;
+    const int TuneThreats = 0;
+    const int TuneKingSafety = 0;
+    const int TunePassedPawns = 0;
 
     struct PositionResults {
         position_t* p;
@@ -285,7 +285,7 @@ namespace Tuner {
             input.push_back({ PasserSafeProm.m, 0, 200, "PasserSafeProm.m" });
             input.push_back({ PasserSafeProm.e, 0, 200, "PasserSafeProm.e" });
         }
-        if (TuneAll || TuneMobility) {
+        if (TuneAll || TuneActivity) {
             input.push_back({ KnightMob.m, 0, 100, "KnightMob.m" });
             input.push_back({ KnightMob.e, 0, 100, "KnightMob.e" });
             input.push_back({ BishopMob.m, 0, 100, "BishopMob.m" });
@@ -300,6 +300,10 @@ namespace Tuner {
             input.push_back({ RookOnSemiOpenFile.e, 0, 100, "RookOnSemiOpenFile.e" });
             input.push_back({ RookOnOpenFile.m, 0, 100, "RookOnOpenFile.m" });
             input.push_back({ RookOnOpenFile.e, 0, 100, "RookOnOpenFile.e" });
+            input.push_back({ OutpostBonus.m, 0, 100, "OutpostBonus.m" });
+            input.push_back({ OutpostBonus.e, 0, 100, "OutpostBonus.e" });
+            input.push_back({ BishopPawns.m, 0, 100, "BishopPawns.m" });
+            input.push_back({ BishopPawns.e, 0, 100, "BishopPawns.e" });
             input.push_back({ Tempo, 0, 100, "Tempo" });
         }
         if (TuneAll || TuneThreats) {
@@ -339,8 +343,8 @@ namespace Tuner {
         PrintOutput() << "\nInitial values:";
         for (auto par : input) PrintOutput() << par.name << "\t\t\t" << par;
 
-        AdamSGD(input, data, batchSize);
-        //LocalSearch(input, data);
+        //AdamSGD(input, data, batchSize);
+        LocalSearch(input, data);
 
         PrintOutput() << "\nTuned values:";
         for (auto par : input) PrintOutput() << par.name << "\t\t\t" << par;

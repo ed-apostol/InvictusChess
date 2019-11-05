@@ -10,6 +10,7 @@
 
 namespace EvalParam {
     extern score_t MaterialValues[7];
+    extern score_t BishopPair;
 
     extern score_t PawnConnected;
     extern score_t PawnDoubled;
@@ -28,6 +29,12 @@ namespace EvalParam {
     extern score_t BishopMob;
     extern score_t RookMob;
     extern score_t QueenMob;
+    extern score_t RookOn7th;
+    extern score_t RookOnSemiOpenFile;
+    extern score_t RookOnOpenFile;
+    extern score_t OutpostBonus;
+    extern score_t BishopPawns;
+    extern basic_score_t Tempo;
 
     extern score_t WeakPawns;
     extern score_t PawnsxMinors;
@@ -50,12 +57,6 @@ namespace EvalParam {
     extern basic_score_t RookSafeCheckValue;
     extern basic_score_t BishopSafeCheckValue;
     extern basic_score_t KnightSafeCheckValue;
-
-    extern basic_score_t Tempo;
-    extern score_t BishopPair;
-    extern score_t RookOn7th;
-    extern score_t RookOnSemiOpenFile;
-    extern score_t RookOnOpenFile;
 
     extern score_t PcSqTab[2][8][64];
     extern uint64_t KingZoneBB[2][64];
