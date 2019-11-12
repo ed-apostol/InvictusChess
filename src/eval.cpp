@@ -29,12 +29,12 @@ namespace {
 }
 
 void eval_t::material(position_t & p, int side) {
-    scr[side] += MaterialValues[PAWN] * bitCnt(p.pieceByColorBB(PAWN, side));
-    scr[side] += MaterialValues[KNIGHT] * bitCnt(p.pieceByColorBB(KNIGHT, side));
-    scr[side] += MaterialValues[BISHOP] * bitCnt(p.pieceByColorBB(BISHOP, side));
-    scr[side] += MaterialValues[ROOK] * bitCnt(p.pieceByColorBB(ROOK, side));
-    scr[side] += MaterialValues[QUEEN] * bitCnt(p.pieceByColorBB(QUEEN, side));
-    if (bitCnt(p.pieceByColorBB(BISHOP, side)) == 2) {
+    scr[side] += MaterialValues[PAWN] * bitCnt(p.getPieceBB(PAWN, side));
+    scr[side] += MaterialValues[KNIGHT] * bitCnt(p.getPieceBB(KNIGHT, side));
+    scr[side] += MaterialValues[BISHOP] * bitCnt(p.getPieceBB(BISHOP, side));
+    scr[side] += MaterialValues[ROOK] * bitCnt(p.getPieceBB(ROOK, side));
+    scr[side] += MaterialValues[QUEEN] * bitCnt(p.getPieceBB(QUEEN, side));
+    if (bitCnt(p.getPieceBB(BISHOP, side)) == 2) {
         scr[side] += BishopPair;
     }
     // TODO: material scaling like opposite colored bishops, KRkb, KRkn
@@ -43,13 +43,13 @@ void eval_t::material(position_t & p, int side) {
 
 void eval_t::pawnstructure(position_t& p, int side) {
     const int xside = side ^ 1;
-    const uint64_t pawns = p.pieceByColorBB(PAWN, side);
-    const uint64_t xpawns = p.pieceByColorBB(PAWN, xside);
+    const uint64_t pawns = p.getPieceBB(PAWN, side);
+    const uint64_t xpawns = p.getPieceBB(PAWN, xside);
     const uint64_t open = pawns & ~(pawns & fillBB[xside](xpawns));
     const uint64_t connected = pawns & (pawnatks[side] | shift8BB[xside](pawnatks[side]));
     const uint64_t doubled = pawns & fillBBEx[xside](pawns);
     const uint64_t isolated = pawns & ~fillBB[xside](pawnfillatks[side]);
-    const uint64_t backward = pawns & shift8BB[xside]((pawnatks[xside] | xpawns) & ~pawnfillatks[side]) & ~isolated;
+    const uint64_t backward = pawns & ~isolated & shift8BB[xside]((pawnatks[xside] | xpawns) & ~pawnfillatks[side]);
     scr[side] += PawnConnected * bitCnt(connected);
     scr[side] -= PawnDoubled * bitCnt(doubled);
     scr[side] -= PawnIsolated * bitCnt(isolated & ~open);
@@ -61,10 +61,10 @@ void eval_t::pawnstructure(position_t& p, int side) {
 void eval_t::pieceactivity(position_t& p, int side) {
     static const uint64_t OutpostMask[2] = { Rank4BB | Rank5BB | Rank6BB, Rank5BB | Rank4BB | Rank3BB };
     const int xside = side ^ 1;
-    const uint64_t mobmask = ~p.pieceByColorBB(KING, side) & ~pawnatks[xside] & ~(shift8BB[xside](p.occupiedBB) & p.pieceByColorBB(PAWN, side));
+    const uint64_t mobmask = ~p.getPieceBB(KING, side) & ~pawnatks[xside] & ~(shift8BB[xside](p.occupiedBB) & p.getPieceBB(PAWN, side));
     const uint64_t outpostsqs = OutpostMask[side] & pawnatks[side] & ~pawnfillatks[xside];
 
-    for (uint64_t pcbits = p.pieceByColorBB(KNIGHT, side); pcbits;) {
+    for (uint64_t pcbits = p.getPieceBB(KNIGHT, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = knightMovesBB(sq);
         knightatks[side] |= atk;
@@ -79,7 +79,7 @@ void eval_t::pieceactivity(position_t& p, int side) {
         if (BitMask[sq] & outpostsqs) scr[side] += OutpostBonus * 2;
         else if (atk & outpostsqs & ~p.colorBB[side]) scr[side] += OutpostBonus;
     }
-    for (uint64_t pcbits = p.pieceByColorBB(BISHOP, side); pcbits;) {
+    for (uint64_t pcbits = p.getPieceBB(BISHOP, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = bishopAttacksBB(sq, p.occupiedBB & ~p.piecesBB[BISHOP]);
         bishopatks[side] |= atk;
@@ -92,9 +92,9 @@ void eval_t::pieceactivity(position_t& p, int side) {
             atkweights[side] += BishopAtk;
         }
         if (BitMask[sq] & outpostsqs) scr[side] += OutpostBonus;
-        scr[side] -= BishopPawns * bitCnt(p.pieceByColorBB(PAWN, side) & (BitMask[sq] & WhiteSquaresBB ? WhiteSquaresBB : BlackSquaresBB));
+        scr[side] -= BishopPawns * bitCnt(p.getPieceBB(PAWN, side) & (BitMask[sq] & WhiteSquaresBB ? WhiteSquaresBB : BlackSquaresBB));
     }
-    for (uint64_t pcbits = p.pieceByColorBB(ROOK, side); pcbits;) {
+    for (uint64_t pcbits = p.getPieceBB(ROOK, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = rookAttacksBB(sq, p.occupiedBB & ~p.piecesBB[ROOK]);
         rookatks[side] |= atk;
@@ -109,12 +109,12 @@ void eval_t::pieceactivity(position_t& p, int side) {
         if ((BitMask[sq] & Rank7ByColorBB[side]) && (BitMask[p.kpos[xside]] & (Rank7ByColorBB[side] | Rank8ByColorBB[side]))) {
             scr[side] += RookOn7th;
         }
-        if (!(FileBB[sqFile(sq)] & p.pieceByColorBB(PAWN, side))) {
-            if (!(FileBB[sqFile(sq)] & p.pieceByColorBB(PAWN, xside))) scr[side] += RookOnOpenFile;
+        if (!(FileBB[sqFile(sq)] & p.getPieceBB(PAWN, side))) {
+            if (!(FileBB[sqFile(sq)] & p.getPieceBB(PAWN, xside))) scr[side] += RookOnOpenFile;
             else scr[side] += RookOnSemiOpenFile;
         }
     }
-    for (uint64_t pcbits = p.pieceByColorBB(QUEEN, side); pcbits;) {
+    for (uint64_t pcbits = p.getPieceBB(QUEEN, side); pcbits;) {
         int sq = popFirstBit(pcbits);
         uint64_t atk = queenAttacksBB(sq, p.occupiedBB);
         queenatks[side] |= atk;
@@ -131,26 +131,26 @@ void eval_t::pieceactivity(position_t& p, int side) {
 
 score_t eval_t::kingshelter(position_t& p, int idx, int side) {
     const int xside = side ^ 1;
-    score_t shelter = KingShelter1 * bitCnt(KingShelterBB[xside][idx] & p.pieceByColorBB(PAWN, xside));
-    shelter += KingShelter2 * bitCnt(KingShelter2BB[xside][idx] & p.pieceByColorBB(PAWN, xside));
-    shelter -= KingStorm1 * bitCnt(KingShelter2BB[xside][idx] & p.pieceByColorBB(PAWN, side));
-    shelter -= KingStorm2 * bitCnt(KingShelter3BB[xside][idx] & p.pieceByColorBB(PAWN, side));
+    score_t shelter = KingShelter1 * bitCnt(KingShelterBB[xside][idx] & p.getPieceBB(PAWN, xside));
+    shelter += KingShelter2 * bitCnt(KingShelter2BB[xside][idx] & p.getPieceBB(PAWN, xside));
+    shelter -= KingStorm1 * bitCnt(KingShelter2BB[xside][idx] & p.getPieceBB(PAWN, side));
+    shelter -= KingStorm2 * bitCnt(KingShelter3BB[xside][idx] & p.getPieceBB(PAWN, side));
     return shelter;
 }
 
 void eval_t::kingsafety(position_t& p, int side) {
     const int xside = side ^ 1;
 
-    if (!p.pieceByColorBB(QUEEN, side)) return;
-    if (!p.pieceByColorBB(ROOK, side) || !p.pieceByColorBB(BISHOP, side) || !p.pieceByColorBB(KNIGHT, side)) return;
+    if (!p.getPieceBB(QUEEN, side)) return;
+    if (!p.getPieceBB(ROOK, side) || !p.getPieceBB(BISHOP, side) || !p.getPieceBB(KNIGHT, side)) return;
 
     score_t curr_shelter = kingshelter(p, FileWing[sqFile(p.kpos[xside])], side);
     score_t best_shelter = curr_shelter;
-    if (p.stack.castle & (xside ? BCQS : WCQS)) {
+    if (p.canCastleQS(xside)) {
         score_t shelter = kingshelter(p, 0, side);
         if (shelter.m > best_shelter.m) best_shelter = shelter;
     }
-    if (p.stack.castle & (xside ? BCKS : WCKS)) {
+    if (p.canCastleKS(xside)) {
         score_t shelter = kingshelter(p, 2, side);
         if (shelter.m > best_shelter.m) best_shelter = shelter;
     }
@@ -167,8 +167,8 @@ void eval_t::kingsafety(position_t& p, int side) {
         basic_score_t penalty = atkweights[side] * katkrscnt[side];
         penalty += AttackValue * kzoneatks[side];
         penalty += WeakSquares * bitCnt(king_atkmask & weaksqs);
-        penalty += NoEnemyQueens * !p.pieceByColorBB(QUEEN, xside);
-        penalty -= EnemyPawns * bitCnt(p.pieceByColorBB(PAWN, xside) & king_atkmask & ~weaksqs);
+        penalty += NoEnemyQueens * !p.getPieceBB(QUEEN, xside);
+        penalty -= EnemyPawns * bitCnt(p.getPieceBB(PAWN, xside) & king_atkmask & ~weaksqs);
         penalty += QueenSafeCheckValue * bitCnt(queenthreats & queenatks[side] & safesqs);
         penalty += RookSafeCheckValue * bitCnt(rookthreats & rookatks[side] & safesqs);
         penalty += BishopSafeCheckValue * bitCnt(bishopthreats & bishopatks[side] & safesqs);
@@ -179,23 +179,24 @@ void eval_t::kingsafety(position_t& p, int side) {
 
 void eval_t::threats(position_t& p, int side) {
     const int xside = side ^ 1;
-    const uint64_t minors = p.pieceByColorBB(KNIGHT, xside) | p.pieceByColorBB(BISHOP, xside);
+    const uint64_t minors = p.getPieceBB(KNIGHT, xside) | p.getPieceBB(BISHOP, xside);
     const uint64_t weak = (allatks[side] & ~allatks[xside]) | (allatks2[side] & ~allatks2[xside] & ~pawnatks[xside]);
-    uint64_t push = shift8BB[side](p.pieceByColorBB(PAWN, side));
-    push |= shift8BB[side](push & Rank3ByColorBB[side] & ~pawnatks[xside] & ~p.occupiedBB);
-    push &= pawnAttackBB(p.colorBB[xside] & ~p.piecesBB[PAWN], xside) & ~pawnatks[xside] & ~p.occupiedBB & (allatks[side] | ~allatks[xside]);
-    scr[side] += PawnPush * bitCnt(push);
-    scr[side] += WeakPawns * bitCnt(p.pieceByColorBB(PAWN, xside) & weak);
+    const uint64_t safepush = ~pawnatks[xside] & ~p.occupiedBB;
+    const uint64_t pushtarget = pawnAttackBB(p.colorBB[xside] & ~p.piecesBB[PAWN], xside) & (allatks[side] | ~allatks[xside]);
+    uint64_t push = shift8BB[side](p.getPieceBB(PAWN, side)) & safepush;
+    push |= shift8BB[side](push & Rank3ByColorBB[side]) & safepush;
+    scr[side] += PawnPush * bitCnt(push & pushtarget);
+    scr[side] += WeakPawns * bitCnt(p.getPieceBB(PAWN, xside) & weak);
     scr[side] += PawnsxMinors * bitCnt(pawnatks[side] & minors);
     scr[side] += MinorsxMinors * bitCnt((knightatks[side] | bishopatks[side]) & minors);
     scr[side] += MajorsxWeakMinors * bitCnt((rookatks[side] | queenatks[side]) & minors & weak);
-    scr[side] += PawnsMinorsxMajors * bitCnt((pawnatks[side] | knightatks[side] | bishopatks[side]) & (p.pieceByColorBB(ROOK, xside) | p.pieceByColorBB(QUEEN, xside)));
-    scr[side] += AllxQueens * bitCnt(allatks[side] & p.pieceByColorBB(QUEEN, xside));
+    scr[side] += PawnsMinorsxMajors * bitCnt((pawnatks[side] | knightatks[side] | bishopatks[side]) & p.rookSlidersBB(xside));
+    scr[side] += AllxQueens * bitCnt(allatks[side] & p.getPieceBB(QUEEN, xside));
 }
 
 void eval_t::passedpawns(position_t& p, int side) {
     const int xside = side ^ 1;
-    uint64_t passers = p.pieceByColorBB(PAWN, side) & ~fillBBEx[xside](p.piecesBB[PAWN]) & ~pawnfillatks[xside];
+    uint64_t passers = p.getPieceBB(PAWN, side) & ~fillBBEx[xside](p.piecesBB[PAWN]) & ~pawnfillatks[xside];
     if (!passers) return;
     const uint64_t notblocked = ~shift8BB[xside](p.occupiedBB);
     const uint64_t safepush = ~shift8BB[xside](allatks[xside]);
@@ -219,7 +220,7 @@ basic_score_t eval_t::score(position_t& p) {
         allatks2[color] = knightatks[color] = bishopatks[color] = rookatks[color] = queenatks[color] = 0;
         kingzone[color] = KingZoneBB[color][p.kpos[color]];
         allatks[color] = kingMovesBB(p.kpos[color]);
-        pawnatks[color] = pawnAttackBB(p.pieceByColorBB(PAWN, color), color);
+        pawnatks[color] = pawnAttackBB(p.getPieceBB(PAWN, color), color);
         pawnfillatks[color] = fillBB[color](pawnatks[color]);
         allatks2[color] |= allatks[color] & pawnatks[color];
         allatks[color] |= pawnatks[color];

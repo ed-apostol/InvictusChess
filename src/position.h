@@ -60,7 +60,7 @@ struct position_t {
     inline int getPiece(int sq);
     inline int getSide(int sq);
 
-    uint64_t pieceByColorBB(int pc, int c);
+    uint64_t getPieceBB(int pc, int c);
     uint64_t bishopSlidersBB(int c);
     uint64_t rookSlidersBB(int c);
     uint64_t allAttackersToSqBB(int sq, uint64_t occupied);
@@ -71,6 +71,8 @@ struct position_t {
     uint64_t discoveredPiecesBB(int c);
 
     bool statExEval(move_t m, int threshold);
+    bool canCastleKS(int s);
+    bool canCastleQS(int s);
     bool kingIsInCheck();
     bool areaIsAttacked(int c, uint64_t target);
     bool sqIsAttacked(uint64_t occ, int sq, int c);

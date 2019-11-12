@@ -29,7 +29,7 @@ static const MoveFlags Flags[11] = {
 };
 
 #define genMoves(mt, PCB, SP, TBB)\
-    for (uint64_t from, bits = pieceByColorBB(Pieces[mt], side) & PCB; bits;) {\
+    for (uint64_t from, bits = getPieceBB(Pieces[mt], side) & PCB; bits;) {\
         for (uint64_t mvbits = AttackFuncs[mt](int(from = popFirstBit(bits)), SP) & TBB; mvbits;) {\
             for (int to = popFirstBit(mvbits), fl = Flags[mt], fll = (Flags[mt] == MF_PROMN ? MF_PROMQ : Flags[mt]); fl <= fll; ++fl)\
                 mvlist.add(move_t(int(from), to, fl));}}
@@ -57,9 +57,9 @@ void position_t::genLegal(movelist_t<256>& mvlist) {
 
 void position_t::genQuietMoves(movelist_t<256>& mvlist) {
     const int xside = side ^ 1;
-    if (stack.castle & (side ? BCKS : WCKS) && !(occupiedBB & CastleSquareMask1[side][0]))
+    if (canCastleKS(side) && !(occupiedBB & CastleSquareMask1[side][0]))
         mvlist.add(move_t(CastleSquareFrom[side], CastleSquareTo[side][0], MF_CASTLE));
-    if (stack.castle & (side ? BCQS : WCQS) && !(occupiedBB & CastleSquareMask1[side][1]))
+    if (canCastleQS(side) && !(occupiedBB & CastleSquareMask1[side][1]))
         mvlist.add(move_t(CastleSquareFrom[side], CastleSquareTo[side][1], MF_CASTLE));
 
     genMoves(MT_PAWN, ~Rank7ByColorBB[side] & shift8BB[xside](~occupiedBB), side, ~occupiedBB);
@@ -99,7 +99,7 @@ void position_t::genCheckEvasions(movelist_t<256>& mvlist) {
     genMoves(MT_PAWNCAP, pcbits & ~Rank7ByColorBB[side], side, checkersBB);
     genMoves(MT_PAWNCAPPROM, pcbits & Rank7ByColorBB[side], side, checkersBB);
 
-    if (checkersBB & pieceByColorBB(PAWN, xside) && (sqchecker + ((side == WHITE) ? 8 : -8)) == stack.epsq)
+    if (checkersBB & getPieceBB(PAWN, xside) && (sqchecker + ((side == WHITE) ? 8 : -8)) == stack.epsq)
         genMoves(MT_EP, notpinned, side, BitMask[stack.epsq]);
 
     genMovesPcs(notpinned, (inbetweenBB | checkersBB));

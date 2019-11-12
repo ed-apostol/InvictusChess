@@ -400,11 +400,10 @@ int position_t::getPiece(int sq) {
 }
 
 int position_t::getSide(int sq) {
-    if (BitMask[sq] & colorBB[WHITE]) return WHITE;
-    return BLACK;
+    return (BitMask[sq] & colorBB[WHITE]) ? WHITE : BLACK;
 }
 
-uint64_t  position_t::pieceByColorBB(int pc, int c) {
+uint64_t  position_t::getPieceBB(int pc, int c) {
     return piecesBB[pc] & colorBB[c];
 }
 
@@ -534,6 +533,13 @@ bool position_t::statExEval(move_t m, int threshold) {
     return side != color;
 }
 
+bool position_t::canCastleKS(int s) {
+    return stack.castle & (s ? BCKS : WCKS);
+}
+bool position_t::canCastleQS(int s) {
+    return stack.castle & (s ? BCQS : WCQS);
+}
+
 bool position_t::kingIsInCheck() {
     return sqIsAttacked(occupiedBB, kpos[side], side ^ 1);
 }
@@ -640,12 +646,12 @@ bool position_t::moveIsValid(move_t m, uint64_t pinned) {
         if (from != E1 && from != E8) return false;
         if (pieces[RookFrom[to / 56][(to % 8) > 5]] != ROOK) return false;
         if (to > from) {
-            if (!(stack.castle & (side ? BCKS : WCKS))) return false;
+            if (!canCastleKS(side)) return false;
             if (occupiedBB & CastleSquareMask1[side][0]) return false;
             if (areaIsAttacked(side ^ 1, CastleSquareMask2[side][0])) return false;
         }
         if (to < from) {
-            if (!(stack.castle & (side ? BCQS : WCQS))) return false;
+            if (!canCastleQS(side)) return false;
             if (occupiedBB & CastleSquareMask1[side][1]) return false;
             if (areaIsAttacked(side ^ 1, CastleSquareMask2[side][1])) return false;
         }
