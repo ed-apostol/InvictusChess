@@ -7,11 +7,11 @@
 #include "uci.h"
 
 int main(void) {
-    uci_t interface;
-    interface.info();
-    interface.run();
+	uci_t interface;
+	interface.info();
+	interface.run();
 
-    return 0;
+	return 0;
 }
 
 // TODO:
@@ -22,4 +22,3 @@ int main(void) {
 //-LMP
 //-razoring, delta pruning, futility,
 //-better time management
-//-outposts
