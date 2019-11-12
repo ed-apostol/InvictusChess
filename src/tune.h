@@ -7,5 +7,5 @@
 #pragma once
 
 namespace Tuner {
-	extern void Tune(const std::string& filename);
+    extern void Tune(const std::string& filename);
 }
