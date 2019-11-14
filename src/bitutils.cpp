@@ -19,7 +19,11 @@ namespace BitUtils {
         _BitScanForward64(&index, bb);
         return index;
     }
-
+    int getLastBit(uint64_t bb) {
+        unsigned long index = 0;
+        _BitScanReverse64(&index, bb);
+        return index;
+    }
     int popFirstBit(uint64_t& b) {
         unsigned long index = 0;
         _BitScanForward64(&index, b);

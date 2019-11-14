@@ -26,8 +26,8 @@ namespace Tuner {
     const int TuneMaterial = 0;
     const int TuneActivity = 0;
     const int TunePawnStructure = 0;
-    const int TuneThreats = 1;
-    const int TuneKingSafety = 0;
+    const int TuneThreats = 0;
+    const int TuneKingSafety = 1;
     const int TunePassedPawns = 0;
 
     struct PositionResults {
@@ -327,26 +327,20 @@ namespace Tuner {
             input.push_back({ AllxQueens.e, 0, 100, "AllxQueens.e" });
         }
         if (TuneAll || TuneKingSafety) {
-            input.push_back({ KingShelter1.m, 0, 200, "KingShelter1.m" });
-            input.push_back({ KingShelter1.e, 0, 200, "KingShelter1.e" });
-            input.push_back({ KingShelter2.m, 0, 200, "KingShelter2.m" });
-            input.push_back({ KingShelter2.e, 0, 200, "KingShelter2.e" });
-            input.push_back({ KingStorm1.m, 0, 200, "KingStorm1.m" });
-            input.push_back({ KingStorm1.e, 0, 200, "KingStorm1.e" });
-            input.push_back({ KingStorm2.m, 0, 200, "KingStorm2.m" });
-            input.push_back({ KingStorm2.e, 0, 200, "KingStorm2.e" });
-            input.push_back({ KnightAtk, 0, 200, "KnightAtk" });
-            input.push_back({ BishopAtk, 0, 200, "BishopAtk" });
-            input.push_back({ RookAtk, 0, 200, "RookAtk" });
-            input.push_back({ QueenAtk, 0, 200, "QueenAtk" });
-            input.push_back({ AttackValue, 0, 200, "AttackValue" });
-            input.push_back({ WeakSquares, 0, 200, "WeakSquares" });
-            input.push_back({ NoEnemyQueens, 0, 200, "NoEnemyQueens" });
-            input.push_back({ EnemyPawns, 0, 200, "EnemyPawns" });
-            input.push_back({ QueenSafeCheckValue, 0, 200, "QueenSafeCheckValue" });
-            input.push_back({ RookSafeCheckValue, 0, 200, "RookSafeCheckValue" });
-            input.push_back({ BishopSafeCheckValue, 0, 200, "BishopSafeCheckValue" });
-            input.push_back({ KnightSafeCheckValue, 0, 200, "KnightSafeCheckValue" });
+            for (int f = 1; f < 4; ++f) input.push_back({ KingShelter[f], 0, 100, "KingShelter_" + std::to_string(f) });
+            for (int f = 1; f < 4; ++f) input.push_back({ KingStorm[f], 0, 100, "KingStorm_" + std::to_string(f) });
+            //input.push_back({ KnightAtk, 0, 200, "KnightAtk" });
+            //input.push_back({ BishopAtk, 0, 200, "BishopAtk" });
+            //input.push_back({ RookAtk, 0, 200, "RookAtk" });
+            //input.push_back({ QueenAtk, 0, 200, "QueenAtk" });
+            //input.push_back({ AttackValue, 0, 200, "AttackValue" });
+            //input.push_back({ WeakSquares, 0, 200, "WeakSquares" });
+            //input.push_back({ NoEnemyQueens, 0, 200, "NoEnemyQueens" });
+            //input.push_back({ EnemyPawns, 0, 200, "EnemyPawns" });
+            //input.push_back({ QueenSafeCheckValue, 0, 200, "QueenSafeCheckValue" });
+            //input.push_back({ RookSafeCheckValue, 0, 200, "RookSafeCheckValue" });
+            //input.push_back({ BishopSafeCheckValue, 0, 200, "BishopSafeCheckValue" });
+            //input.push_back({ KnightSafeCheckValue, 0, 200, "KnightSafeCheckValue" });
         }
 
         FindBestK(data);

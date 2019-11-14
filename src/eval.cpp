@@ -38,7 +38,7 @@ void eval_t::material(position_t & p, int side) {
         scr[side] += BishopPair;
     }
     // TODO: material scaling like opposite colored bishops, KRkb, KRkn
-    // TODO: add material table with precomputed material recognizer (KBPk, KRPkr, insufficient material, etc)
+// TODO: add material table with precomputed material recognizer (KBPk, KRPkr, insufficient material, etc)
 }
 
 void eval_t::pawnstructure(position_t& p, int side) {
@@ -129,34 +129,31 @@ void eval_t::pieceactivity(position_t& p, int side) {
     }
 }
 
-score_t eval_t::kingshelter(position_t& p, int idx, int side) {
-    const int xside = side ^ 1;
-    score_t shelter = KingShelter1 * bitCnt(KingShelterBB[xside][idx] & p.getPieceBB(PAWN, xside));
-    shelter += KingShelter2 * bitCnt(KingShelter2BB[xside][idx] & p.getPieceBB(PAWN, xside));
-    shelter -= KingStorm1 * bitCnt(KingShelter2BB[xside][idx] & p.getPieceBB(PAWN, side));
-    shelter -= KingStorm2 * bitCnt(KingShelter3BB[xside][idx] & p.getPieceBB(PAWN, side));
+basic_score_t eval_t::kingshelter(position_t& p, int sq, int side) {
+    static const std::function<int(uint64_t)> nearestBit[2] = { getFirstBit, getLastBit };
+    const uint64_t pawns = p.getPieceBB(PAWN, side);
+    const uint64_t xpawns = p.getPieceBB(PAWN, side ^ 1);
+    const int rank = sqRank(sq);
+    basic_score_t shelter = 0;
+    for (int file = std::max(0, sqFile(sq) - 1); file <= std::min(7, sqFile(sq) + 1); ++file) {
+        uint64_t bits = FileBB[file] & pawns;
+        int dist = bits ? abs(rank - sqRank(nearestBit[side](bits))) : 0;
+        shelter += dist < 4 ? KingShelter[dist] : 0;
+        bits = FileBB[file] & xpawns;
+        dist = bits ? abs(rank - sqRank(nearestBit[side](bits))) : 0;
+        shelter -= dist < 4 ? KingStorm[dist] : 0;
+    }
     return shelter;
 }
 
 void eval_t::kingsafety(position_t& p, int side) {
     const int xside = side ^ 1;
+    basic_score_t shelter = kingshelter(p, p.kpos[side], side);
+    if (p.canCastleQS(side)) shelter = std::max(shelter, kingshelter(p, KingSquare[side][0], side));
+    if (p.canCastleKS(side)) shelter = std::max(shelter, kingshelter(p, KingSquare[side][2], side));
+    scr[side] += score_t(shelter, 0);
 
-    if (!p.getPieceBB(QUEEN, side)) return;
-    if (!p.getPieceBB(ROOK, side) || !p.getPieceBB(BISHOP, side) || !p.getPieceBB(KNIGHT, side)) return;
-
-    score_t curr_shelter = kingshelter(p, FileWing[sqFile(p.kpos[xside])], side);
-    score_t best_shelter = curr_shelter;
-    if (p.canCastleQS(xside)) {
-        score_t shelter = kingshelter(p, 0, side);
-        if (shelter.m > best_shelter.m) best_shelter = shelter;
-    }
-    if (p.canCastleKS(xside)) {
-        score_t shelter = kingshelter(p, 2, side);
-        if (shelter.m > best_shelter.m) best_shelter = shelter;
-    }
-    scr[xside] += (best_shelter + curr_shelter) / 2;
-
-    if (katkrscnt[side] >= 2 && kzoneatks[side] >= 1) {
+    if (katkrscnt[side] > (1 - bitCnt(p.getPieceBB(QUEEN, side)))) {
         const uint64_t king_atkmask = kingMovesBB(p.kpos[xside]);
         const uint64_t weaksqs = allatks[side] & ~allatks2[xside] & (~allatks[xside] | queenatks[xside] | king_atkmask);
         const uint64_t safesqs = ~p.colorBB[side] & (~allatks[xside] | (weaksqs & allatks2[side]));

@@ -79,10 +79,8 @@ namespace EvalParam {
     score_t PawnsMinorsxMajors = { 24, 34 };
     score_t AllxQueens = { 47, 33 };
 
-    score_t KingShelter1 = { 10, 19 };
-    score_t KingShelter2 = { 11, 0 };
-    score_t KingStorm1 = { 49, 55 };
-    score_t KingStorm2 = { 22, 0 };
+    basic_score_t KingShelter[4] = { 0, 14, 12, 0 };
+    basic_score_t KingStorm[4] = { 0, 0, 23, 11 };
 
     basic_score_t KnightAtk = 7;
     basic_score_t BishopAtk = 3;
@@ -102,6 +100,8 @@ namespace EvalParam {
     uint64_t KingShelterBB[2][3];
     uint64_t KingShelter2BB[2][3];
     uint64_t KingShelter3BB[2][3];
+
+    const int KingSquare[2][3] = { {B1, E1, G1}, {B8, E8, G8} };
 
     void initArr() {
         std::function<score_t(int)> pstInit[] = { pawnPST, knightPST,bishopPST,rookPST,queenPST,kingPST };
@@ -123,7 +123,6 @@ namespace EvalParam {
                 KingZoneBB[color][sq] |= sqFile(sq) == FileH ? KingZoneBB[color][sq] >> 1 : 0;
             }
         }
-        const int KingSquare[2][3] = { {B1, E1, G1}, {B8, E8, G8} };
         for (int color = WHITE; color <= BLACK; ++color) {
             for (int castle = 0; castle <= 2; ++castle) {
                 KingShelterBB[color][castle] = kingMovesBB(KingSquare[color][castle]) & Rank2ByColorBB[color];
