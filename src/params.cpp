@@ -79,8 +79,10 @@ namespace EvalParam {
     score_t PawnsMinorsxMajors = { 24, 34 };
     score_t AllxQueens = { 47, 33 };
 
-    basic_score_t KingShelter[4] = { 0, 14, 12, 0 };
-    basic_score_t KingStorm[4] = { 0, 0, 23, 11 };
+    basic_score_t KingShelter1 = 19;
+    basic_score_t KingShelter2 = 18;
+    basic_score_t KingStorm1 = 63;
+    basic_score_t KingStorm2 = 21;
 
     basic_score_t KnightAtk = 7;
     basic_score_t BishopAtk = 3;
@@ -125,7 +127,8 @@ namespace EvalParam {
         }
         for (int color = WHITE; color <= BLACK; ++color) {
             for (int castle = 0; castle <= 2; ++castle) {
-                KingShelterBB[color][castle] = kingMovesBB(KingSquare[color][castle]) & Rank2ByColorBB[color];
+                int sq = KingSquare[color][castle];
+                KingShelterBB[color][castle] = (kingMovesBB(sq) | (1ull << sq)) & Rank2ByColorBB[color];
                 KingShelter2BB[color][castle] = shift8BB[color](KingShelterBB[color][castle]);
                 KingShelter3BB[color][castle] = shift16BB[color](KingShelterBB[color][castle]);
             }

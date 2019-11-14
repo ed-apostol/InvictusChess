@@ -19,7 +19,7 @@
 namespace Tuner {
     using Ldouble = long double;
 
-    Ldouble K = 1.42206;
+    Ldouble K = 1.37621;
     const int num_threads = 7;
 
     const int TuneAll = 0;
@@ -327,20 +327,22 @@ namespace Tuner {
             input.push_back({ AllxQueens.e, 0, 100, "AllxQueens.e" });
         }
         if (TuneAll || TuneKingSafety) {
-            for (int f = 1; f < 4; ++f) input.push_back({ KingShelter[f], 0, 100, "KingShelter_" + std::to_string(f) });
-            for (int f = 1; f < 4; ++f) input.push_back({ KingStorm[f], 0, 100, "KingStorm_" + std::to_string(f) });
-            //input.push_back({ KnightAtk, 0, 200, "KnightAtk" });
-            //input.push_back({ BishopAtk, 0, 200, "BishopAtk" });
-            //input.push_back({ RookAtk, 0, 200, "RookAtk" });
-            //input.push_back({ QueenAtk, 0, 200, "QueenAtk" });
-            //input.push_back({ AttackValue, 0, 200, "AttackValue" });
-            //input.push_back({ WeakSquares, 0, 200, "WeakSquares" });
-            //input.push_back({ NoEnemyQueens, 0, 200, "NoEnemyQueens" });
-            //input.push_back({ EnemyPawns, 0, 200, "EnemyPawns" });
-            //input.push_back({ QueenSafeCheckValue, 0, 200, "QueenSafeCheckValue" });
-            //input.push_back({ RookSafeCheckValue, 0, 200, "RookSafeCheckValue" });
-            //input.push_back({ BishopSafeCheckValue, 0, 200, "BishopSafeCheckValue" });
-            //input.push_back({ KnightSafeCheckValue, 0, 200, "KnightSafeCheckValue" });
+            input.push_back({ KingShelter1, 0, 100, "KingShelter1" });
+            input.push_back({ KingShelter2, 0, 100, "KingShelter2" });
+            input.push_back({ KingStorm1, 0, 100, "KingStorm1" });
+            input.push_back({ KingStorm2, 0, 100, "KingStorm2" });
+            input.push_back({ KnightAtk, 0, 200, "KnightAtk" });
+            input.push_back({ BishopAtk, 0, 200, "BishopAtk" });
+            input.push_back({ RookAtk, 0, 200, "RookAtk" });
+            input.push_back({ QueenAtk, 0, 200, "QueenAtk" });
+            input.push_back({ AttackValue, 0, 200, "AttackValue" });
+            input.push_back({ WeakSquares, 0, 200, "WeakSquares" });
+            input.push_back({ NoEnemyQueens, 0, 200, "NoEnemyQueens" });
+            input.push_back({ EnemyPawns, 0, 200, "EnemyPawns" });
+            input.push_back({ QueenSafeCheckValue, 0, 200, "QueenSafeCheckValue" });
+            input.push_back({ RookSafeCheckValue, 0, 200, "RookSafeCheckValue" });
+            input.push_back({ BishopSafeCheckValue, 0, 200, "BishopSafeCheckValue" });
+            input.push_back({ KnightSafeCheckValue, 0, 200, "KnightSafeCheckValue" });
         }
 
         FindBestK(data);

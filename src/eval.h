@@ -27,6 +27,8 @@ struct eval_t {
     uint64_t allatks2[2];
     uint64_t kingzone[2];
     uint64_t pawnfillatks[2];
+    uint64_t pawnshelter[2];
+    uint64_t pawnstorm[2];
     basic_score_t katkrscnt[2];
     basic_score_t atkweights[2];
     basic_score_t kzoneatks[2];

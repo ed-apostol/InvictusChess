@@ -130,19 +130,12 @@ void eval_t::pieceactivity(position_t& p, int side) {
 }
 
 basic_score_t eval_t::kingshelter(position_t& p, int sq, int side) {
-    static const std::function<int(uint64_t)> nearestBit[2] = { getFirstBit, getLastBit };
-    const uint64_t pawns = p.getPieceBB(PAWN, side);
-    const uint64_t xpawns = p.getPieceBB(PAWN, side ^ 1);
-    const int rank = sqRank(sq);
+    const int file = FileWing[sqFile(sq)];
     basic_score_t shelter = 0;
-    for (int file = std::max(0, sqFile(sq) - 1); file <= std::min(7, sqFile(sq) + 1); ++file) {
-        uint64_t bits = FileBB[file] & pawns;
-        int dist = bits ? abs(rank - sqRank(nearestBit[side](bits))) : 0;
-        shelter += dist < 4 ? KingShelter[dist] : 0;
-        bits = FileBB[file] & xpawns;
-        dist = bits ? abs(rank - sqRank(nearestBit[side](bits))) : 0;
-        shelter -= dist < 4 ? KingStorm[dist] : 0;
-    }
+    shelter += KingShelter1 * bitCnt(pawnshelter[side] & KingShelterBB[side][file]);
+    shelter += KingShelter2 * bitCnt(pawnshelter[side] & KingShelter2BB[side][file]);
+    shelter -= KingStorm1 * bitCnt(pawnstorm[side] & KingShelter2BB[side][file]);
+    shelter -= KingStorm2 * bitCnt(pawnstorm[side] & KingShelter3BB[side][file]);
     return shelter;
 }
 
@@ -221,6 +214,10 @@ basic_score_t eval_t::score(position_t& p) {
         pawnfillatks[color] = fillBB[color](pawnatks[color]);
         allatks2[color] |= allatks[color] & pawnatks[color];
         allatks[color] |= pawnatks[color];
+        pawnshelter[color] = p.getPieceBB(PAWN, color);
+        pawnshelter[color] &= ~fillBBEx[color](pawnshelter[color]);
+        pawnstorm[color] = p.getPieceBB(PAWN, color ^ 1);
+        pawnstorm[color] &= ~fillBBEx[color](pawnstorm[color]);
     }
     for (int color = WHITE; color <= BLACK; ++color) {
         material(p, color);
