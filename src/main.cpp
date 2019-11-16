@@ -18,7 +18,5 @@ int main(void) {
 //-history moves and other new history ideas
 // counter move
 // singular move
-// probcut
-//-LMP
-//-razoring, delta pruning, futility,
 //-better time management
+//-hash qsearch

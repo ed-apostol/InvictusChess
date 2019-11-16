@@ -237,31 +237,43 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             return tte.move.s;
     }
 
-    if (!inPv && !inCheck
-        && depth >= 2 && pos.colorBB[pos.side] & ~(pos.piecesBB[PAWN] | pos.piecesBB[KING])
-        && pos.stack.lastmove.m != 0 && tte.move.m == 0) {
+    if (!inPv && !inCheck) {
         int evalscore = eval.score(pos);
-        if (evalscore >= beta) {
-            undo_t undo;
-            int R = 4 + depth / 6 + std::min(3, (evalscore - beta) / 200);
-            pos.doNullMove(undo);
-            int score = -search(false, false, -beta, -beta + 1, depth - R, ply + 1, false);
-            pos.undoNullMove(undo);
-            if (e.stop || stop_iter) return 0;
-            if (score >= beta) {
-                if (score >= 32500) score = beta;
-                if (depth < 12 && abs(beta) < 32500) return score;
-                int score2 = search(false, false, alpha, beta, depth - R, ply + 1, inCheck);
+        if (depth < 2 && evalscore + 325 < alpha)
+            return qsearch(alpha, beta, ply, inCheck);
+        if (depth < 9 && evalscore - 85 * depth > beta)
+            return evalscore;
+        if (depth >= 2 && pos.colorBB[pos.side] & ~(pos.piecesBB[PAWN] | pos.piecesBB[KING])
+            && pos.stack.lastmove.m != 0 && tte.move.m == 0) {
+            if (evalscore >= beta) {
+                undo_t undo;
+                int R = 4 + depth / 6 + std::min(3, (evalscore - beta) / 200);
+                pos.doNullMove(undo);
+                int score = -search(false, false, -beta, -beta + 1, depth - R, ply + 1, false);
+                pos.undoNullMove(undo);
                 if (e.stop || stop_iter) return 0;
-                if (score2 >= beta) return score;
+                if (score >= beta) {
+                    if (score >= 32500) score = beta;
+                    if (depth < 12 && abs(beta) < 32500) return score;
+                    int score2 = search(false, false, alpha, beta, depth - R, ply + 1, inCheck);
+                    if (e.stop || stop_iter) return 0;
+                    if (score2 >= beta) return score;
+                }
             }
         }
-    }
-
-    if (inPv && !inCheck && tte.move.m == 0 && depth >= 3) {
-        search(inRoot, inPv, alpha, beta, depth - 2, ply, inCheck);
-        if (e.stop || stop_iter) return 0;
-        e.tt.retrieve(pos.stack.hash, tte);
+        if (depth > 4 && std::abs(beta) < MATE - MAXPLY) {
+            undo_t undo;
+            int rbeta = std::min(beta + 100, MATE);
+            uint64_t dcc = pos.discoveredPiecesBB(pos.side);
+            movepicker_t mp(*this, inCheck, true, ply);
+            for (move_t m; mp.getMoves(m);) {
+                bool moveGivesCheck = pos.moveIsCheck(m, dcc);
+                pos.doMove(undo, m);
+                int score = -search(false, false, -rbeta, -rbeta + 1, depth - 4, ply + 1, moveGivesCheck);
+                pos.undoMove(undo);
+                if (score >= rbeta) return score;
+            }
+        }
     }
 
     int old_alpha = alpha;
@@ -302,33 +314,38 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             }
         }
 
-        bool moveIsCheck = pos.moveIsCheck(m, dcc);
+        bool moveGivesCheck = pos.moveIsCheck(m, dcc);
 
         if (best_score == -MATE) {
             pos.doMove(undo, m);
-            score = -search(false, inPv, -beta, -alpha, depth - 1 + moveIsCheck, ply + 1, moveIsCheck);
+            score = -search(false, inPv, -beta, -alpha, depth - 1 + moveGivesCheck, ply + 1, moveGivesCheck);
             pos.undoMove(undo);
         }
         else {
+            // TODO: FP, LMP, CMP, FUMP
+            // TODO: SEE pruning
+
             int reduction = 1;
-            if (!inCheck && !moveIsCheck && !pos.moveIsTactical(m) && depth > 2) {
+            if (!inCheck && !moveGivesCheck && !pos.moveIsTactical(m) && depth > 2) {
                 reduction = LMRTable[std::min(depth, 63)][std::min(movestried, 63)];
                 reduction += !inPv;
                 reduction -= (m.m == mp.killer1) || (m.m == mp.killer2);
                 reduction = std::min(depth - 1, std::max(reduction, 1));
             }
 
+            // TODO: singular extension
+
             pos.doMove(undo, m);
 
             if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.setBusy(move_hash, m.m, depth);
-            score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1, moveIsCheck);
+            score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1, moveGivesCheck);
             if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.resetBusy(move_hash, m.m, depth);
 
             if (reduction != 1 && !e.stop && !stop_iter && score > alpha)
-                score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1, moveIsCheck);
+                score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1, moveGivesCheck);
 
             if (inPv && !e.stop && !stop_iter && score > alpha)
-                score = -search(false, inPv, -beta, -alpha, depth - 1, ply + 1, moveIsCheck);
+                score = -search(false, inPv, -beta, -alpha, depth - 1, ply + 1, moveGivesCheck);
 
             pos.undoMove(undo);
         }
@@ -378,15 +395,18 @@ int search_t::qsearch(int alpha, int beta, int ply, bool inCheck) {
     if (ply >= MAXPLY) return eval.score(pos);
 
     int best_score = -MATE;
-    movepicker_t mp(*this, inCheck, true, ply);
     if (!inCheck) {
         best_score = eval.score(pos);
         if (best_score >= beta) return best_score;
         alpha = std::max(alpha, best_score);
     }
+
+    // TODO: delta pruning
+
     undo_t undo;
     move_t best_move(0);
     int movestried = 0;
+    movepicker_t mp(*this, inCheck, true, ply);
     uint64_t dcc = pos.discoveredPiecesBB(pos.side);
     for (move_t m; mp.getMoves(m);) {
         ++movestried;
