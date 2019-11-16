@@ -42,59 +42,61 @@ namespace EvalParam {
         return file[sqFile(sq)] + rank[sqRank(sq)];
     }
 
-    score_t MaterialValues[7] = { { 0, 0 },{ 100, 115 },{ 341, 425 },{ 377, 454 },{ 460, 772 },{ 1004, 1535 },{ 0, 0 } };
-    score_t BishopPair = { 14, 68 };
+    score_t MaterialValues[7] = { { 0, 0 },{ 100, 117 },{ 366, 424 },{ 400, 457 },{ 501, 770 },{ 913, 1592 },{ 0, 0 } };
+    score_t BishopPair = { 23, 66 };
 
-    score_t PawnConnected = { 4, 13 };
-    score_t PawnDoubled = { 12, 1 };
-    score_t PawnIsolated = { 4, 15 };
-    score_t PawnBackward = { 0, 16 };
-    score_t PawnIsolatedOpen = { 28, 16 };
-    score_t PawnBackwardOpen = { 24, 13 };
+    score_t PawnConnected = { 2, 12 };
+    score_t PawnDoubled = { 10, 1 };
+    score_t PawnIsolated = { 2, 17 };
+    score_t PawnBackward = { 0, 14 };
+    score_t PawnIsolatedOpen = { 28, 17 };
+    score_t PawnBackwardOpen = { 21, 14 };
 
     score_t PasserBonusMin = { 0, 0 };
-    score_t PasserBonusMax = { 38, 115 };
-    score_t PasserDistOwn = { 0, 24 };
-    score_t PasserDistEnemy = { 0, 44 };
-    score_t PasserNotBlocked = { 0, 73 };
-    score_t PasserSafePush = { 0, 22 };
-    score_t PasserSafeProm = { 0, 165 };
+    score_t PasserBonusMax = { 34, 105 };
+    score_t PasserDistOwn = { 0, 25 };
+    score_t PasserDistEnemy = { 0, 48 };
+    score_t PasserNotBlocked = { 0, 75 };
+    score_t PasserSafePush = { 0, 25 };
+    score_t PasserSafeProm = { 0, 166 };
 
-    score_t KnightMob = { 6, 6 };
+    score_t KnightMob = { 7, 7 };
     score_t BishopMob = { 9, 6 };
-    score_t RookMob = { 4, 5 };
-    score_t QueenMob = { 4, 5 };
-    score_t RookOn7th = { 0, 55 };
-    score_t RookOnSemiOpenFile = { 19, 10 };
-    score_t RookOnOpenFile = { 42, 14 };
-    score_t OutpostBonus = { 20, 15 };
-    score_t BishopPawns = { 7, 10 };
-    basic_score_t Tempo = 35;
+    score_t RookMob = { 4, 6 };
+    score_t QueenMob = { 3, 5 };
+    score_t RookOn7th = { 0, 53 };
+    score_t RookOnSemiOpenFile = { 20, 5 };
+    score_t RookOnOpenFile = { 38, 12 };
+    score_t OutpostBonus = { 15, 15 };
+    score_t BishopPawns = { 7, 9 };
+    basic_score_t Tempo = 37;
 
-    score_t PawnPush = { 15, 9 };
-    score_t WeakPawns = { 4, 55 };
-    score_t PawnsxMinors = { 67, 17 };
-    score_t MinorsxMinors = { 28, 40 };
-    score_t MajorsxWeakMinors = { 29, 74 };
-    score_t PawnsMinorsxMajors = { 24, 34 };
-    score_t AllxQueens = { 47, 33 };
+    score_t PawnPush = { 19, 9 };
+    score_t WeakPawns = { 2, 57 };
+    score_t PawnsxMinors = { 74, 19 };
+    score_t MinorsxMinors = { 30, 40 };
+    score_t MajorsxWeakMinors = { 30, 78 };
+    score_t PawnsMinorsxMajors = { 24, 38 };
+    score_t AllxQueens = { 51, 30 };
+    score_t KingxMinors = { 29, 57 };
+    score_t KingxRooks = { 0, 34 };
 
-    basic_score_t KingShelter1 = 19;
-    basic_score_t KingShelter2 = 18;
-    basic_score_t KingStorm1 = 63;
-    basic_score_t KingStorm2 = 21;
+    basic_score_t KingShelter1 = 29;
+    basic_score_t KingShelter2 = 26;
+    basic_score_t KingStorm1 = 69;
+    basic_score_t KingStorm2 = 24;
 
-    basic_score_t KnightAtk = 7;
-    basic_score_t BishopAtk = 3;
+    basic_score_t KnightAtk = 10;
+    basic_score_t BishopAtk = 2;
     basic_score_t RookAtk = 12;
     basic_score_t QueenAtk = 3;
-    basic_score_t AttackValue = 20;
-    basic_score_t WeakSquares = 44;
-    basic_score_t NoEnemyQueens = 85;
-    basic_score_t EnemyPawns = 29;
-    basic_score_t QueenSafeCheckValue = 57;
-    basic_score_t RookSafeCheckValue = 113;
-    basic_score_t BishopSafeCheckValue = 65;
+    basic_score_t AttackValue = 22;
+    basic_score_t WeakSquares = 40;
+    basic_score_t NoEnemyQueens = 95;
+    basic_score_t EnemyPawns = 21;
+    basic_score_t QueenSafeCheckValue = 60;
+    basic_score_t RookSafeCheckValue = 117;
+    basic_score_t BishopSafeCheckValue = 77;
     basic_score_t KnightSafeCheckValue = 112;
 
     score_t PcSqTab[2][8][64];

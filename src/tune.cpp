@@ -22,12 +22,12 @@ namespace Tuner {
     Ldouble K = 1.37621;
     const int num_threads = 7;
 
-    const int TuneAll = 0;
+    const int TuneAll = 1;
     const int TuneMaterial = 0;
     const int TuneActivity = 0;
     const int TunePawnStructure = 0;
-    const int TuneThreats = 0;
-    const int TuneKingSafety = 1;
+    const int TuneThreats = 1;
+    const int TuneKingSafety = 0;
     const int TunePassedPawns = 0;
 
     struct PositionResults {
@@ -325,6 +325,10 @@ namespace Tuner {
             input.push_back({ PawnsMinorsxMajors.e, 0, 100, "PawnsMinorsxMajors.e" });
             input.push_back({ AllxQueens.m, 0, 100, "AllxQueens.m" });
             input.push_back({ AllxQueens.e, 0, 100, "AllxQueens.e" });
+            input.push_back({ KingxMinors.m, 0, 100, "KingxMinors.m" });
+            input.push_back({ KingxMinors.e, 0, 100, "KingxMinors.e" });
+            input.push_back({ KingxRooks.m, 0, 100, "KingxRooks.m" });
+            input.push_back({ KingxRooks.e, 0, 100, "KingxRooks.e" });
         }
         if (TuneAll || TuneKingSafety) {
             input.push_back({ KingShelter1, 0, 100, "KingShelter1" });

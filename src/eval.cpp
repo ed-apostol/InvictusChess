@@ -38,7 +38,7 @@ void eval_t::material(position_t & p, int side) {
         scr[side] += BishopPair;
     }
     // TODO: material scaling like opposite colored bishops, KRkb, KRkn
-// TODO: add material table with precomputed material recognizer (KBPk, KRPkr, insufficient material, etc)
+    // TODO: add material table with precomputed material recognizer (KBPk, KRPkr, insufficient material, etc)
 }
 
 void eval_t::pawnstructure(position_t& p, int side) {
@@ -141,12 +141,16 @@ basic_score_t eval_t::kingshelter(position_t& p, int sq, int side) {
 
 void eval_t::kingsafety(position_t& p, int side) {
     const int xside = side ^ 1;
+
+    if (!p.getPieceBB(QUEEN, side)) return;
+    if (!(p.getPieceBB(ROOK, side) || p.getPieceBB(BISHOP, side) || p.getPieceBB(KNIGHT, side))) return;
+
     basic_score_t shelter = kingshelter(p, p.kpos[side], side);
     if (p.canCastleQS(side)) shelter = std::max(shelter, kingshelter(p, KingSquare[side][0], side));
     if (p.canCastleKS(side)) shelter = std::max(shelter, kingshelter(p, KingSquare[side][2], side));
     scr[side] += score_t(shelter, 0);
 
-    if (katkrscnt[side] > (1 - bitCnt(p.getPieceBB(QUEEN, side)))) {
+    if (katkrscnt[side] > 0) {
         const uint64_t king_atkmask = kingMovesBB(p.kpos[xside]);
         const uint64_t weaksqs = allatks[side] & ~allatks2[xside] & (~allatks[xside] | queenatks[xside] | king_atkmask);
         const uint64_t safesqs = ~p.colorBB[side] & (~allatks[xside] | (weaksqs & allatks2[side]));
@@ -182,6 +186,8 @@ void eval_t::threats(position_t& p, int side) {
     scr[side] += MajorsxWeakMinors * bitCnt((rookatks[side] | queenatks[side]) & minors & weak);
     scr[side] += PawnsMinorsxMajors * bitCnt((pawnatks[side] | knightatks[side] | bishopatks[side]) & p.rookSlidersBB(xside));
     scr[side] += AllxQueens * bitCnt(allatks[side] & p.getPieceBB(QUEEN, xside));
+    scr[side] += KingxMinors * bitCnt(kingMovesBB(p.kpos[side]) & minors & weak);
+    scr[side] += KingxRooks * bitCnt(kingMovesBB(p.kpos[side]) & p.getPieceBB(ROOK, xside) & weak);
 }
 
 void eval_t::passedpawns(position_t& p, int side) {

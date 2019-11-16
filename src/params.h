@@ -45,6 +45,8 @@ namespace EvalParam {
     extern score_t MajorsxWeakMinors;
     extern score_t PawnsMinorsxMajors;
     extern score_t AllxQueens;
+    extern score_t KingxMinors;
+    extern score_t KingxRooks;
 
     extern basic_score_t KingShelter1;
     extern basic_score_t KingShelter2;
