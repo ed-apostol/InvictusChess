@@ -16,9 +16,10 @@
 #include "movepicker.h"
 
 namespace Search {
+    static const int LMPTable[9] = { 0, 5, 7, 11, 17, 25, 35, 47, 61 };
     int LMRTable[64][64];
     void initArr() {
-        //LogAndPrintOutput logger;
+        LogAndPrintOutput logger;
         for (int d = 1; d < 64; d++) {
             for (int p = 1; p < 64; p++) {
                 //LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.25; //Ethereal
@@ -237,8 +238,9 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             return tte.move.s;
     }
 
+    int evalscore = eval.score(pos);
+
     if (!inPv && !inCheck) {
-        int evalscore = eval.score(pos);
         if (depth < 2 && evalscore + 325 < alpha)
             return qsearch(alpha, beta, ply, inCheck);
         if (depth < 9 && evalscore - 85 * depth > beta)
@@ -275,7 +277,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             }
         }
     }
-
+    const int futilityMargin = evalscore + (90 * depth) + 250;
     int old_alpha = alpha;
     int best_score = -MATE;
     int movestried = 0;
@@ -322,15 +324,20 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             pos.undoMove(undo);
         }
         else {
-            // TODO: FP, LMP, CMP, FUMP
-            // TODO: SEE pruning
-
+            // TODO: CMP, FUMP
+            // TODO: SEE pruning for tactical moves
             int reduction = 1;
-            if (!inCheck && !moveGivesCheck && !pos.moveIsTactical(m) && depth > 2) {
-                reduction = LMRTable[std::min(depth, 63)][std::min(movestried, 63)];
-                reduction += !inPv;
-                reduction -= (m.m == mp.killer1) || (m.m == mp.killer2);
-                reduction = std::min(depth - 1, std::max(reduction, 1));
+            if (!inCheck && !moveGivesCheck && !pos.moveIsTactical(m)) {
+                if (depth < 9 && futilityMargin <= alpha)continue;
+                if (depth < 9 && movestried >= LMPTable[depth]) continue;
+                if (depth < 9 && mp.stage == STG_QUIET && !pos.statExEval(m, -80 * depth)) continue;
+
+                if (!inCheck && !moveGivesCheck && !pos.moveIsTactical(m) && depth > 2) {
+                    reduction = LMRTable[std::min(depth, 63)][std::min(movestried, 63)];
+                    reduction += !inPv;
+                    reduction -= (m.m == mp.killer1) || (m.m == mp.killer2);
+                    reduction = std::min(depth - 1, std::max(reduction, 1));
+                }
             }
 
             // TODO: singular extension
