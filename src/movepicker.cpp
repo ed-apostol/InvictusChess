@@ -120,6 +120,7 @@ bool movepicker_t::getMoves(move_t& move, bool skipquiets) {
     case STG_DEFERRED:
         while (idx < deferred.size) {
             move = deferred.mv(idx++);
+            if (skipquiets && !pos.moveIsTactical(move)) continue;
             return true;
         }
         ++stage;

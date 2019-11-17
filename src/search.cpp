@@ -23,10 +23,11 @@ namespace Search {
         //LogAndPrintOutput logger;
         for (int d = 1; d < 64; d++) {
             for (int p = 1; p < 64; p++) {
-                //LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.25; //Ethereal
+                //LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.25; // Ethereal
                 //LMRTable[d][p] = 0.5 + log(d) * log(p) / 3; // Hannibal
                 //LMRTable[d][p] = log(d) * log(p) / 1.95; // SF
                 //LMRTable[d][p] = 0.5 + log(d) * log(p) / 2.1; // Laser
+                //LMRTable[d][p] = log(d) * log(p) / 2.0; // Defenchess
                 LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.25;
                 //logger << " " << LMRTable[d][p];
             }
@@ -144,6 +145,7 @@ void search_t::start() {
 
     for (rdepth = 1; e.rootbestdepth < e.limits.depth; rdepth = e.rootbestdepth + 1) {
         int delta = 16;
+        resolve_fail = false;
         e.alpha = -MATE;
         e.beta = MATE;
         maxplysearched = 0;
@@ -181,12 +183,20 @@ void search_t::start() {
                     break;
                 }
                 delta <<= 1;
+                e.resolveFail();
                 e.resolveIteration();
                 e.stopIteration();
             }
         }
         if (e.stop) break;
-        // TODO: check for time here if going to next iter is still possible, if > 70% stop search
+        if (thread_id == 0 && e.use_time) {
+            int64_t currtime = Utils::getTime();
+            // TODO: if current score is worst than the last by ~30 cp, extend by half
+            if (currtime - e.start_time >= ((e.time_limit_max - e.start_time) * 7) / 10) {
+                //PrintOutput() << "info string Break at 70% time limit!";
+                break;
+            }
+        }
     }
 
     if (!e.stop && (e.limits.ponder || e.limits.infinite)) {
@@ -208,7 +218,11 @@ bool search_t::stopSearch() {
     if (thread_id == 0 && e.use_time && (nodecnt & 0x3fff) == 0) {
         int64_t currtime = Utils::getTime();
         if ((currtime >= e.time_limit_max && !resolve_iter) || (currtime >= e.time_limit_abs)) {
-            e.stop = true;
+            if (resolve_fail && currtime < e.time_limit_abs) {
+                e.time_limit_max = std::min(e.time_limit_max + e.time_range / 2, e.time_limit_abs);
+                //PrintOutput() << "info string Resolve fail! Time extended by half!";
+            }
+            else e.stop = true;
         }
     }
     return e.stop;

@@ -15,10 +15,11 @@ int main(void) {
 }
 
 // TODO:
-//-history moves and other new history ideas
+// history moves and other new history ideas
 // counter move
 // singular move
-//-better time management
-//-hash qsearch
-//-pawn hash
-//-checks in qsearch at first level
+// hash qsearch
+// pawn hash
+// eval hash
+// material tables with material recognizer
+// checks in qsearch at first level

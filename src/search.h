@@ -75,6 +75,7 @@ struct search_t : public thread_t {
     std::atomic<uint64_t> nodecnt;
     std::atomic<bool> stop_iter;
     std::atomic<bool> resolve_iter;
+    std::atomic<bool> resolve_fail;
 
     eval_t eval;
     move_t rootmove;

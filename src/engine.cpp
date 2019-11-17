@@ -68,6 +68,7 @@ void engine_t::initSearch() {
     rootbestdepth = 0;
     if (!limits.depth) limits.depth = search_t::MAXPLY;
 
+    time_range = time_limit_max;
     time_limit_max += start_time;
     time_limit_abs += start_time;
     use_time = !limits.ponder && (mytime || limits.movetime);
@@ -140,9 +141,13 @@ uint64_t engine_t::nodesearched() {
 }
 
 void engine_t::stopIteration() {
-    for (auto t : *this) t->stop_iter = true;
+    for (auto &t : *this) t->stop_iter = true;
 }
 
 void engine_t::resolveIteration() {
-    for (auto t : *this) t->resolve_iter = true;
+    for (auto &t : *this) t->resolve_iter = true;
+}
+
+void engine_t::resolveFail() {
+    for (auto &t : *this) t->resolve_fail = true;
 }

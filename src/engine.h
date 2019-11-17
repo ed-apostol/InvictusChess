@@ -113,6 +113,7 @@ struct engine_t : public std::vector<search_t*> {
     uint64_t nodesearched();
     void stopIteration();
     void resolveIteration();
+    void resolveFail();
 
     abdada_table_t mht;
     pvhash_table_t pvt;
@@ -134,6 +135,7 @@ struct engine_t : public std::vector<search_t*> {
     move_t rootponder;
 
     int64_t start_time;
+    int64_t time_range;
     int64_t time_limit_max;
     int64_t time_limit_abs;
 };
