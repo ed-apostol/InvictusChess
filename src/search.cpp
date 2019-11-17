@@ -14,12 +14,13 @@
 #include "eval.h"
 #include "log.h"
 #include "movepicker.h"
+#include "params.h"
 
 namespace Search {
     static const int LMPTable[9] = { 0, 5, 7, 11, 17, 25, 35, 47, 61 };
     int LMRTable[64][64];
     void initArr() {
-        LogAndPrintOutput logger;
+        //LogAndPrintOutput logger;
         for (int d = 1; d < 64; d++) {
             for (int p = 1; p < 64; p++) {
                 //LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.25; //Ethereal
@@ -41,6 +42,7 @@ namespace Search {
 }
 
 using namespace Search;
+using namespace EvalParam;
 
 void search_t::idleloop() {
     while (!exit_flag) {
@@ -184,7 +186,7 @@ void search_t::start() {
             }
         }
         if (e.stop) break;
-        // TODO check for time here if going to next iter is still possible, if > 70% stop search
+        // TODO: check for time here if going to next iter is still possible, if > 70% stop search
     }
 
     if (!e.stop && (e.limits.ponder || e.limits.infinite)) {
@@ -202,6 +204,7 @@ void search_t::start() {
 
 bool search_t::stopSearch() {
     ++nodecnt;
+    // TODO: if doing re-search for fail high/low, do not stop iteration
     if (thread_id == 0 && e.use_time && (nodecnt & 0x3fff) == 0) {
         int64_t currtime = Utils::getTime();
         if ((currtime >= e.time_limit_max && !resolve_iter) || (currtime >= e.time_limit_abs)) {
@@ -238,29 +241,27 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             return tte.move.s;
     }
 
-    int evalscore = eval.score(pos);
+    const int evalscore = eval.score(pos);
+    const bool nonpawnpcs = pos.colorBB[pos.side] & ~(pos.piecesBB[PAWN] | pos.piecesBB[KING]);
 
     if (!inPv && !inCheck) {
-        if (depth < 2 && evalscore + 325 < alpha)
+        if (depth < 2 && evalscore + 325 < alpha) // TODO: test
             return qsearch(alpha, beta, ply, inCheck);
-        if (depth < 9 && evalscore - 85 * depth > beta)
+        if (depth < 9 && evalscore - 85 * depth > beta) // TODO: test
             return evalscore;
-        if (depth >= 2 && pos.colorBB[pos.side] & ~(pos.piecesBB[PAWN] | pos.piecesBB[KING])
-            && pos.stack.lastmove.m != 0 && tte.move.m == 0) {
-            if (evalscore >= beta) {
-                undo_t undo;
-                int R = 4 + depth / 6 + std::min(3, (evalscore - beta) / 200);
-                pos.doNullMove(undo);
-                int score = -search(false, false, -beta, -beta + 1, depth - R, ply + 1, false);
-                pos.undoNullMove(undo);
+        if (depth >= 2 && evalscore >= beta && nonpawnpcs && pos.stack.lastmove.m != 0 && tte.move.m == 0) {
+            undo_t undo;
+            int R = 4 + depth / 6 + std::min(3, (evalscore - beta) / 200);
+            pos.doNullMove(undo);
+            int score = -search(false, false, -beta, -beta + 1, depth - R, ply + 1, false);
+            pos.undoNullMove(undo);
+            if (e.stop || stop_iter) return 0;
+            if (score >= beta) {
+                if (score >= 32500) score = beta;
+                if (depth < 12 && abs(beta) < 32500) return score;
+                int score2 = search(false, false, alpha, beta, depth - R, ply + 1, inCheck);
                 if (e.stop || stop_iter) return 0;
-                if (score >= beta) {
-                    if (score >= 32500) score = beta;
-                    if (depth < 12 && abs(beta) < 32500) return score;
-                    int score2 = search(false, false, alpha, beta, depth - R, ply + 1, inCheck);
-                    if (e.stop || stop_iter) return 0;
-                    if (score2 >= beta) return score;
-                }
+                if (score2 >= beta) return score;
             }
         }
         if (depth > 4 && std::abs(beta) < MATE - MAXPLY) {
@@ -277,7 +278,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             }
         }
     }
-    const int futilityMargin = evalscore + (90 * depth) + 250;
+    const int futilityMargin = evalscore + (90 * depth) + 250; // TODO: test
     int old_alpha = alpha;
     int best_score = -MATE;
     int movestried = 0;
@@ -287,8 +288,9 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
     uint32_t move_hash;
     movepicker_t mp(*this, inCheck, false, ply, tte.move.m, killer1[ply], killer2[ply]);
     uint64_t dcc = pos.discoveredPiecesBB(pos.side);
+    bool skipquiets = false;
     playedmoves[ply].size = 0;
-    for (move_t m; mp.getMoves(m);) {
+    for (move_t m; mp.getMoves(m, skipquiets);) {
         if (e.doSMP && mp.stage == STG_DEFERRED) {
             //if (inRoot) PrintOutput() << depth << " " << m.to_str() << " " << m.s;
             movestried = m.s;
@@ -324,25 +326,27 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             pos.undoMove(undo);
         }
         else {
-            // TODO: CMP, FUMP
+            // TODO: Counter moves history, Follow up moves history
             // TODO: SEE pruning for tactical moves
-            int reduction = 1;
-            if (!inCheck && !moveGivesCheck && !pos.moveIsTactical(m)) {
-                if (depth < 9 && futilityMargin <= alpha)continue;
-                if (depth < 9 && movestried >= LMPTable[depth]) continue;
-                if (depth < 9 && mp.stage == STG_QUIET && !pos.statExEval(m, -80 * depth)) continue;
 
-                if (!inCheck && !moveGivesCheck && !pos.moveIsTactical(m) && depth > 2) {
-                    reduction = LMRTable[std::min(depth, 63)][std::min(movestried, 63)];
-                    reduction += !inPv;
-                    reduction -= (m.m == mp.killer1) || (m.m == mp.killer2);
-                    reduction = std::min(depth - 1, std::max(reduction, 1));
-                }
+            bool canBeReduced = !inCheck && !moveGivesCheck && !pos.moveIsTactical(m);
+            if (!inRoot && canBeReduced && depth < 9 && nonpawnpcs) {
+                if (futilityMargin <= alpha) { skipquiets = true;  continue; }
+                if (movestried >= LMPTable[depth]) { skipquiets = true;  continue; }
+                if (!pos.statExEval(m, -80 * depth)) continue;
             }
 
             // TODO: singular extension
 
             pos.doMove(undo, m);
+
+            int reduction = 1;
+            if (canBeReduced && depth > 2) {
+                reduction = LMRTable[std::min(depth, 63)][std::min(movestried, 63)];
+                reduction += !inPv;
+                reduction -= (m.m == mp.killer1) || (m.m == mp.killer2);
+                reduction = std::min(depth - 1, std::max(reduction, 1));
+            }
 
             if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.setBusy(move_hash, m.m, depth);
             score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1, moveGivesCheck);
@@ -407,8 +411,6 @@ int search_t::qsearch(int alpha, int beta, int ply, bool inCheck) {
         if (best_score >= beta) return best_score;
         alpha = std::max(alpha, best_score);
     }
-
-    // TODO: delta pruning
 
     undo_t undo;
     move_t best_move(0);

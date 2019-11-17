@@ -20,3 +20,5 @@ int main(void) {
 // singular move
 //-better time management
 //-hash qsearch
+//-pawn hash
+//-checks in qsearch at first level

@@ -14,9 +14,9 @@
 
 //#define TUNE
 
-//#define ASSERT(a)
-#define ASSERT(a) if (!(a)) \
-{LogAndPrintInfo() << "file " << __FILE__ << ", line " << __LINE__  << " : " << "assertion \"" #a "\" failed";}
+#define ASSERT(a)
+//#define ASSERT(a) if (!(a)) \
+//{LogAndPrintInfo() << "file " << __FILE__ << ", line " << __LINE__  << " : " << "assertion \"" #a "\" failed";}
 
 enum ColorEnum {
     WHITE,

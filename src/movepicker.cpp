@@ -8,20 +8,20 @@
 #include "movepicker.h"
 #include "log.h"
 
-movepicker_t::movepicker_t(search_t& search, bool inCheck, bool skipq, int ply, uint16_t hmove, uint16_t k1, uint16_t k2)
+movepicker_t::movepicker_t(search_t& search, bool inCheck, bool inQS, int ply, uint16_t hmove, uint16_t k1, uint16_t k2)
     : s(search), pos(s.pos) {
     idx = 0;
     hashmove = hmove;
     killer1 = k1;
     killer2 = k2;
     pinned = pos.pinnedPiecesBB(pos.side);
-    skipquiet = skipq;
+    inQSearch = inQS;
     if (inCheck) {
         pos.genCheckEvasions(mvlist);
         scoreEvasions();
         stage = STG_EVASION;
     }
-    else if (skipquiet) stage = STG_GENTACTICS;
+    else if (inQSearch) stage = STG_GENTACTICS;
     else stage = STG_HTABLE;
 }
 
@@ -36,7 +36,7 @@ move_t movepicker_t::getBestMoveFromIdx(int idx) {
     return mvlist.mv(idx);
 }
 
-bool movepicker_t::getMoves(move_t& move) {
+bool movepicker_t::getMoves(move_t& move, bool skipquiets) {
     switch (stage) {
     case STG_EVASION:
         if (idx < mvlist.size) {
@@ -47,7 +47,7 @@ bool movepicker_t::getMoves(move_t& move) {
         break;
     case STG_HTABLE:
         ++stage;
-        if (!skipquiet && hashmove != 0) {
+        if (!inQSearch && hashmove != 0) {
             move.m = hashmove;
             if (pos.moveIsValid(move, pinned) && pos.moveIsLegal(move, pinned, false))
                 return true;
@@ -65,41 +65,45 @@ bool movepicker_t::getMoves(move_t& move) {
             move = getBestMoveFromIdx(idx++);
             if (move.m == hashmove) continue;
             if (!pos.statExEval(move, 1)) {
-                if (!skipquiet)
+                if (!inQSearch)
                     mvlistbad.add(move);
                 continue;
             }
             if (pos.moveIsLegal(move, pinned, false))
                 return true;
         }
-        if (skipquiet) return false;
+        if (inQSearch) return false;
         ++stage;
     case STG_KILLER1:
         ++stage;
-        if (killer1 != hashmove && killer1 != 0) {
+        if (!skipquiets && killer1 != hashmove && killer1 != 0) {
             move.m = killer1;
             if (pos.moveIsValid(move, pinned) && pos.moveIsLegal(move, pinned, false))
                 return true;
         }
     case STG_KILLER2:
         ++stage;
-        if (killer2 != hashmove && killer2 != 0) {
+        if (!skipquiets && killer2 != hashmove && killer2 != 0) {
             move.m = killer2;
             if (pos.moveIsValid(move, pinned) && pos.moveIsLegal(move, pinned, false))
                 return true;
         }
     case STG_GENQUIET:
-        pos.genQuietMoves(mvlist);
-        scoreNonTactical();
+        if (!skipquiets) {
+            pos.genQuietMoves(mvlist);
+            scoreNonTactical();
+        }
         ++stage;
     case STG_QUIET:
-        while (idx < mvlist.size) {
-            move = getBestMoveFromIdx(idx++);
-            if (move.m == hashmove) continue;
-            if (move.m == killer1) continue;
-            if (move.m == killer2) continue;
-            if (pos.moveIsLegal(move, pinned, false))
-                return true;
+        if (!skipquiets) {
+            while (idx < mvlist.size) {
+                move = getBestMoveFromIdx(idx++);
+                if (move.m == hashmove) continue;
+                if (move.m == killer1) continue;
+                if (move.m == killer2) continue;
+                if (pos.moveIsLegal(move, pinned, false))
+                    return true;
+            }
         }
         ++stage;
         idx = 0;
