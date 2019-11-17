@@ -3,10 +3,9 @@
 Invictus is a state of the art UCI compliant chess engine. 
 
 Features:
-* -magic bitboards with pext optimizations
+* -magic bitboards move generation with pext optimizations
 * -PVS search on top of alpha-beta and iterative aspiration window search
-* -null move pruning
-* -internal iterative deepening
+* -null move pruning, and other search heuristics
 * -SMP using a modified ABDADA algorithm that should scale well with large number of threads/processors
 * -Texel tuning with Stochastic Gradient Descent using Adam optimizer
 * -Texel tuning with local search
