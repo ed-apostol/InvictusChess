@@ -42,6 +42,18 @@ void pvhash_table_t::storePV(uint64_t hash, move_t move, int depth) {
     replace->depth = depth;
 }
 
+int eval_table_t::retrieve(position_t& pos) {
+    eval_hash_entry_t *entry = &getEntry(pos.stack.hash).bucket[0], *replace = entry;
+    uint32_t lock32 = lock(pos.stack.hash);
+    for (int t = 5; t--; ++entry) {
+        if (entry->hashlock == lock32)
+            return entry->eval;
+    }
+    replace->hashlock = lock32;
+    replace->eval = eval.score(pos);
+    return replace->eval;
+}
+
 bool trans_table_t::retrieve(const uint64_t hash, tt_entry_t& ttentry) {
     tt_entry_t *entry = &getEntry(hash).bucket[0];
     for (int t = 3; t--; ++entry) {

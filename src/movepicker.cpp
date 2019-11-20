@@ -21,7 +21,6 @@ movepicker_t::movepicker_t(search_t& search, bool inCheck, bool inQS, int ply, u
         scoreEvasions();
         stage = STG_EVASION;
     }
-    else if (inQSearch) stage = STG_GENTACTICS;
     else stage = STG_HTABLE;
 }
 
@@ -47,11 +46,12 @@ bool movepicker_t::getMoves(move_t& move, bool skipquiets) {
         break;
     case STG_HTABLE:
         ++stage;
-        if (!inQSearch && hashmove != 0) {
+        if (hashmove != 0) {
             move.m = hashmove;
             if (pos.moveIsValid(move, pinned) && pos.moveIsLegal(move, pinned, false))
                 return true;
             else {
+                LogAndPrintOutput() << "Hashmove not valid!";
                 LogAndPrintOutput() << move.to_str();
                 LogAndPrintOutput() << pos.to_str();
             }

@@ -130,7 +130,6 @@ struct engine_t : public std::vector<search_t*> {
 
     std::atomic<int> alpha;
     std::atomic<int> beta;
-    std::atomic<int> rootbestdepth;
     move_t rootbestmove;
     move_t rootponder;
 

@@ -9,6 +9,7 @@
 #include <algorithm>
 #include "typedefs.h"
 #include "log.h"
+#include "eval.h"
 
 template <typename hash_entity_t>
 class hashtable_t {
@@ -56,6 +57,24 @@ public:
     bool retrievePV(const uint64_t hash, pv_hash_entry_t& pventry);
 private:
     int currentAge;
+};
+
+#pragma pack(push, 1)
+struct eval_hash_entry_t {
+    uint32_t hashlock;
+    int16_t eval;
+};
+#pragma pack(pop)
+
+struct eval_bucket_t {
+    eval_hash_entry_t bucket[5];
+    uint16_t padding;
+};
+
+class eval_table_t : public hashtable_t < eval_bucket_t > {
+public:
+    int retrieve(position_t& pos);
+    eval_t eval;
 };
 
 #pragma pack(push, 1)

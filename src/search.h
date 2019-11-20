@@ -53,6 +53,7 @@ struct search_t : public thread_t {
 
     search_t(int _thread_id, engine_t& _e) : e(_e), thread_t(_thread_id) {
         native_thread = std::thread(&search_t::idleloop, this);
+        et.init(1);
     }
 
     void idleloop();
@@ -64,11 +65,12 @@ struct search_t : public thread_t {
     void start();
     bool stopSearch();
     int search(bool inRoot, bool inPv, int alpha, int beta, int depth, int ply, bool inCheck);
-    int qsearch(int alpha, int beta, int ply, bool inCheck);
+    int qsearch(bool inPv, int alpha, int beta, int ply, bool inCheck);
     void updateHistory(position_t& p, move_t bm, int depth, int ply);
 
     position_t pos;
     engine_t& e;
+    eval_table_t et;
 
     int maxplysearched;
     int rdepth;
@@ -77,7 +79,6 @@ struct search_t : public thread_t {
     std::atomic<bool> resolve_iter;
     std::atomic<bool> resolve_fail;
 
-    eval_t eval;
     move_t rootmove;
     movelist_t<128> pvlist;
     movelist_t<64> playedmoves[MAXPLYSIZE];

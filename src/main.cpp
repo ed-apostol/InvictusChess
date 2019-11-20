@@ -18,8 +18,6 @@ int main(void) {
 // history moves and other new history ideas
 // counter move
 // singular move
-// hash qsearch
 // pawn hash
-// eval hash
 // material tables with material recognizer
 // checks in qsearch at first level

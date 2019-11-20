@@ -65,7 +65,6 @@ void engine_t::initSearch() {
 
     pvt.updateAge();
     tt.updateAge();
-    rootbestdepth = 0;
     if (!limits.depth) limits.depth = search_t::MAXPLY;
 
     time_range = time_limit_max;
@@ -116,6 +115,7 @@ void engine_t::newgame() {
     pvt.clear();
     tt.resetAge();
     tt.clear();
+    for (auto t : *this) t->et.clear();
 }
 
 void engine_t::stopthreads() {
