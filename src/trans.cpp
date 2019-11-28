@@ -7,41 +7,6 @@
 #include "trans.h"
 #include "log.h"
 
-bool pvhash_table_t::retrievePV(uint64_t hash, pv_hash_entry_t& pventry) {
-    pv_hash_entry_t *entry = &getEntry(hash).bucket[0];
-    for (int t = 3; t--; ++entry) {
-        if (entry->hashlock == lock(hash)) {
-            entry->age = currentAge;
-            pventry = *entry;
-            return true;
-        }
-    }
-    return false;
-}
-
-void pvhash_table_t::storePV(uint64_t hash, move_t move, int depth) {
-    int highest = INT_MIN;
-    pv_hash_entry_t *entry = &getEntry(hash).bucket[0], *replace = entry;
-    for (int t = 3; t--; ++entry) {
-        if (entry->hashlock == lock(hash)) {
-            if (depth >= entry->depth) {
-                replace = entry;
-                break;
-            }
-            else return;
-        }
-        int score = (((256 + currentAge - entry->age) % 256) << 8) - entry->depth;
-        if (score > highest) {
-            highest = score;
-            replace = entry;
-        }
-    }
-    replace->hashlock = lock(hash);
-    replace->age = currentAge;
-    replace->move = move;
-    replace->depth = depth;
-}
-
 int eval_table_t::retrieve(position_t& pos) {
     eval_hash_entry_t *entry = &getEntry(pos.stack.hash).bucket[0], *replace = entry;
     uint32_t lock32 = lock(pos.stack.hash);

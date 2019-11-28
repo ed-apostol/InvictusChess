@@ -59,7 +59,6 @@ struct search_t : public thread_t {
     void idleloop();
     uint64_t perft(size_t depth);
     uint64_t perft2(int depth);
-    void extractPV(move_t rmove, bool fillhash);
     void updateInfo();
     void displayInfo(move_t bestmove, int depth, int alpha, int beta);
     void start();
@@ -80,9 +79,10 @@ struct search_t : public thread_t {
     std::atomic<bool> resolve_fail;
 
     move_t rootmove;
-    movelist_t<128> pvlist;
+    movelist_t<128> pvlist[128];
     movelist_t<64> playedmoves[MAXPLYSIZE];
     uint16_t killer1[MAXPLYSIZE];
     uint16_t killer2[MAXPLYSIZE];
-    int history[2][8][64];
+    uint16_t countermove[7][64];
+    int history[2][64][64];
 };

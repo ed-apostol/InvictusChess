@@ -8,14 +8,9 @@
 #include "movepicker.h"
 #include "log.h"
 
-movepicker_t::movepicker_t(search_t& search, bool inCheck, bool inQS, int ply, uint16_t hmove, uint16_t k1, uint16_t k2)
-    : s(search), pos(s.pos) {
-    idx = 0;
-    hashmove = hmove;
-    killer1 = k1;
-    killer2 = k2;
+movepicker_t::movepicker_t(search_t& search, bool inCheck, bool inQS, int m, uint16_t hmove, uint16_t k1, uint16_t k2, uint16_t cm)
+    : s(search), pos(s.pos), idx(0), hashmove(hmove), killer1(k1), killer2(k2), counter(cm), inQSearch(inQS), margin(m) {
     pinned = pos.pinnedPiecesBB(pos.side);
-    inQSearch = inQS;
     if (inCheck) {
         pos.genCheckEvasions(mvlist);
         scoreEvasions();
@@ -64,7 +59,7 @@ bool movepicker_t::getMoves(move_t& move, bool skipquiets) {
         while (idx < mvlist.size) {
             move = getBestMoveFromIdx(idx++);
             if (move.m == hashmove) continue;
-            if (!pos.statExEval(move, 1)) {
+            if (!pos.statExEval(move, margin)) {
                 if (!inQSearch)
                     mvlistbad.add(move);
                 continue;
@@ -76,15 +71,22 @@ bool movepicker_t::getMoves(move_t& move, bool skipquiets) {
         ++stage;
     case STG_KILLER1:
         ++stage;
-        if (!skipquiets && killer1 != hashmove && killer1 != 0) {
+        if (!skipquiets && killer1 != 0 && killer1 != hashmove) {
             move.m = killer1;
             if (pos.moveIsValid(move, pinned) && pos.moveIsLegal(move, pinned, false))
                 return true;
         }
     case STG_KILLER2:
         ++stage;
-        if (!skipquiets && killer2 != hashmove && killer2 != 0) {
+        if (!skipquiets  && killer2 != 0 && killer2 != hashmove) {
             move.m = killer2;
+            if (pos.moveIsValid(move, pinned) && pos.moveIsLegal(move, pinned, false))
+                return true;
+        }
+    case STG_COUNTER:
+        ++stage;
+        if (!skipquiets && counter != 0 && counter != hashmove && counter != killer1 && counter != killer2) {
+            move.m = counter;
             if (pos.moveIsValid(move, pinned) && pos.moveIsLegal(move, pinned, false))
                 return true;
         }
@@ -101,6 +103,7 @@ bool movepicker_t::getMoves(move_t& move, bool skipquiets) {
                 if (move.m == hashmove) continue;
                 if (move.m == killer1) continue;
                 if (move.m == killer2) continue;
+                if (move.m == counter) continue;
                 if (pos.moveIsLegal(move, pinned, false))
                     return true;
             }
@@ -139,7 +142,7 @@ void movepicker_t::scoreTactical() {
 
 void movepicker_t::scoreNonTactical() {
     for (move_t& m : mvlist) {
-        m.s = s.history[pos.side][pos.getPiece(m.moveFrom())][m.moveTo()];
+        m.s = s.history[pos.side][m.moveFrom()][m.moveTo()];
         //PrintOutput() << m.to_str() << " " << m.s;
     }
 }
@@ -149,6 +152,7 @@ void movepicker_t::scoreEvasions() {
         if (m.m == hashmove) m.s = 10000;
         else if (m.m == killer1) m.s = 5000;
         else if (m.m == killer2) m.s = 4999;
-        else m.s = 5000 + (pos.pieces[m.moveTo()] * 6) + m.movePromote() - pos.pieces[m.moveFrom()];
+        else if (m.m == counter) m.s = 4998;
+        else m.s = 7000 + (pos.pieces[m.moveTo()] * 10) + m.movePromote() - pos.pieces[m.moveFrom()];
     }
 }

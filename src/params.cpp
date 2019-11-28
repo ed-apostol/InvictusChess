@@ -99,12 +99,19 @@ namespace EvalParam {
     basic_score_t BishopSafeCheckValue = 77;
     basic_score_t KnightSafeCheckValue = 112;
 
+    basic_score_t KnightPhase = 3;
+    basic_score_t BishopPhase = 5;
+    basic_score_t RookPhase = 9;
+    basic_score_t QueenPhase = 17;
+
     score_t PcSqTab[2][8][64];
     uint64_t KingZoneBB[2][64];
     uint64_t KingShelterBB[2][3];
     uint64_t KingShelter2BB[2][3];
     uint64_t KingShelter3BB[2][3];
+    material_t MaterialTable[486][486];
 
+    const int MatMul[8] = { 0,1,9,27,81,243,0,0 };
     const int KingSquare[2][3] = { {B1, E1, G1}, {B8, E8, G8} };
 
     void initArr() {
@@ -157,5 +164,36 @@ namespace EvalParam {
                 displayPSTbyPC(PcSqTab[c][pc], colstr[c] + " " + pcstr[pc], false);
             }
         }
+    }
+    void initMaterial() {
+        memset(MaterialTable, 0, sizeof(MaterialTable));
+        for (int wq = 0; wq <= 1; wq++) for (int bq = 0; bq <= 1; bq++)
+            for (int wr = 0; wr <= 2; wr++) for (int br = 0; br <= 2; br++)
+                for (int wb = 0; wb <= 2; wb++) for (int bb = 0; bb <= 2; bb++)
+                    for (int wn = 0; wn <= 2; wn++) for (int bn = 0; bn <= 2; bn++)
+                        for (int wp = 0; wp <= 8; wp++) for (int bp = 0; bp <= 8; bp++) {
+                            int idx1 = wp * MatMul[PAWN] + wn * MatMul[KNIGHT] + wb * MatMul[BISHOP] + wr * MatMul[ROOK] + wq * MatMul[QUEEN];
+                            int idx2 = bp * MatMul[PAWN] + bn * MatMul[KNIGHT] + bb * MatMul[BISHOP] + br * MatMul[ROOK] + bq * MatMul[QUEEN];
+
+                            material_t &mat = MaterialTable[idx1][idx2];
+                            mat.phase = QueenPhase * (wq + bq) + RookPhase * (wr + br) + BishopPhase * (wb + bb) + KnightPhase * (wn + bn);
+                            mat.value = { 0, 0 };
+
+                            for (int side = WHITE; side <= BLACK; ++side) {
+                                score_t scr;
+                                scr += MaterialValues[PAWN] * (side == WHITE ? wp : bp);
+                                scr += MaterialValues[KNIGHT] * (side == WHITE ? wn : bn);
+                                scr += MaterialValues[BISHOP] * (side == WHITE ? wb : bb);
+                                scr += MaterialValues[ROOK] * (side == WHITE ? wr : br);
+                                scr += MaterialValues[QUEEN] * (side == WHITE ? wq : bq);
+                                if ((side == WHITE ? wb : bb) == 2) {
+                                    scr += BishopPair;
+                                }
+                                mat.value += scr * (side == WHITE ? 1 : -1);
+                            }
+                        }
+    }
+    material_t& getMaterial(int idx1, int idx2) {
+        return MaterialTable[idx1][idx2];
     }
 }

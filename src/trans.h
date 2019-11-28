@@ -36,30 +36,6 @@ protected:
 };
 
 #pragma pack(push, 1)
-struct pv_hash_entry_t {
-    uint32_t hashlock;
-    move_t move;
-    uint8_t depth;
-    uint8_t age;
-};
-#pragma pack(pop)
-
-struct pv_bucket_t {
-    pv_hash_entry_t bucket[3];
-    uint16_t padding;
-};
-
-class pvhash_table_t : public hashtable_t < pv_bucket_t > {
-public:
-    void resetAge() { currentAge = 0; }
-    void updateAge() { currentAge = (currentAge + 1) % 256; }
-    void storePV(uint64_t hash, move_t move, int depth);
-    bool retrievePV(const uint64_t hash, pv_hash_entry_t& pventry);
-private:
-    int currentAge;
-};
-
-#pragma pack(push, 1)
 struct eval_hash_entry_t {
     uint32_t hashlock;
     int16_t eval;

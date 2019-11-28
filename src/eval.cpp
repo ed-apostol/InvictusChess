@@ -225,8 +225,19 @@ basic_score_t eval_t::score(position_t& p) {
         pawnstorm[color] = p.getPieceBB(PAWN, color ^ 1);
         pawnstorm[color] &= ~fillBBEx[color](pawnstorm[color]);
     }
+    if (p.mat_idx[WHITE] < 486 && p.mat_idx[BLACK] < 486) {
+        material_t& mat = getMaterial(p.mat_idx[WHITE], p.mat_idx[BLACK]);
+        phase = mat.phase;
+        scr[WHITE] += mat.value;
+    }
+    else {
+        for (int color = WHITE; color <= BLACK; ++color) {
+            material(p, color);
+        }
+        phase = QueenPhase * bitCnt(p.piecesBB[QUEEN]) + RookPhase * bitCnt(p.piecesBB[ROOK])
+            + BishopPhase * bitCnt(p.piecesBB[BISHOP]) + KnightPhase * bitCnt(p.piecesBB[KNIGHT]);
+    }
     for (int color = WHITE; color <= BLACK; ++color) {
-        material(p, color);
         pawnstructure(p, color);
         pieceactivity(p, color);
     }
@@ -235,9 +246,8 @@ basic_score_t eval_t::score(position_t& p) {
         passedpawns(p, color);
         threats(p, color);
     }
-
-    int phase = 4 * bitCnt(p.piecesBB[QUEEN]) + 2 * bitCnt(p.piecesBB[ROOK]) + 1 * bitCnt(p.piecesBB[KNIGHT] | p.piecesBB[BISHOP]);
+    basic_score_t total_phase = QueenPhase * 2 + RookPhase * 4 + BishopPhase * 4 + KnightPhase * 4;
     score_t score = scr[p.side] - scr[p.side ^ 1];
-    basic_score_t scaled = (score.m*phase + (score.e*(24 - phase))) / 24;
+    basic_score_t scaled = (score.m*phase + (score.e*(total_phase - phase))) / total_phase;
     return scaled + Tempo;
 }

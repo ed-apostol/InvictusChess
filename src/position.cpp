@@ -106,6 +106,7 @@ void position_t::initPosition() {
     for (auto& pc : pieces) pc = EMPTY;
     occupiedBB = EmptyBoardBB;
     kpos[0] = kpos[1] = A1;
+    mat_idx[0] = mat_idx[1] = 0;
     side = WHITE;
     history.clear();
     stack.init();
@@ -148,6 +149,7 @@ void position_t::undoMove(undo_t& undo) {
     if (cap != EMPTY) {
         piecesBB[cap] ^= BitMask[to];
         colorBB[xside] ^= BitMask[to];
+        mat_idx[xside] += MatMul[cap];
     }
     if (pc == KING) kpos[side] = from;
 
@@ -163,12 +165,15 @@ void position_t::undoMove(undo_t& undo) {
     case MF_ENPASSANT: {
         int epsq = (sqRank(from) << 3) + sqFile(to);
         pieces[epsq] = PAWN;
+        mat_idx[xside] += MatMul[PAWN];
         piecesBB[PAWN] ^= BitMask[epsq];
         colorBB[xside] ^= BitMask[epsq];
     } break;
     case MF_PROMQ: case MF_PROMR: case MF_PROMB: case MF_PROMN: {
         int prom = m.movePromote();
         pieces[from] = PAWN;
+        mat_idx[side] += MatMul[PAWN];
+        mat_idx[side] -= MatMul[prom];
         piecesBB[PAWN] ^= BitMask[from];
         piecesBB[prom] ^= BitMask[from];
     } break;
@@ -222,6 +227,7 @@ void position_t::doMove(undo_t& undo, move_t m) {
         stack.hash ^= ZobPiece[xside][cap][to];
         if (cap == PAWN)
             stack.phash ^= ZobPiece[xside][cap][to];
+        mat_idx[xside] -= MatMul[cap];
     }
     switch (m.moveFlags()) {
     case MF_PAWN2: {
@@ -246,6 +252,7 @@ void position_t::doMove(undo_t& undo, move_t m) {
     case MF_ENPASSANT: {
         const int epsq = (sqRank(from) << 3) + sqFile(to);
         pieces[epsq] = EMPTY;
+        mat_idx[xside] -= MatMul[PAWN];
         piecesBB[PAWN] ^= BitMask[epsq];
         colorBB[xside] ^= BitMask[epsq];
         stack.score[xside] -= PcSqTab[xside][PAWN][epsq];
@@ -259,6 +266,8 @@ void position_t::doMove(undo_t& undo, move_t m) {
         stack.hash ^= ZobPiece[side][PAWN][to];
         stack.phash ^= ZobPiece[side][PAWN][to];
         pieces[to] = prom;
+        mat_idx[side] -= MatMul[PAWN];
+        mat_idx[side] += MatMul[prom];
         piecesBB[prom] ^= BitMask[to];
         stack.score[side] += PcSqTab[side][prom][to];
         stack.score[side] -= PcSqTab[side][PAWN][to];
@@ -283,6 +292,7 @@ void position_t::setPiece(int sq, int c, int pc) {
     stack.hash ^= ZobPiece[c][pc][sq];
     if (pc == PAWN) stack.phash ^= ZobPiece[c][pc][sq];
     if (pc == KING) kpos[c] = sq;
+    mat_idx[c] += MatMul[pc];
 }
 
 void position_t::setPosition(const std::string& fenStr) {

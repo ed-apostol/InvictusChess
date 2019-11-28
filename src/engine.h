@@ -116,7 +116,6 @@ struct engine_t : public std::vector<search_t*> {
     void resolveFail();
 
     abdada_table_t mht;
-    pvhash_table_t pvt;
     trans_table_t tt;
     uci_options_map options;
     uci_limits_t limits;

@@ -34,4 +34,5 @@ struct eval_t {
     basic_score_t kzoneatks[2];
 
     score_t scr[2];
+    basic_score_t phase;
 };

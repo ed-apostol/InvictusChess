@@ -95,6 +95,7 @@ struct position_t {
     uint64_t colorBB[2];
     int pieces[64];
     int kpos[2];
+    int mat_idx[2];
     undo_t stack;
     int side;
 };

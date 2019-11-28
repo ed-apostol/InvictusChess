@@ -16,7 +16,7 @@
 const std::string uci_t::name = "Invictus";
 const std::string uci_t::author = "Edsel Apostol";
 const std::string uci_t::year = "2019";
-const std::string uci_t::version = "r291";
+const std::string uci_t::version = "r297";
 
 void uci_t::info() {
     LogAndPrintOutput() << name << " " << version;
@@ -29,6 +29,7 @@ uci_t::uci_t() {
     Attacks::initArr();
     PositionData::initArr();
     EvalParam::initArr();
+    EvalParam::initMaterial();
     Search::initArr();
     //EvalParam::displayPST();
     engine.origpos.setPosition(StartFEN);

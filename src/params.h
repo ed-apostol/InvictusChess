@@ -66,6 +66,11 @@ namespace EvalParam {
     extern basic_score_t BishopSafeCheckValue;
     extern basic_score_t KnightSafeCheckValue;
 
+    extern basic_score_t KnightPhase;
+    extern basic_score_t BishopPhase;
+    extern basic_score_t RookPhase;
+    extern basic_score_t QueenPhase;
+
     extern score_t PcSqTab[2][8][64];
     extern uint64_t KingZoneBB[2][64];
     extern uint64_t KingShelterBB[2][3];
@@ -73,7 +78,10 @@ namespace EvalParam {
     extern uint64_t KingShelter3BB[2][3];
 
     extern const int KingSquare[2][3];
+    extern const int MatMul[8];
 
     extern void initArr();
+    extern void initMaterial();
+    extern material_t& getMaterial(int idx1, int idx2);
     extern void displayPST();
 }

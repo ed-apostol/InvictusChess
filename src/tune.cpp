@@ -22,13 +22,14 @@ namespace Tuner {
     Ldouble K = 1.37621;
     const int num_threads = 7;
 
-    const int TuneAll = 1;
+    const int TuneAll = 0;
     const int TuneMaterial = 0;
     const int TuneActivity = 0;
     const int TunePawnStructure = 0;
-    const int TuneThreats = 1;
+    const int TuneThreats = 0;
     const int TuneKingSafety = 0;
     const int TunePassedPawns = 0;
+    const int TunePhase = 1;
 
     struct PositionResults {
         position_t* p;
@@ -348,7 +349,12 @@ namespace Tuner {
             input.push_back({ BishopSafeCheckValue, 0, 200, "BishopSafeCheckValue" });
             input.push_back({ KnightSafeCheckValue, 0, 200, "KnightSafeCheckValue" });
         }
-
+        if (TuneAll || TunePhase) {
+            input.push_back({ KnightPhase, 0, 100, "KnightPhase" });
+            input.push_back({ BishopPhase, 0, 100, "BishopPhase" });
+            input.push_back({ RookPhase, 0, 100, "RookPhase" });
+            input.push_back({ QueenPhase, 0, 100, "QueenPhase" });
+        }
         FindBestK(data);
         PrintOutput() << "Best K " << K;
 

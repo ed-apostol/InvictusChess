@@ -35,10 +35,15 @@ namespace Search {
         }
     }
     inline int scoreFromTrans(int score, int ply, int mate) {
-        return (score > mate) ? (score - ply) : ((score < -mate) ? (score + ply) : score);
+        return (score >= mate) ? (score - ply) : ((score <= -mate) ? (score + ply) : score);
     }
     inline int scoreToTrans(int score, int ply, int mate) {
-        return (score > mate) ? (score + ply) : ((score < -mate) ? (score - ply) : score);
+        return (score >= mate) ? (score + ply) : ((score <= -mate) ? (score - ply) : score);
+    }
+    inline void updatePV(movelist_t<128> pv[], move_t& m, int ply) {
+        pv[ply].size = 0;
+        pv[ply].add(m);
+        for (auto mm : pv[ply + 1]) pv[ply].add(mm);
     }
 }
 
@@ -92,26 +97,6 @@ uint64_t search_t::perft2(int depth) {
     return cnt;
 }
 
-void search_t::extractPV(move_t rmove, bool fillhash) {
-    int ply = 0;
-    undo_t undo[MAXPLYSIZE];
-    pvlist.size = 0;
-    pvlist.add(rmove);
-    pos.doMove(undo[ply++], rmove);
-    for (pv_hash_entry_t entry; e.pvt.retrievePV(pos.stack.hash, entry);) {
-        uint64_t pinned = pos.pinnedPiecesBB(pos.side);
-        if (!pos.moveIsValid(entry.move, pinned)) break;
-        if (!pos.moveIsLegal(entry.move, pinned, false)) break;
-        pvlist.add(entry.move);
-        entry.move.s = scoreToTrans(entry.move.s, ply, MATE);
-        if (fillhash) e.tt.store(pos.stack.hash, entry.move, entry.depth, TT_EXACT);
-        pos.doMove(undo[ply++], entry.move);
-        if (pos.isRepeat()) break;
-        if (ply >= MAXPLY) break;
-    }
-    while (ply > 0) pos.undoMove(undo[--ply]);
-}
-
 void search_t::updateInfo() {
     uint64_t currtime = Utils::getTime() - e.start_time + 1;
     uint64_t totalnodes = e.nodesearched();
@@ -122,7 +107,7 @@ void search_t::displayInfo(move_t bestmove, int depth, int alpha, int beta) {
     PrintOutput logger;
     uint64_t currtime = Utils::getTime() - e.start_time + 1;
     logger << "info depth " << depth << " seldepth " << maxplysearched;
-    if (abs(bestmove.s) < (MATE - MAXPLY)) {
+    if (abs(bestmove.s) < MATE - MAXPLY) {
         if (bestmove.s <= alpha) logger << " score cp " << bestmove.s << " upperbound";
         else if (bestmove.s >= beta) logger << " score cp " << bestmove.s << " lowerbound";
         else logger << " score cp " << bestmove.s;
@@ -131,19 +116,21 @@ void search_t::displayInfo(move_t bestmove, int depth, int alpha, int beta) {
         logger << " score mate " << ((bestmove.s > 0) ? (MATE - bestmove.s + 1) / 2 : -(MATE + bestmove.s) / 2);
     uint64_t totalnodes = e.nodesearched();
     logger << " time " << currtime << " nodes " << totalnodes << " nps " << (totalnodes * 1000 / currtime) << " pv";
-    for (move_t m : pvlist) logger << " " << m.to_str();
+    for (move_t m : pvlist[0]) logger << " " << m.to_str();
 }
 
 void search_t::start() {
     if (thread_id > 8) Utils::bindThisThread(thread_id); // NUMA
 
     memset(history, 0, sizeof(history));
-    for (auto& m : killer1) m = 0;
-    for (auto& m : killer2) m = 0;
+    memset(countermove, 0, sizeof(countermove));
+    memset(killer1, 0, sizeof(killer1));
+    memset(killer2, 0, sizeof(killer2));
     nodecnt = 0;
+    e.rootbestmove.m = 0;
     bool inCheck = pos.kingIsInCheck();
 
-    for (rdepth = 1; rdepth < e.limits.depth; ++rdepth) {
+    for (rdepth = 1; rdepth <= e.limits.depth; ++rdepth) {
         int delta = 16;
         resolve_fail = false;
         e.alpha = -MATE;
@@ -164,18 +151,15 @@ void search_t::start() {
                     if (resolve_iter) continue;
                     else break;
                 }
-                bool faillow = rootmove.s <= e.alpha;
-                bool failhigh = rootmove.s >= e.beta;
-                if (!faillow && !failhigh) extractPV(rootmove, true);
-                if (rdepth >= 8) {
-                    //PrintOutput() << "thread_id: " << thread_id;
-                    displayInfo(rootmove, rdepth, e.alpha, e.beta);
-                }
-                if (faillow) e.alpha = std::max(-MATE, rootmove.s - delta);
-                else if (failhigh) e.beta = std::min(MATE, rootmove.s + delta);
+                if (rootmove.s <= e.alpha) e.alpha = std::max(-MATE, rootmove.s - delta);
+                else if (rootmove.s >= e.beta) e.beta = std::min(MATE, rootmove.s + delta);
                 else {
                     e.rootbestmove = rootmove;
-                    if (pvlist.size > 1) e.rootponder = pvlist.mv(1);
+                    if (rdepth >= 8) {
+                        //PrintOutput() << "thread_id: " << thread_id;
+                        displayInfo(rootmove, rdepth, e.alpha, e.beta);
+                    }
+                    if (pvlist[0].size > 1) e.rootponder = pvlist[0].mv(1);
                     e.stopIteration();
                     break;
                 }
@@ -205,23 +189,23 @@ void search_t::start() {
         updateInfo();
         LogAndPrintOutput logger;
         logger << "bestmove " << e.rootbestmove.to_str();
-        if (pvlist.size >= 2) logger << " ponder " << e.rootponder.to_str();
+        if (pvlist[0].size > 1) logger << " ponder " << e.rootponder.to_str();
     }
 }
 
 bool search_t::stopSearch() {
     ++nodecnt;
-    // TODO: if doing re-search for fail high/low, do not stop iteration
     if (thread_id == 0 && e.use_time && (nodecnt & 0x3fff) == 0) {
         int64_t currtime = Utils::getTime();
         if ((currtime >= e.time_limit_max && !resolve_iter) || (currtime >= e.time_limit_abs)) {
-            if (resolve_fail && currtime < e.time_limit_abs) {
+            if (rdepth == 1 || (resolve_fail && currtime < e.time_limit_abs)) {
                 e.time_limit_max = std::min(e.time_limit_max + e.time_range / 2, e.time_limit_abs);
                 //PrintOutput() << "info string Resolve fail! Time extended by half!";
             }
             else e.stop = true;
         }
     }
+    if (thread_id == 0 && (nodecnt & 0x3fffff) == 0) updateInfo();
     return e.stop;
 }
 
@@ -231,10 +215,11 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
     ASSERT(alpha < beta);
     ASSERT(!(pos.colorBB[WHITE] & pos.colorBB[BLACK]));
 
+    pvlist[ply].size = 0;
     if (stopSearch()) return 0;
 
     if (!inRoot) {
-        if (ply > maxplysearched) maxplysearched = ply;
+        if (inPv && ply > maxplysearched) maxplysearched = ply;
         if (pos.stack.fifty > 99 || pos.isRepeat() || pos.isMatDrawn()) return 0;
         if (ply >= MAXPLY) return et.retrieve(pos);
         alpha = std::max(alpha, -MATE + ply);
@@ -245,7 +230,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
     tt_entry_t tte;
     tte.move.m = 0;
     if (e.tt.retrieve(pos.stack.hash, tte)) {
-        tte.move.s = scoreFromTrans(tte.move.s, ply, MATE);
+        tte.move.s = scoreFromTrans(tte.move.s, ply, MATE - MAXPLY);
         if (!inPv && tte.depth >= depth && (tte.getBound() == TT_EXACT
             || (tte.getBound() == TT_LOWER && tte.move.s >= beta)
             || (tte.getBound() == TT_UPPER && tte.move.s <= alpha)))
@@ -279,11 +264,12 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             undo_t undo;
             int rbeta = std::min(beta + 100, MATE);
             uint64_t dcc = pos.discoveredPiecesBB(pos.side);
-            movepicker_t mp(*this, inCheck, true, ply);
+            movepicker_t mp(*this, inCheck, true, rbeta - evalscore);
             for (move_t m; mp.getMoves(m);) {
                 bool moveGivesCheck = pos.moveIsCheck(m, dcc);
                 pos.doMove(undo, m);
-                int score = -search(false, false, -rbeta, -rbeta + 1, depth - 4, ply + 1, moveGivesCheck);
+                int score = -qsearch(inPv, -rbeta, -rbeta + 1, ply + 1, moveGivesCheck);
+                if (score >= rbeta) score = -search(false, false, -rbeta, -rbeta + 1, depth - 4, ply + 1, moveGivesCheck);
                 pos.undoMove(undo);
                 if (score >= rbeta) return score;
             }
@@ -297,7 +283,9 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
     undo_t undo;
     int score;
     uint32_t move_hash;
-    movepicker_t mp(*this, inCheck, false, ply, tte.move.m, killer1[ply], killer2[ply]);
+    move_t lm = pos.stack.lastmove;
+    uint16_t cm = countermove[pos.getPiece(lm.moveTo())][lm.moveTo()];
+    movepicker_t mp(*this, inCheck, false, 1, tte.move.m, killer1[ply], killer2[ply], cm);
     uint64_t dcc = pos.discoveredPiecesBB(pos.side);
     bool skipquiets = false;
     playedmoves[ply].size = 0;
@@ -311,9 +299,9 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
         if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth && best_score != -MATE) {
             if (mp.deferred.size > 0 && depth >= e.cutoffcheck_depth) {
                 if (e.tt.retrieve(pos.stack.hash, tte)) {
-                    tte.move.s = scoreFromTrans(tte.move.s, ply, MATE);
-                    if (tte.depth >= depth && ((tte.getBound() == TT_EXACT) ||
-                        (tte.getBound() == TT_LOWER && tte.move.s >= beta)
+                    tte.move.s = scoreFromTrans(tte.move.s, ply, MATE - MAXPLY);
+                    if (tte.depth >= depth && (tte.getBound() == TT_EXACT
+                        || (tte.getBound() == TT_LOWER && tte.move.s >= beta)
                         || (tte.getBound() == TT_UPPER && tte.move.s <= old_alpha))) {
                         //PrintOutput() << depth << " " << m.to_str();
                         return tte.move.s;
@@ -341,7 +329,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             // TODO: SEE pruning for tactical moves
 
             bool canBeReduced = !inCheck && !moveGivesCheck && !pos.moveIsTactical(m);
-            if (!inRoot && canBeReduced && depth < 9 && nonpawnpcs) {
+            if (!inPv && canBeReduced && depth < 9 && nonpawnpcs) {
                 if (futilityMargin <= alpha) { skipquiets = true; continue; }
                 if (movestried >= LMPTable[depth]) { skipquiets = true; continue; }
                 if (!pos.statExEval(m, -80 * depth)) continue;
@@ -355,7 +343,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             if (canBeReduced && depth > 2) {
                 reduction = LMRTable[std::min(depth, 63)][std::min(movestried, 63)];
                 reduction += !inPv;
-                reduction -= (m.m == mp.killer1) || (m.m == mp.killer2);
+                reduction -= (m.m == mp.killer1) || (m.m == mp.killer2) || (m.m == mp.counter);
                 reduction = std::min(depth - 1, std::max(reduction, 1));
             }
 
@@ -363,7 +351,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1, moveGivesCheck);
             if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.resetBusy(move_hash, m.m, depth);
 
-            if (reduction != 1 && !e.stop && !stop_iter && score > alpha)
+            if (reduction > 1 && !e.stop && !stop_iter && score > alpha)
                 score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1, moveGivesCheck);
 
             if (inPv && !e.stop && !stop_iter && score > alpha)
@@ -380,10 +368,12 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             if (inRoot) {
                 rootmove = m;
                 rootmove.s = best_score;
+                updatePV(pvlist, m, ply);
             }
             if (score > alpha) {
                 best_move = m;
                 best_move.s = score;
+                if (!inRoot) updatePV(pvlist, m, ply);
                 if (score >= beta) break;
                 alpha = score;
             }
@@ -393,15 +383,14 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
         if (inCheck) return -MATE + ply;
         else return 0;
     }
-    if (best_score >= beta && !pos.moveIsTactical(best_move)) {
+    if (!inCheck && best_move.m != 0 && !pos.moveIsTactical(best_move)) {
         updateHistory(pos, best_move, depth, ply);
         if (killer1[ply] != best_move.m) {
             killer2[ply] = killer1[ply];
             killer1[ply] = best_move.m;
         }
     }
-    if (inPv && best_move.m != 0) e.pvt.storePV(pos.stack.hash, best_move, depth);
-    best_move.s = scoreToTrans(best_score, ply, MATE);
+    best_move.s = scoreToTrans(best_score, ply, MATE - MAXPLY);
     e.tt.store(pos.stack.hash, best_move, depth, (best_score >= beta) ? TT_LOWER : ((inPv && best_move.m != 0) ? TT_EXACT : TT_UPPER));
     return best_score;
 }
@@ -410,6 +399,7 @@ int search_t::qsearch(bool inPv, int alpha, int beta, int ply, bool inCheck) {
     ASSERT(alpha < beta);
     ASSERT(!(pos.colorBB[WHITE] & pos.colorBB[BLACK]));
 
+    pvlist[ply].size = 0;
     if (stopSearch()) return 0;
 
     if (ply > maxplysearched) maxplysearched = ply;
@@ -419,7 +409,7 @@ int search_t::qsearch(bool inPv, int alpha, int beta, int ply, bool inCheck) {
     tt_entry_t tte;
     tte.move.m = 0;
     if (e.tt.retrieve(pos.stack.hash, tte)) {
-        tte.move.s = scoreFromTrans(tte.move.s, ply, MATE);
+        tte.move.s = scoreFromTrans(tte.move.s, ply, MATE - MAXPLY);
         if (!inPv && (tte.getBound() == TT_EXACT
             || (tte.getBound() == TT_LOWER && tte.move.s >= beta)
             || (tte.getBound() == TT_UPPER && tte.move.s <= alpha)))
@@ -436,7 +426,7 @@ int search_t::qsearch(bool inPv, int alpha, int beta, int ply, bool inCheck) {
     undo_t undo;
     move_t best_move(0);
     int movestried = 0;
-    movepicker_t mp(*this, inCheck, true, ply, tte.move.m);
+    movepicker_t mp(*this, inCheck, true, std::max(1, alpha - best_score - 100), tte.move.m);
     uint64_t dcc = pos.discoveredPiecesBB(pos.side);
     for (move_t m; mp.getMoves(m);) {
         ++movestried;
@@ -450,23 +440,24 @@ int search_t::qsearch(bool inPv, int alpha, int beta, int ply, bool inCheck) {
             if (score > alpha) {
                 best_move = m;
                 best_move.s = best_score;
+                updatePV(pvlist, m, ply);
                 if (score >= beta) break;
                 alpha = score;
             }
         }
     }
     if (movestried == 0 && inCheck) return -MATE + ply;
-    if (inPv && best_move.m != 0) e.pvt.storePV(pos.stack.hash, best_move, 0);
     return best_score;
 }
 
 void search_t::updateHistory(position_t& p, move_t bm, int depth, int ply) {
     depth = std::min(15, depth);
-    history[p.side][p.getPiece(bm.moveFrom())][bm.moveTo()] += depth * depth;
-    for (int idx = 0; idx < playedmoves[ply].size; ++idx) {
-        move_t m = playedmoves[ply].mv(idx);
+    history[p.side][bm.moveFrom()][bm.moveTo()] += depth * depth;
+    auto lm = p.stack.lastmove;
+    if (lm.m != 0) countermove[p.getPiece(lm.moveTo())][lm.moveTo()] = bm.m;
+    for (move_t m : playedmoves[ply]) {
         if (p.moveIsTactical(m)) continue;
-        int& sc = history[p.side][p.getPiece(m.moveFrom())][m.moveTo()];
+        int& sc = history[p.side][m.moveFrom()][m.moveTo()];
         sc -= sc / 10;
     }
 }

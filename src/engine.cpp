@@ -18,7 +18,6 @@
 engine_t::engine_t() {
     initUCIoptions();
     mht.init(1);
-    pvt.init(1);
     onHashChange();
     onThreadsChange();
 }
@@ -60,12 +59,10 @@ void engine_t::initSearch() {
         if (time_limit_abs < time_limit_max) time_limit_abs = time_limit_max;
         if (time_limit_abs > mytime) time_limit_abs = mytime;
     }
-
+    if (!limits.depth) limits.depth = search_t::MAXPLY;
     LogInfo() << "max time = " << time_limit_max << " abs time = " << time_limit_abs << " depth = " << limits.depth;
 
-    pvt.updateAge();
     tt.updateAge();
-    if (!limits.depth) limits.depth = search_t::MAXPLY;
 
     time_range = time_limit_max;
     time_limit_max += start_time;
@@ -111,8 +108,6 @@ void engine_t::onThreadsChange() {
 }
 
 void engine_t::newgame() {
-    pvt.resetAge();
-    pvt.clear();
     tt.resetAge();
     tt.clear();
     for (auto t : *this) t->et.clear();

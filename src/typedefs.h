@@ -123,7 +123,7 @@ private:
 #ifdef TUNE
 typedef long double basic_score_t;
 #else
-typedef int basic_score_t;
+typedef int16_t basic_score_t;
 #endif
 
 struct score_t {
@@ -164,4 +164,9 @@ public:
     }
 private:
     std::atomic_flag mLock = ATOMIC_FLAG_INIT;
+};
+
+struct material_t {
+    score_t value;
+    int32_t phase;
 };
