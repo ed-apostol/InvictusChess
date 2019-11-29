@@ -361,7 +361,8 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
         }
         if (e.stop || stop_iter) return 0;
 
-        if (movestried < 64) playedmoves[ply].add(m);
+        if (playedmoves[ply].size < 64 && !pos.moveIsTactical(m))
+            playedmoves[ply].add(m);
 
         if (score > best_score) {
             best_score = score;
@@ -456,7 +457,6 @@ void search_t::updateHistory(position_t& p, move_t bm, int depth, int ply) {
     auto lm = p.stack.lastmove;
     if (lm.m != 0) countermove[p.getPiece(lm.moveTo())][lm.moveTo()] = bm.m;
     for (move_t m : playedmoves[ply]) {
-        if (p.moveIsTactical(m)) continue;
         int& sc = history[p.side][m.moveFrom()][m.moveTo()];
         sc -= sc / 10;
     }

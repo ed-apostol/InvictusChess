@@ -168,5 +168,6 @@ private:
 
 struct material_t {
     score_t value;
-    int32_t phase;
+    int16_t phase;
+    int16_t flags;
 };

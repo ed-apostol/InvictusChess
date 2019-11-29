@@ -56,6 +56,7 @@ struct position_t {
     std::string to_str();
 
     bool isRepeat();
+    bool isMatIdxValid();
     bool isMatDrawn();
     inline int getPiece(int sq);
     inline int getSide(int sq);

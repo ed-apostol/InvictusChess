@@ -212,6 +212,21 @@ void eval_t::passedpawns(position_t& p, int side) {
 basic_score_t eval_t::score(position_t& p) {
     for (int color = WHITE; color <= BLACK; ++color) {
         scr[color] = p.stack.score[color];
+    }
+    if (p.isMatIdxValid()) {
+        material_t& mat = getMaterial(p.mat_idx[WHITE], p.mat_idx[BLACK]);
+        if (mat.flags & 1) return 0;
+        phase = mat.phase;
+        scr[WHITE] += mat.value;
+    }
+    else {
+        for (int color = WHITE; color <= BLACK; ++color) {
+            material(p, color);
+        }
+        phase = QueenPhase * bitCnt(p.piecesBB[QUEEN]) + RookPhase * bitCnt(p.piecesBB[ROOK])
+            + BishopPhase * bitCnt(p.piecesBB[BISHOP]) + KnightPhase * bitCnt(p.piecesBB[KNIGHT]);
+    }
+    for (int color = WHITE; color <= BLACK; ++color) {
         katkrscnt[color] = kzoneatks[color] = atkweights[color] = 0;
         allatks2[color] = knightatks[color] = bishopatks[color] = rookatks[color] = queenatks[color] = 0;
         kingzone[color] = KingZoneBB[color][p.kpos[color]];
@@ -224,18 +239,6 @@ basic_score_t eval_t::score(position_t& p) {
         pawnshelter[color] &= ~fillBBEx[color](pawnshelter[color]);
         pawnstorm[color] = p.getPieceBB(PAWN, color ^ 1);
         pawnstorm[color] &= ~fillBBEx[color](pawnstorm[color]);
-    }
-    if (p.mat_idx[WHITE] < 486 && p.mat_idx[BLACK] < 486) {
-        material_t& mat = getMaterial(p.mat_idx[WHITE], p.mat_idx[BLACK]);
-        phase = mat.phase;
-        scr[WHITE] += mat.value;
-    }
-    else {
-        for (int color = WHITE; color <= BLACK; ++color) {
-            material(p, color);
-        }
-        phase = QueenPhase * bitCnt(p.piecesBB[QUEEN]) + RookPhase * bitCnt(p.piecesBB[ROOK])
-            + BishopPhase * bitCnt(p.piecesBB[BISHOP]) + KnightPhase * bitCnt(p.piecesBB[KNIGHT]);
     }
     for (int color = WHITE; color <= BLACK; ++color) {
         pawnstructure(p, color);

@@ -166,6 +166,7 @@ namespace EvalParam {
         }
     }
     void initMaterial() {
+        //PrintOutput() << "sizeof(MaterialTable)): " << sizeof(MaterialTable);
         memset(MaterialTable, 0, sizeof(MaterialTable));
         for (int wq = 0; wq <= 1; wq++) for (int bq = 0; bq <= 1; bq++)
             for (int wr = 0; wr <= 2; wr++) for (int br = 0; br <= 2; br++)
@@ -178,6 +179,7 @@ namespace EvalParam {
                             material_t &mat = MaterialTable[idx1][idx2];
                             mat.phase = QueenPhase * (wq + bq) + RookPhase * (wr + br) + BishopPhase * (wb + bb) + KnightPhase * (wn + bn);
                             mat.value = { 0, 0 };
+                            mat.flags = 0;
 
                             for (int side = WHITE; side <= BLACK; ++side) {
                                 score_t scr;
@@ -186,11 +188,20 @@ namespace EvalParam {
                                 scr += MaterialValues[BISHOP] * (side == WHITE ? wb : bb);
                                 scr += MaterialValues[ROOK] * (side == WHITE ? wr : br);
                                 scr += MaterialValues[QUEEN] * (side == WHITE ? wq : bq);
-                                if ((side == WHITE ? wb : bb) == 2) {
-                                    scr += BishopPair;
-                                }
+                                if ((side == WHITE ? wb : bb) == 2) scr += BishopPair;
                                 mat.value += scr * (side == WHITE ? 1 : -1);
                             }
+
+                            int wminors = wn + wb;
+                            int bminors = bn + bb;
+                            int wmajors = wr + wq;
+                            int bmajors = br + bq;
+                            int minors = wminors + bminors;
+                            int majors = wmajors + bmajors;
+
+                            if (wp + bp + minors + majors == 0) mat.flags |= 1;
+                            else if (!wp && !bp && majors == 0 && wminors < 2 && bminors < 2) mat.flags |= 1;
+                            else if (!wp && !bp && majors == 0 && minors == 2 && (wn == 2 || bn == 2)) mat.flags |= 1;
                         }
     }
     material_t& getMaterial(int idx1, int idx2) {

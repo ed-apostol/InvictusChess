@@ -388,20 +388,21 @@ std::string position_t::to_str() {
 }
 
 bool position_t::isRepeat() {
-    for (int idx = history.size() - 5; idx >= 0 && idx >= history.size() - stack.fifty; idx -= 2) {
+    int idx_limit = std::max(history.size() - stack.fifty, history.size() - stack.pliesfromnull);
+    idx_limit = std::max(idx_limit, 0);
+    for (int idx = history.size() - 5; idx >= idx_limit; idx -= 2) {
         if (history[idx] == stack.hash)
             return true;
     }
     return false;
 }
 
+bool position_t::isMatIdxValid() {
+    return mat_idx[0] < 486 && mat_idx[1] < 486;
+}
+
 bool position_t::isMatDrawn() {
-    if (piecesBB[PAWN] | piecesBB[ROOK] | piecesBB[QUEEN]) return false;
-    int cnt = bitCnt(colorBB[side]), xcnt = bitCnt(colorBB[side ^ 1]);
-    if (cnt == 1 || xcnt == 1) {
-        if (abs(cnt - xcnt) <= 1) return true;
-        if (abs(cnt - xcnt) == 2 && bitCnt(piecesBB[KNIGHT]) == 2) return true;
-    }
+    if (isMatIdxValid() && getMaterial(mat_idx[0], mat_idx[1]).flags & 1) return true;
     return false;
 }
 
