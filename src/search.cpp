@@ -216,9 +216,9 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
     ASSERT(!(pos.colorBB[WHITE] & pos.colorBB[BLACK]));
 
     pvlist[ply].size = 0;
-    if (stopSearch()) return 0;
 
     if (!inRoot) {
+        if (stopSearch()) return 0;
         if (inPv && ply > maxplysearched) maxplysearched = ply;
         if (pos.stack.fifty > 99 || pos.isRepeat() || pos.isMatDrawn()) return 0;
         if (ply >= MAXPLY) return et.retrieve(pos);
@@ -240,7 +240,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
     int evalscore = et.retrieve(pos);
     const bool nonpawnpcs = pos.colorBB[pos.side] & ~(pos.piecesBB[PAWN] | pos.piecesBB[KING]);
 
-    if (!inPv && !inCheck) {
+    if (!inRoot && !inPv && !inCheck) {
         if (depth < 2 && evalscore + 325 < alpha) // TODO: test
             return qsearch(inPv, alpha, beta, ply, inCheck);
         if (depth < 9 && evalscore - 85 * depth > beta) // TODO: test
@@ -253,8 +253,8 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             pos.undoNullMove(undo);
             if (e.stop || stop_iter) return 0;
             if (score >= beta) {
-                if (score >= 32500) score = beta;
-                if (depth < 12 && abs(beta) < 32500) return score;
+                if (score >= MATE - MAXPLY) score = beta;
+                if (depth < 12 && abs(beta) < MATE - MAXPLY) return score;
                 int score2 = search(false, false, alpha, beta, depth - R, ply + 1, inCheck);
                 if (e.stop || stop_iter) return 0;
                 if (score2 >= beta) return score;
@@ -271,6 +271,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
                 int score = -qsearch(inPv, -rbeta, -rbeta + 1, ply + 1, moveGivesCheck);
                 if (score >= rbeta) score = -search(false, false, -rbeta, -rbeta + 1, depth - 4, ply + 1, moveGivesCheck);
                 pos.undoMove(undo);
+                if (e.stop || stop_iter) return 0;
                 if (score >= rbeta) return score;
             }
         }
@@ -320,8 +321,25 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
         bool moveGivesCheck = pos.moveIsCheck(m, dcc);
 
         if (best_score == -MATE) {
+            int extension = 0;
+            if (moveGivesCheck) extension = 1;
+            else if (inCheck && mp.mvlist.size == 1) extension = 1;
+            else if (!inRoot && depth >= 8 && tte.move.m == m.m && tte.depth >= depth - 2 && tte.getBound() == TT_LOWER) {
+                int xbeta = std::max(tte.move.s - depth * 2, -MATE), xscore = -MATE;
+                movepicker_t mpx(*this, inCheck, false, 1, tte.move.m, killer1[ply], killer2[ply], cm);
+                for (move_t mx; mpx.getMoves(mx, false);) {
+                    if (mx.m == tte.move.m) continue;
+                    bool givesCheck = pos.moveIsCheck(mx, dcc);
+                    pos.doMove(undo, mx);
+                    xscore = -search(false, inPv, -xbeta - 1, -xbeta, depth / 2 - 1, ply + 1, givesCheck);
+                    pos.undoMove(undo);
+                    if (e.stop || stop_iter) return 0;
+                    if (xscore >= xbeta) break;
+                }
+                if (xscore < xbeta) extension = 1;
+            }
             pos.doMove(undo, m);
-            score = -search(false, inPv, -beta, -alpha, depth - 1 + moveGivesCheck, ply + 1, moveGivesCheck);
+            score = -search(false, inPv, -beta, -alpha, depth - 1 + extension, ply + 1, moveGivesCheck);
             pos.undoMove(undo);
         }
         else {
@@ -334,8 +352,6 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
                 if (movestried >= LMPTable[depth]) { skipquiets = true; continue; }
                 if (!pos.statExEval(m, -80 * depth)) continue;
             }
-
-            // TODO: singular extension
 
             pos.doMove(undo, m);
 

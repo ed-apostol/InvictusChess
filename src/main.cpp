@@ -16,7 +16,6 @@ int main(void) {
 
 // TODO:
 // history moves and other new history ideas
-// singular move
 // pawn hash
 // material tables with material recognizer
 // checks in qsearch at first level

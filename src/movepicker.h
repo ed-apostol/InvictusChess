@@ -26,7 +26,7 @@ enum MoveGenStages {
 };
 
 struct movepicker_t {
-    movepicker_t(search_t& search, bool inCheck, bool skipq, int m, uint16_t hmove = 0, uint16_t k1 = 0, uint16_t k2 = 0, uint16_t cm = 0);
+    movepicker_t(search_t& search, bool inCheck, bool inQS, int marg, uint16_t hmove = 0, uint16_t k1 = 0, uint16_t k2 = 0, uint16_t cm = 0);
     move_t getBestMoveFromIdx(int idx);
     bool getMoves(move_t& move, bool skipquiets = false);
     void scoreTactical();
