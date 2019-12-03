@@ -129,6 +129,7 @@ void search_t::start() {
     nodecnt = 0;
     e.rootbestmove.m = 0;
     bool inCheck = pos.kingIsInCheck();
+    int last_score = 0;
 
     for (rdepth = 1; rdepth <= e.limits.depth; ++rdepth) {
         int delta = 16;
@@ -139,7 +140,6 @@ void search_t::start() {
         if (rdepth > 3)
             e.alpha = std::max(-MATE, e.rootbestmove.s - delta), e.beta = std::min(MATE, e.rootbestmove.s + delta);
         while (true) {
-            //PrintOutput() << thread_id << " : " << mdepth << " " << e.alpha << " " << e.beta;
             stop_iter = false;
             resolve_iter = false;
             search(true, true, e.alpha, e.beta, rdepth, 0, inCheck);
@@ -155,15 +155,12 @@ void search_t::start() {
                 else if (rootmove.s >= e.beta) e.beta = std::min(MATE, rootmove.s + delta);
                 else {
                     e.rootbestmove = rootmove;
-                    if (rdepth >= 8) {
-                        //PrintOutput() << "thread_id: " << thread_id;
-                        displayInfo(rootmove, rdepth, e.alpha, e.beta);
-                    }
+                    if (rdepth >= 8) displayInfo(rootmove, rdepth, e.alpha, e.beta);
                     if (pvlist[0].size > 1) e.rootponder = pvlist[0].mv(1);
                     e.stopIteration();
                     break;
                 }
-                delta <<= 1; // TODO: improve
+                delta += delta / 2;
                 e.resolveFail();
                 e.resolveIteration();
                 e.stopIteration();
@@ -172,12 +169,14 @@ void search_t::start() {
         if (e.stop) break;
         if (thread_id == 0 && e.use_time) {
             int64_t currtime = Utils::getTime();
-            // TODO: if current score is worst than the last by ~30 cp, extend by half
             if (currtime - e.start_time >= ((e.time_limit_max - e.start_time) * 7) / 10) {
-                //PrintOutput() << "info string Break at 70% time limit!";
-                break;
+                if (last_score <= e.rootbestmove.s - 30)
+                    e.time_limit_max = std::min(e.time_limit_max + e.time_range / 2, e.time_limit_abs);
+                else
+                    break;
             }
         }
+        last_score = e.rootbestmove.s;
     }
 
     if (!e.stop && (e.limits.ponder || e.limits.infinite)) {
@@ -198,11 +197,10 @@ bool search_t::stopSearch() {
     if (thread_id == 0 && e.use_time && (nodecnt & 0x3fff) == 0) {
         int64_t currtime = Utils::getTime();
         if ((currtime >= e.time_limit_max && !resolve_iter) || (currtime >= e.time_limit_abs)) {
-            if (rdepth == 1 || (resolve_fail && currtime < e.time_limit_abs)) {
+            if (rdepth == 1 || (resolve_fail && currtime < e.time_limit_abs))
                 e.time_limit_max = std::min(e.time_limit_max + e.time_range / 2, e.time_limit_abs);
-                //PrintOutput() << "info string Resolve fail! Time extended by half!";
-            }
-            else e.stop = true;
+            else
+                e.stop = true;
         }
     }
     if (thread_id == 0 && (nodecnt & 0x3fffff) == 0) updateInfo();
@@ -247,7 +245,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             return evalscore;
         if (depth >= 2 && evalscore >= beta && nonpawnpcs && pos.stack.lastmove.m != 0 && tte.move.m == 0) {
             undo_t undo;
-            int R = 4 + depth / 6 + std::min(3, (evalscore - beta) / 200);
+            int R = ((13 + depth) >> 2) + std::min(3, (evalscore - beta) / 185);
             pos.doNullMove(undo);
             int score = -search(false, false, -beta, -beta + 1, depth - R, ply + 1, false);
             pos.undoNullMove(undo);
@@ -291,10 +289,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
     bool skipquiets = false;
     playedmoves[ply].size = 0;
     for (move_t m; mp.getMoves(m, skipquiets);) {
-        if (e.doSMP && mp.stage == STG_DEFERRED) {
-            //if (inRoot) PrintOutput() << depth << " " << m.to_str() << " " << m.s;
-            movestried = m.s;
-        }
+        if (e.doSMP && mp.stage == STG_DEFERRED) movestried = m.s;
         else ++movestried;
 
         if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth && best_score != -MATE) {
@@ -303,10 +298,8 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
                     tte.move.s = scoreFromTrans(tte.move.s, ply, MATE - MAXPLY);
                     if (tte.depth >= depth && (tte.getBound() == TT_EXACT
                         || (tte.getBound() == TT_LOWER && tte.move.s >= beta)
-                        || (tte.getBound() == TT_UPPER && tte.move.s <= old_alpha))) {
-                        //PrintOutput() << depth << " " << m.to_str();
+                        || (tte.getBound() == TT_UPPER && tte.move.s <= old_alpha)))
                         return tte.move.s;
-                    }
                 }
             }
             move_hash = pos.stack.hash >> 32;
@@ -345,7 +338,6 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
         else {
             // TODO: Counter moves history, Follow up moves history
             // TODO: SEE pruning for tactical moves
-
             bool canBeReduced = !inCheck && !moveGivesCheck && !pos.moveIsTactical(m);
             if (!inPv && canBeReduced && depth < 9 && nonpawnpcs) {
                 if (futilityMargin <= alpha) { skipquiets = true; continue; }
@@ -469,11 +461,13 @@ int search_t::qsearch(bool inPv, int alpha, int beta, int ply, bool inCheck) {
 
 void search_t::updateHistory(position_t& p, move_t bm, int depth, int ply) {
     depth = std::min(15, depth);
-    history[p.side][bm.moveFrom()][bm.moveTo()] += depth * depth;
+    int bonus = depth * depth;
+    history[p.side][bm.moveFrom()][bm.moveTo()] += bonus;
     auto lm = p.stack.lastmove;
     if (lm.m != 0) countermove[p.getPiece(lm.moveTo())][lm.moveTo()] = bm.m;
     for (move_t m : playedmoves[ply]) {
+        if (m.m == bm.m) continue;
         int& sc = history[p.side][m.moveFrom()][m.moveTo()];
-        sc -= sc / 10;
+        sc -= bonus / 10;
     }
 }

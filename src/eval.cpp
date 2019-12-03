@@ -38,7 +38,8 @@ void eval_t::material(position_t & p, int side) {
         scr[side] += BishopPair;
     }
     // TODO: material scaling like opposite colored bishops, KRkb, KRkn
-    // TODO: add material table with precomputed material recognizer (KBPk, KRPkr, insufficient material, etc)
+    // TODO: material recognizer (KBPk, KRPkr, insufficient material, etc)
+    // TODO: endgame knowledge (KRPkr, KRkp, KBPkb)
 }
 
 void eval_t::pawnstructure(position_t& p, int side) {
