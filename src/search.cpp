@@ -132,12 +132,12 @@ void search_t::start() {
     int last_score = 0;
 
     for (rdepth = 1; rdepth <= e.limits.depth; ++rdepth) {
-        int delta = 16;
+        int delta = 10;
         resolve_fail = false;
         e.alpha = -MATE;
         e.beta = MATE;
         maxplysearched = 0;
-        if (rdepth > 3)
+        if (rdepth >= 5)
             e.alpha = std::max(-MATE, e.rootbestmove.s - delta), e.beta = std::min(MATE, e.rootbestmove.s + delta);
         while (true) {
             stop_iter = false;
@@ -151,7 +151,7 @@ void search_t::start() {
                     if (resolve_iter) continue;
                     else break;
                 }
-                if (rootmove.s <= e.alpha) e.alpha = std::max(-MATE, rootmove.s - delta);
+                if (rootmove.s <= e.alpha) e.beta = (e.alpha + e.beta) / 2, e.alpha = std::max(-MATE, rootmove.s - delta);
                 else if (rootmove.s >= e.beta) e.beta = std::min(MATE, rootmove.s + delta);
                 else {
                     e.rootbestmove = rootmove;
@@ -235,7 +235,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             return tte.move.s;
     }
 
-    int evalscore = et.retrieve(pos);
+    int evalscore = et.retrieve(pos); // TODO: optimize
     const bool nonpawnpcs = pos.colorBB[pos.side] & ~(pos.piecesBB[PAWN] | pos.piecesBB[KING]);
 
     if (!inRoot && !inPv && !inCheck) {
@@ -337,18 +337,17 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
         }
         else {
             // TODO: Counter moves history, Follow up moves history
-            // TODO: SEE pruning for tactical moves
-            bool canBeReduced = !inCheck && !moveGivesCheck && !pos.moveIsTactical(m);
-            if (!inPv && canBeReduced && depth < 9 && nonpawnpcs) {
-                if (futilityMargin <= alpha) { skipquiets = true; continue; }
-                if (movestried >= LMPTable[depth]) { skipquiets = true; continue; }
-                if (!pos.statExEval(m, -80 * depth)) continue;
+            bool isTactical = pos.moveIsTactical(m);
+            if (!inPv && !inCheck && !moveGivesCheck && nonpawnpcs && depth < 9) {
+                if (!isTactical && futilityMargin <= alpha) { skipquiets = true; continue; }
+                if (!isTactical && movestried >= LMPTable[depth]) { skipquiets = true; continue; }
+                if ((!isTactical || mp.stage == STG_BADTACTICS) && !pos.statExEval(m, isTactical ? -100 * depth : -10 * depth * depth)) continue;
             }
 
             pos.doMove(undo, m);
 
             int reduction = 1;
-            if (canBeReduced && depth > 2) {
+            if (!inCheck && !moveGivesCheck && !isTactical && depth > 2) {
                 reduction = LMRTable[std::min(depth, 63)][std::min(movestried, 63)];
                 reduction += !inPv;
                 reduction -= (m.m == mp.killer1) || (m.m == mp.killer2) || (m.m == mp.counter);
