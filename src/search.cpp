@@ -17,18 +17,13 @@
 #include "params.h"
 
 namespace Search {
-    static const int LMPTable[9] = { 0, 5, 7, 11, 17, 25, 35, 47, 61 };
+    static const int LMPTable[9] = { 0, 3, 5, 7, 15, 21, 27, 35, 43 };
     int LMRTable[64][64];
     void initArr() {
         //LogAndPrintOutput logger;
         for (int d = 1; d < 64; d++) {
             for (int p = 1; p < 64; p++) {
-                //LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.25; // Ethereal
-                //LMRTable[d][p] = 0.5 + log(d) * log(p) / 3; // Hannibal
-                //LMRTable[d][p] = log(d) * log(p) / 1.95; // SF
-                //LMRTable[d][p] = 0.5 + log(d) * log(p) / 2.1; // Laser
-                //LMRTable[d][p] = log(d) * log(p) / 2.0; // Defenchess
-                LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.25;
+                LMRTable[d][p] = 0.75 + log(d) * log(p) / 2.1;
                 //logger << " " << LMRTable[d][p];
             }
             //logger << "\n";
