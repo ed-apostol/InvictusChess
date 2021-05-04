@@ -28,15 +28,10 @@ namespace Utils {
         return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
     }
 #ifndef _WIN32
-
-void bindThisThread(int index) { (void)index; };
-
-
+    void bindThisThread(int index) { (void)index; };
 #else
-
 #include <windows.h>
-
-	#define GetKnownProcAddress(hmod, F) (decltype(F)*)GetProcAddress(hmod, #F)
+#define GetKnownProcAddress(hmod, F) (decltype(F)*)GetProcAddress(hmod, #F)
 
     int bestGroup(int index, HMODULE kernel) {
         std::vector<int> groups;

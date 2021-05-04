@@ -339,7 +339,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             }
             // TODO: Counter moves history, Follow up moves history
             bool isTactical = pos.moveIsTactical(m);
-            if (!inRoot && !inCheck && !moveGivesCheck && nonpawnpcs && depth < 9 && mp.stage != STG_DEFERRED) {
+            if (!inRoot && !inPv && !inCheck && !moveGivesCheck && nonpawnpcs && depth < 9 && mp.stage != STG_DEFERRED) {
                 if (!isTactical && futilityMargin <= alpha) { skipquiets = true; continue; }
                 if (!isTactical && movestried >= LMPTable[depth]) { skipquiets = true; continue; }
                 if ((!isTactical || mp.stage == STG_BADTACTICS) && !pos.statExEval(m, isTactical ? -100 * depth : -10 * depth * depth)) continue;
