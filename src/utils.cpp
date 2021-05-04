@@ -1,11 +1,10 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
 
 #include <chrono>
-#include <windows.h>
 #include <iostream>
 #include "typedefs.h"
 #include "constants.h"
@@ -28,8 +27,16 @@ namespace Utils {
         using namespace std::chrono;
         return duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
     }
+#ifndef _WIN32
 
-#define GetKnownProcAddress(hmod, F) (decltype(F)*)GetProcAddress(hmod, #F)
+void bindThisThread(int index) { (void)index; };
+
+
+#else
+
+#include <windows.h>
+
+	#define GetKnownProcAddress(hmod, F) (decltype(F)*)GetProcAddress(hmod, #F)
 
     int bestGroup(int index, HMODULE kernel) {
         std::vector<int> groups;
@@ -79,4 +86,5 @@ namespace Utils {
         GROUP_AFFINITY affinity;
         if (getNumaProcMask(group, &affinity)) setThreadAffinity(GetCurrentThread(), &affinity, NULL);
     }
+#endif
 }

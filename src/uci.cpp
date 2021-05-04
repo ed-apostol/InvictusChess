@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -15,8 +15,8 @@
 
 const std::string uci_t::name = "Invictus";
 const std::string uci_t::author = "Edsel Apostol";
-const std::string uci_t::year = "2019";
-const std::string uci_t::version = "r305";
+const std::string uci_t::year = "2021";
+const std::string uci_t::version = "r322";
 
 void uci_t::info() {
     LogAndPrintOutput() << name << " " << version;

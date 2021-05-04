@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -58,8 +58,8 @@ struct position_t {
     bool isRepeat();
     bool isMatIdxValid();
     bool isMatDrawn();
-    inline int getPiece(int sq);
-    inline int getSide(int sq);
+    int getPiece(int sq);
+    int getSide(int sq);
 
     uint64_t getPieceBB(int pc, int c);
     uint64_t bishopSlidersBB(int c);

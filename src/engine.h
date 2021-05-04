@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -102,6 +102,7 @@ struct engine_t : public std::vector<search_t*> {
     void initSearch();
     void newgame();
     void stopthreads();
+    void stopIteration();
     void initUCIoptions();
     void printUCIoptions();
     void waitForThreads();
@@ -111,9 +112,6 @@ struct engine_t : public std::vector<search_t*> {
     void onThreadsChange();
 
     uint64_t nodesearched();
-    void stopIteration();
-    void resolveIteration();
-    void resolveFail();
 
     abdada_table_t mht;
     trans_table_t tt;
@@ -126,9 +124,15 @@ struct engine_t : public std::vector<search_t*> {
     bool doSMP;
     int defer_depth;
     int cutoffcheck_depth;
+    bool doNUMA;
 
+    spinlock_t updatelock;
+    std::atomic<bool> plysearched[MAXPLYSIZE];
+    std::atomic<bool> resolve_iter;
+    std::atomic<int> rdepth;
     std::atomic<int> alpha;
     std::atomic<int> beta;
+
     move_t rootbestmove;
     move_t rootponder;
 

@@ -1,10 +1,12 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
 
 #include <algorithm>
+#include <cstring>
+
 #include "typedefs.h"
 #include "constants.h"
 #include "position.h"

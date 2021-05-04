@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -54,33 +54,30 @@ void trans_table_t::store(uint64_t hash, move_t move, int depth, int bound) {
     replace->depth = depth;
 }
 
-void abdada_table_t::setBusy(const uint32_t hash, uint16_t move, int depth) {
+void abdada_table_t::setBusy(const uint32_t hash, int depth) {
     int lowest = INT_MAX;
+    uint32_t key = hashkey(hash, depth);
     move_hash_t *entry = &getEntry(hash).bucket[0], *replace = entry;
     for (int t = 4; t--; ++entry) {
-        if (entry->move == move && entry->hashlock == mhlock(hash) && entry->depth == depth) return;
-        if (entry->depth < lowest) lowest = entry->depth, replace = entry;
+        if (entry->hashlock == key) return;
+        if (entry->depth() < lowest) lowest = entry->depth(), replace = entry;
     }
-    replace->move = move;
-    replace->depth = depth;
-    replace->hashlock = mhlock(hash);
+    replace->hashlock = key;
 }
 
-void abdada_table_t::resetBusy(const uint32_t hash, uint16_t move, int depth) {
+void abdada_table_t::resetBusy(const uint32_t hash, int depth) {
+    uint32_t key = hashkey(hash, depth);
     move_hash_t *entry = &getEntry(hash).bucket[0];
     for (int t = 4; t--; ++entry) {
-        if (entry->move == move && entry->hashlock == mhlock(hash) && entry->depth == depth) {
-            entry->move = 0;
-            entry->depth = 0;
-            entry->hashlock = 0;
-        }
+        if (entry->hashlock == key) entry->hashlock = 0;
     }
 }
 
-bool abdada_table_t::isBusy(const uint32_t hash, uint16_t move, int depth) {
+bool abdada_table_t::isBusy(const uint32_t hash, int depth) {
+    uint32_t key = hashkey(hash, depth);
     move_hash_t *entry = &getEntry(hash).bucket[0];
     for (int t = 4; t--; ++entry) {
-        if (entry->move == move && entry->hashlock == mhlock(hash) && entry->depth == depth) return true;
+        if (entry->hashlock == key) return true;
     }
     return false;
 }

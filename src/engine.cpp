@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -17,7 +17,7 @@
 
 engine_t::engine_t() {
     initUCIoptions();
-    mht.init(1);
+    mht.init(2); // 2Mb
     onHashChange();
     onThreadsChange();
 }
@@ -31,7 +31,7 @@ void engine_t::initSearch() {
 
     int mytime = 0, t_inc = 0;
     if (limits.infinite)
-        limits.depth = search_t::MAXPLY;
+        limits.depth = MAXPLY;
     if (limits.mate)
         limits.depth = limits.mate * 2 - 1;
 
@@ -59,7 +59,7 @@ void engine_t::initSearch() {
         if (time_limit_abs < time_limit_max) time_limit_abs = time_limit_max;
         if (time_limit_abs > mytime) time_limit_abs = mytime;
     }
-    if (!limits.depth) limits.depth = search_t::MAXPLY;
+    if (!limits.depth) limits.depth = MAXPLY;
     LogInfo() << "max time = " << time_limit_max << " abs time = " << time_limit_abs << " depth = " << limits.depth;
 
     tt.updateAge();
@@ -69,13 +69,21 @@ void engine_t::initSearch() {
     time_limit_abs += start_time;
     use_time = !limits.ponder && (mytime || limits.movetime);
     stop = false;
+    resolve_iter = false;
+    rootbestmove.m = 0;
+    rdepth = 1;
+    alpha = -MATE;
+    beta = -MATE;
 
     defer_depth = options["ABDADA Depth"].getIntVal();
     cutoffcheck_depth = options["Cutoff Check Depth"].getIntVal();
+    doNUMA = options["NUMA"].getIntVal();
 
     if (doSMP = size() > 1) {
         mht.clear();
     }
+
+    for (auto& a : plysearched) a = false;
 
     for (auto t : *this) {
         t->pos = origpos;
@@ -117,12 +125,17 @@ void engine_t::stopthreads() {
     stop = true;
 }
 
+void engine_t::stopIteration() {
+    for (auto &t : *this) t->stop_iter = true;
+}
+
 void engine_t::initUCIoptions() {
-    options["Hash"] = uci_options_t(64, 1, 65536, [&] { onHashChange(); });
-    options["Threads"] = uci_options_t(1, 1, 4096, [&] { onThreadsChange(); });
+    options["Hash"] = uci_options_t(256, 1, 65536, [&] { onHashChange(); });
+    options["Threads"] = uci_options_t(8, 1, 4096, [&] { onThreadsChange(); });
     options["Ponder"] = uci_options_t(false, [&] {});
     options["ABDADA Depth"] = uci_options_t(3, 1, 128, [&] {});
     options["Cutoff Check Depth"] = uci_options_t(4, 1, 128, [&] {});
+    options["NUMA"] = uci_options_t(false, [&] {});
 }
 
 void engine_t::printUCIoptions() {
@@ -133,16 +146,4 @@ uint64_t engine_t::nodesearched() {
     uint64_t nodes = 0;
     for (auto t : *this) nodes += t->nodecnt;
     return nodes;
-}
-
-void engine_t::stopIteration() {
-    for (auto &t : *this) t->stop_iter = true;
-}
-
-void engine_t::resolveIteration() {
-    for (auto &t : *this) t->resolve_iter = true;
-}
-
-void engine_t::resolveFail() {
-    for (auto &t : *this) t->resolve_fail = true;
 }

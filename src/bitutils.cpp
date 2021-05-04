@@ -1,14 +1,18 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021						          */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
 
-#include <intrin.h>
+
 #include "typedefs.h"
 #include "constants.h"
 
 //#define NOPOPCNT
+
+#ifdef _MSC_VER
+
+#include <intrin.h>
 
 #pragma intrinsic(_BitScanForward64)
 #pragma intrinsic(_BitScanReverse64)
@@ -19,11 +23,7 @@ namespace BitUtils {
         _BitScanForward64(&index, bb);
         return index;
     }
-    int getLastBit(uint64_t bb) {
-        unsigned long index = 0;
-        _BitScanReverse64(&index, bb);
-        return index;
-    }
+
     int popFirstBit(uint64_t& b) {
         unsigned long index = 0;
         _BitScanForward64(&index, b);
@@ -40,7 +40,25 @@ namespace BitUtils {
     }
 #else
     int bitCnt(uint64_t x) {
-        return (int)__popcnt64(x);
+        return __popcnt64(x);
     }
-#endif
 }
+#endif
+#else
+namespace BitUtils {
+    int getFirstBit(uint64_t bb) {
+        return __builtin_ctzll(bb);
+    }
+
+     int popFirstBit(uint64_t& b) {
+       int index = __builtin_ctzll(b);
+        b &= (b - 1);
+        return index;
+    }
+
+     int bitCnt(uint64_t x) {
+        return __builtin_popcountll(x);
+    }
+}
+#endif
+

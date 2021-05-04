@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -47,10 +47,6 @@ protected:
 struct engine_t;
 
 struct search_t : public thread_t {
-    static const int MAXPLY = 127;
-    static const int MAXPLYSIZE = 128;
-    static const int MATE = 32750;
-
     search_t(int _thread_id, engine_t& _e) : e(_e), thread_t(_thread_id) {
         native_thread = std::thread(&search_t::idleloop, this);
         et.init(1);
@@ -75,14 +71,12 @@ struct search_t : public thread_t {
     int rdepth;
     std::atomic<uint64_t> nodecnt;
     std::atomic<bool> stop_iter;
-    std::atomic<bool> resolve_iter;
-    std::atomic<bool> resolve_fail;
 
     move_t rootmove;
-    movelist_t<128> pvlist[128];
+    movelist_t<128> pvlist[MAXPLYSIZE];
     movelist_t<64> playedmoves[MAXPLYSIZE];
     uint16_t killer1[MAXPLYSIZE];
     uint16_t killer2[MAXPLYSIZE];
-    uint16_t countermove[7][64];
+    uint16_t countermove[2][7][64];
     int history[2][64][64];
 };

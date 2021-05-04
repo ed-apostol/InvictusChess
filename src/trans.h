@@ -1,5 +1,5 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
@@ -7,6 +7,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cstring>
 #include "typedefs.h"
 #include "log.h"
 #include "eval.h"
@@ -89,9 +90,8 @@ private:
 };
 
 struct move_hash_t {
-    uint16_t move;
-    uint8_t depth;
-    uint8_t hashlock;
+    uint32_t hashlock;
+    int depth() { return hashlock & 0xff; };
 };
 
 struct movehash_bucket_t {
@@ -99,8 +99,8 @@ struct movehash_bucket_t {
 };
 
 struct abdada_table_t : public hashtable_t < movehash_bucket_t > {
-    void setBusy(uint32_t hash, uint16_t move, int depth);
-    void resetBusy(uint32_t hash, uint16_t move, int depth);
-    bool isBusy(uint32_t hash, uint16_t move, int depth);
-    uint8_t mhlock(uint32_t hash) { return hash >> 24; }
+    void setBusy(uint32_t hash, int depth);
+    void resetBusy(uint32_t hash, int depth);
+    bool isBusy(uint32_t hash, int depth);
+    uint32_t hashkey(uint32_t hash, int depth) { return (hash & 0xffffff00) | depth; };
 };

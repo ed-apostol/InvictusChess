@@ -1,11 +1,12 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
 
 #define USE_PEXT
 
+#include <functional>
 #include <vector>
 #ifdef USE_PEXT
 #include <immintrin.h>
@@ -85,7 +86,7 @@ namespace {
         return att;
     }
 
-    inline size_t sliderIndex(uint64_t occ, Magic& m) {
+    size_t sliderIndex(uint64_t occ, Magic& m) {
 #ifdef USE_PEXT
         return _pext_u64(occ, m.mask);
 #else
@@ -118,34 +119,34 @@ namespace {
             }
         }
     }
-    inline uint64_t shiftLeft(uint64_t b, int i) {
+    uint64_t shiftLeft(uint64_t b, int i) {
         return (b << i);
     }
-    inline uint64_t shiftRight(uint64_t b, int i) {
+    uint64_t shiftRight(uint64_t b, int i) {
         return (b >> i);
     }
-    inline uint64_t shiftLeft8(uint64_t b) {
+    uint64_t shiftLeft8(uint64_t b) {
         return (b << 8);
     }
-    inline uint64_t shiftRight8(uint64_t b) {
+    uint64_t shiftRight8(uint64_t b) {
         return (b >> 8);
     }
-    inline uint64_t shiftLeft16(uint64_t b) {
+    uint64_t shiftLeft16(uint64_t b) {
         return (b << 16);
     }
-    inline uint64_t shiftRight16(uint64_t b) {
+    uint64_t shiftRight16(uint64_t b) {
         return (b >> 16);
     }
-    inline uint64_t fillUp(uint64_t b) {
+    uint64_t fillUp(uint64_t b) {
         return b |= b << 8, b |= b << 16, b |= b << 32;
     }
-    inline uint64_t fillDown(uint64_t b) {
+    uint64_t fillDown(uint64_t b) {
         return b |= b >> 8, b |= b >> 16, b |= b >> 32;
     }
-    inline uint64_t fillUpEx(uint64_t b) {
+    uint64_t fillUpEx(uint64_t b) {
         return b |= b << 8, b |= b << 16, (b |= b << 32) << 8;
     }
-    inline uint64_t fillDownEx(uint64_t b) {
+    uint64_t fillDownEx(uint64_t b) {
         return b |= b >> 8, b |= b >> 16, (b |= b >> 32) >> 8;
     }
 }

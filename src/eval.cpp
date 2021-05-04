@@ -1,8 +1,10 @@
 /**************************************************/
-/*  Invictus 2019                                 */
+/*  Invictus 2021                                 */
 /*  Edsel Apostol                                 */
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
+
+#include <cstring>
 
 #include "eval.h"
 #include "bitutils.h"
