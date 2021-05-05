@@ -4,6 +4,7 @@
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
 
+#include <cstring>
 #include "params.h"
 #include "attacks.h"
 #include "log.h"
