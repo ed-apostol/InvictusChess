@@ -12,4 +12,9 @@ Features:
 
 Invictus is influenced by other excellent open source projects especially Stocksfish, Ethereal, and Defenchess. Special thanks to Minic from which I learned the Texel tuning code.
 
+To Do:
+* -NNUE support
+* -Syzygy support
+* -Polyglot opening book support
+
 Thanks Kan for the logo! Thanks TCEC for giving me motivation to work with the engine!
