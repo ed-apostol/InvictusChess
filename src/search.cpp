@@ -134,11 +134,17 @@ void search_t::start() {
             stop_iter = false;
             search(true, true, e.alpha, e.beta, rdepth, 0, inCheck);
             if (e.stop || e.plysearched[rdepth - 1]) break;
-            else if (stop_iter && e.resolve_iter) continue;
+            else if (stop_iter) {
+                if (e.resolve_iter) continue;
+                else break;
+            }
             else {
                 std::lock_guard<spinlock_t> lock(e.updatelock);
                 if (e.stop || e.plysearched[rdepth - 1]) break;
-                else if (stop_iter && e.resolve_iter) continue;
+                else if (stop_iter) {
+                    if (e.resolve_iter) continue;
+                    else break;
+                }
                 if (rootmove.s <= e.alpha)
                     e.beta = (e.alpha + e.beta) / 2,
                     e.alpha = std::max(-MATE, rootmove.s - delta);
@@ -318,7 +324,7 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
             pos.undoMove(undo);
         }
         else {
-            if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) {
+            if (e.doSMP && !inCheck && mp.stage != STG_DEFERRED && depth >= e.defer_depth) {
                 if (!inRoot && !inPv && mp.deferred.size > 0 && depth >= e.cutoffcheck_depth) {
                     tt_entry_t ttet;
                     if (e.tt.retrieve(pos.stack.hash, ttet)) {
@@ -355,9 +361,9 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, int
                 reduction = std::min(depth - 1, std::max(reduction, 1));
             }
 
-            if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.setBusy(move_hash, depth);
+            if (e.doSMP && !inCheck && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.setBusy(move_hash, depth);
             score = -search(false, false, -alpha - 1, -alpha, depth - reduction, ply + 1, moveGivesCheck);
-            if (e.doSMP && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.resetBusy(move_hash, depth);
+            if (e.doSMP && !inCheck && mp.stage != STG_DEFERRED && depth >= e.defer_depth) e.mht.resetBusy(move_hash, depth);
 
             if (reduction > 1 && !e.stop && !stop_iter && score > alpha)
                 score = -search(false, false, -alpha - 1, -alpha, depth - 1, ply + 1, moveGivesCheck);

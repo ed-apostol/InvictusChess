@@ -16,7 +16,7 @@
 const std::string uci_t::name = "Invictus";
 const std::string uci_t::author = "Edsel Apostol";
 const std::string uci_t::year = "2021";
-const std::string uci_t::version = "r323";
+const std::string uci_t::version = "r324";
 
 void uci_t::info() {
     LogAndPrintOutput() << name << " " << version;
