@@ -30,7 +30,9 @@ namespace Utils {
 #ifndef _WIN32
     void bindThisThread(int index) { (void)index; };
 #else
+
 #include <windows.h>
+
 #define GetKnownProcAddress(hmod, F) (decltype(F)*)GetProcAddress(hmod, #F)
 
     int bestGroup(int index, HMODULE kernel) {

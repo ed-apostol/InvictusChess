@@ -15,7 +15,8 @@ int main(void) {
 }
 
 // TODO:
-// history moves and other new history ideas
-// pawn hash
-// material imbalance
-// checks in qsearch at first level
+// counter moves history
+// capture moves history
+// follow up move history
+// Syzygy
+// NNUE

@@ -131,7 +131,7 @@ void engine_t::stopIteration() {
 
 void engine_t::initUCIoptions() {
     options["Hash"] = uci_options_t(256, 1, 65536, [&] { onHashChange(); });
-    options["Threads"] = uci_options_t(8, 1, 4096, [&] { onThreadsChange(); });
+    options["Threads"] = uci_options_t(1, 1, 4096, [&] { onThreadsChange(); });
     options["Ponder"] = uci_options_t(false, [&] {});
     options["ABDADA Depth"] = uci_options_t(3, 1, 128, [&] {});
     options["Cutoff Check Depth"] = uci_options_t(4, 1, 128, [&] {});

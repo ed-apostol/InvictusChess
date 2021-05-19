@@ -400,7 +400,11 @@ bool position_t::isRepeat() {
 }
 
 bool position_t::isMatIdxValid() {
+#ifdef TUNE
+    return false;
+#else
     return mat_idx[0] < 486 && mat_idx[1] < 486;
+#endif
 }
 
 bool position_t::isMatDrawn() {
@@ -497,44 +501,39 @@ uint64_t position_t::discoveredPiecesBB(int c) {
     return pinned;
 }
 
-bool position_t::statExEval(move_t m, int threshold) {
+bool position_t::staticExchangeEval(move_t m, int threshold) {
     static const int StatExEvPcVals[] = { 0, 100,  450,  450,  675, 1300, 0 };
-
     const int from = m.moveFrom();
     const int to = m.moveTo();
-    const int flag = m.moveFlags();
     const int prom = m.movePromote();
+    const bool isEnPassant = m.isEnPassant();
 
-    int nextpiece = prom ? prom : pieces[from];
+    int piece = prom ? prom : pieces[from];
     int currval = StatExEvPcVals[pieces[to]] - threshold;
     if (prom) currval += StatExEvPcVals[prom] - StatExEvPcVals[PAWN];
-    if (flag == MF_ENPASSANT) currval += StatExEvPcVals[PAWN];
-    if (currval < 0) return 0;
-    currval -= StatExEvPcVals[nextpiece];
-    if (currval >= 0) return 1;
+    else if (isEnPassant) currval += StatExEvPcVals[PAWN];
+    if (currval < 0) return false;
+    currval -= StatExEvPcVals[piece];
+    if (currval >= 0) return true;
 
     const uint64_t bishops = piecesBB[BISHOP] | piecesBB[QUEEN];
     const uint64_t rooks = piecesBB[ROOK] | piecesBB[QUEEN];
-    uint64_t occupied = occupiedBB ^ (BitMask[from] | BitMask[to]);
-    if (flag == MF_ENPASSANT && stack.epsq != -1) occupied ^= BitMask[stack.epsq];
-    uint64_t attackers = allAttackersToSqBB(to, occupied) & occupied;
+    uint64_t occupied = (occupiedBB ^ BitMask[from]) | BitMask[to];
+    if (isEnPassant) occupied ^= BitMask[stack.epsq];
+    uint64_t allAttackers = allAttackersToSqBB(to, occupied) & occupied;
     int color = side ^ 1;
-
-    while (true) {
-        uint64_t myAttackers = attackers & colorBB[color];
-        if (myAttackers == EmptyBoardBB) break;
-        for (nextpiece = PAWN; nextpiece <= QUEEN; nextpiece++)
-            if (myAttackers & piecesBB[nextpiece]) break;
-        occupied ^= BitMask[getFirstBit(myAttackers & piecesBB[nextpiece])];
-        if (nextpiece == PAWN || nextpiece == BISHOP || nextpiece == QUEEN)
-            attackers |= bishopAttacksBB(to, occupied) & bishops;
-        if (nextpiece == ROOK || nextpiece == QUEEN)
-            attackers |= rookAttacksBB(to, occupied) & rooks;
-        attackers &= occupied;
+    for (uint64_t mask, attackers; attackers = allAttackers & colorBB[color];) {
+        for (piece = PAWN; !(mask = attackers & piecesBB[piece]); ++piece);
+        occupied ^= BitMask[getFirstBit(mask)];
+        if (piece == PAWN || piece == BISHOP || piece == QUEEN)
+            allAttackers |= bishopAttacksBB(to, occupied) & bishops;
+        if (piece == ROOK || piece == QUEEN)
+            allAttackers |= rookAttacksBB(to, occupied) & rooks;
+        allAttackers &= occupied;
         color ^= 1;
-        currval = -currval - 1 - StatExEvPcVals[nextpiece];
+        currval = -currval - 1 - StatExEvPcVals[piece];
         if (currval >= 0) {
-            if (nextpiece == KING && (attackers & colorBB[color])) color ^= 1;
+            if (piece == KING && (allAttackers & colorBB[color])) color ^= 1;
             break;
         }
     }

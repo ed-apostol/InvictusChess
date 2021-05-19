@@ -4,7 +4,6 @@
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
 
-
 #include "typedefs.h"
 #include "constants.h"
 
@@ -50,15 +49,14 @@ namespace BitUtils {
         return __builtin_ctzll(bb);
     }
 
-     int popFirstBit(uint64_t& b) {
-       int index = __builtin_ctzll(b);
+    int popFirstBit(uint64_t& b) {
+        int index = __builtin_ctzll(b);
         b &= (b - 1);
         return index;
     }
 
-     int bitCnt(uint64_t x) {
+    int bitCnt(uint64_t x) {
         return __builtin_popcountll(x);
     }
 }
 #endif
-

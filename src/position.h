@@ -71,7 +71,7 @@ struct position_t {
     uint64_t pinnedPiecesBB(int c);
     uint64_t discoveredPiecesBB(int c);
 
-    bool statExEval(move_t m, int threshold);
+    bool staticExchangeEval(move_t m, int threshold);
     bool canCastleKS(int s);
     bool canCastleQS(int s);
     bool kingIsInCheck();

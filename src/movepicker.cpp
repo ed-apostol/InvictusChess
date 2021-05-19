@@ -59,7 +59,7 @@ bool movepicker_t::getMoves(move_t& move, bool skipquiets) {
         while (idx < mvlist.size) {
             move = getBestMoveFromIdx(idx++);
             if (move.m == hashmove) continue;
-            if (!pos.statExEval(move, margin)) {
+            if (!pos.staticExchangeEval(move, margin)) {
                 if (!inQSearch)
                     mvlistbad.add(move);
                 continue;

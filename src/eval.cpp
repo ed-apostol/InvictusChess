@@ -220,7 +220,7 @@ basic_score_t eval_t::score(position_t& p) {
         material_t& mat = getMaterial(p.mat_idx[WHITE], p.mat_idx[BLACK]);
         if (mat.flags & 1) return 0;
         phase = mat.phase;
-        scr[WHITE] += mat.value;
+        if (!(mat.flags & 2)) scr[WHITE] += mat.value;
     }
     else {
         for (int color = WHITE; color <= BLACK; ++color) {

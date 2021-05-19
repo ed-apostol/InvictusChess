@@ -74,9 +74,9 @@ struct tt_bucket_t {
 };
 
 enum TTBounds {
-    TT_EXACT = 1,
-    TT_LOWER,
-    TT_UPPER
+    TT_LOWER = 1,
+    TT_UPPER,
+    TT_EXACT = TT_LOWER | TT_UPPER
 };
 
 class trans_table_t : public hashtable_t < tt_bucket_t > {
@@ -91,7 +91,7 @@ private:
 
 struct move_hash_t {
     uint32_t hashlock;
-    int depth() { return hashlock & 0xff; };
+    int depth() { return hashlock & 0xff; }
 };
 
 struct movehash_bucket_t {
@@ -99,8 +99,8 @@ struct movehash_bucket_t {
 };
 
 struct abdada_table_t : public hashtable_t < movehash_bucket_t > {
-    void setBusy(uint32_t hash, int depth);
-    void resetBusy(uint32_t hash, int depth);
-    bool isBusy(uint32_t hash, int depth);
-    uint32_t hashkey(uint32_t hash, int depth) { return (hash & 0xffffff00) | depth; };
+    void setBusy(uint32_t hash, uint16_t m, int d);
+    void resetBusy(uint32_t hash, uint16_t m, int d);
+    bool isBusy(uint32_t hash, uint16_t m, int d);
+    uint32_t hashkey(uint32_t hash, uint16_t m, int d) { return (hash << 24) | (m << 8) | d; }
 };

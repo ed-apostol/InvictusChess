@@ -45,5 +45,5 @@ struct movepicker_t {
     position_t& pos;
     movelist_t<256> mvlist;
     movelist_t<32> mvlistbad;
-    movelist_t<128> deferred;
+    movelist_t<256> deferred;
 };

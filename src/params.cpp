@@ -201,8 +201,13 @@ namespace EvalParam {
                             int majors = wmajors + bmajors;
 
                             if (wp + bp + minors + majors == 0) mat.flags |= 1;
-                            else if (!wp && !bp && majors == 0 && wminors < 2 && bminors < 2) mat.flags |= 1;
-                            else if (!wp && !bp && majors == 0 && minors == 2 && (wn == 2 || bn == 2)) mat.flags |= 1;
+                            if (!wp && !bp) {
+                                if (majors == 0 && wminors < 2 && bminors < 2) mat.flags |= 1;
+                                if (majors == 0 && minors == 2 && (wn == 2 || bn == 2)) mat.flags |= 1;
+                                if (majors == 1 && wr == 1 && wminors == 0 && bminors == 1) mat.flags |= 2;
+                                if (majors == 1 && br == 1 && bminors == 0 && wminors == 1) mat.flags |= 2;
+                                if (majors == 2 && wr == 1 && br == 1 && minors < 2) mat.flags |= 2;
+                            }
                         }
     }
     material_t& getMaterial(int idx1, int idx2) {

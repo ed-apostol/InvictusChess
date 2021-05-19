@@ -54,6 +54,7 @@ const std::string StartFEN = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq
 const int MAXPLY = 127;
 const int MAXPLYSIZE = 128;
 const int MATE = 32750;
+const int NOVALUE = -32751;
 
 enum Square {
     A1, B1, C1, D1, E1, F1, G1, H1,

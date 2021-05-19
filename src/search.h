@@ -75,6 +75,7 @@ struct search_t : public thread_t {
     move_t rootmove;
     movelist_t<128> pvlist[MAXPLYSIZE];
     movelist_t<64> playedmoves[MAXPLYSIZE];
+    int evalvalue[MAXPLYSIZE];
     uint16_t killer1[MAXPLYSIZE];
     uint16_t killer2[MAXPLYSIZE];
     uint16_t countermove[2][7][64];

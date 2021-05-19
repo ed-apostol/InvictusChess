@@ -54,9 +54,9 @@ void trans_table_t::store(uint64_t hash, move_t move, int depth, int bound) {
     replace->depth = depth;
 }
 
-void abdada_table_t::setBusy(const uint32_t hash, int depth) {
+void abdada_table_t::setBusy(const uint32_t hash, uint16_t m, int d) {
     int lowest = INT_MAX;
-    uint32_t key = hashkey(hash, depth);
+    uint32_t key = hashkey(hash, m, d);
     move_hash_t *entry = &getEntry(hash).bucket[0], *replace = entry;
     for (int t = 4; t--; ++entry) {
         if (entry->hashlock == key) return;
@@ -65,16 +65,16 @@ void abdada_table_t::setBusy(const uint32_t hash, int depth) {
     replace->hashlock = key;
 }
 
-void abdada_table_t::resetBusy(const uint32_t hash, int depth) {
-    uint32_t key = hashkey(hash, depth);
+void abdada_table_t::resetBusy(const uint32_t hash, uint16_t m, int d) {
+    uint32_t key = hashkey(hash, m, d);
     move_hash_t *entry = &getEntry(hash).bucket[0];
     for (int t = 4; t--; ++entry) {
         if (entry->hashlock == key) entry->hashlock = 0;
     }
 }
 
-bool abdada_table_t::isBusy(const uint32_t hash, int depth) {
-    uint32_t key = hashkey(hash, depth);
+bool abdada_table_t::isBusy(const uint32_t hash, uint16_t m, int d) {
+    uint32_t key = hashkey(hash, m, d);
     move_hash_t *entry = &getEntry(hash).bucket[0];
     for (int t = 4; t--; ++entry) {
         if (entry->hashlock == key) return true;
