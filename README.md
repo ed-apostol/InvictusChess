@@ -6,7 +6,7 @@ Features:
 * -magic bitboards move generation with pext optimizations
 * -PVS search on top of alpha-beta and iterative aspiration window search
 * -null move pruning, and other search heuristics
-* -SMP using a modified ABDADA algorithm that should scale well with large number of threads/processors
+* -one of the best multi-threading implementation out there, using a modified ABDADA algorithm that should scale well with large number of threads/processors
 * -Texel tuning with Stochastic Gradient Descent using Adam optimizer
 * -Texel tuning with local search
 
@@ -17,4 +17,6 @@ To Do:
 * -Syzygy support
 * -Polyglot opening book support
 
-Thanks Kan for the logo! Thanks TCEC for giving me motivation to work with the engine!
+Thanks Kan for the logo! 
+Thanks TCEC for giving me motivation to work with the engine! 
+Thanks Tom Kerrigan (of TSCP fame) for the ABDADA idea!
