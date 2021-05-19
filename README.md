@@ -9,6 +9,7 @@ Features:
 * -one of the best multi-threading implementation out there, using a modified ABDADA algorithm that should scale well with large number of threads/processors
 * -Texel tuning with Stochastic Gradient Descent using Adam optimizer
 * -Texel tuning with local search
+* -NUMA support
 
 Invictus is influenced by other excellent open source projects especially Stocksfish, Ethereal, and Defenchess. Special thanks to Minic from which I learned the Texel tuning code.
 
