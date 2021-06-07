@@ -17,6 +17,7 @@ struct eval_t {
     void kingsafety(position_t& p, int side);
     void threats(position_t& p, int side);
     void passedpawns(position_t& p, int side);
+    void space(position_t& p, int side);
     basic_score_t score(position_t& p);
     uint64_t pawnatks[2];
     uint64_t knightatks[2];
@@ -27,12 +28,7 @@ struct eval_t {
     uint64_t allatks2[2];
     uint64_t kingzone[2];
     uint64_t pawnfillatks[2];
-    uint64_t pawnshelter[2];
-    uint64_t pawnstorm[2];
-    basic_score_t katkrscnt[2];
-    basic_score_t atkweights[2];
-    basic_score_t kzoneatks[2];
-
+    uint64_t katkrs[2];
     score_t scr[2];
     basic_score_t phase;
 };

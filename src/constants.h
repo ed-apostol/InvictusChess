@@ -153,3 +153,4 @@ const uint64_t Rank7ByColorBB[2] = { Rank7BB, Rank2BB };
 const uint64_t Rank4ByColorBB[2] = { Rank4BB, Rank5BB };
 const uint64_t Rank3ByColorBB[2] = { Rank3BB, Rank6BB };
 const uint64_t Rank2ByColorBB[2] = { Rank2BB, Rank7BB };
+const uint64_t Rank1ByColorBB[2] = { Rank1BB, Rank8BB };

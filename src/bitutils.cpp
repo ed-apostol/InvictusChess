@@ -41,8 +41,8 @@ namespace BitUtils {
     int bitCnt(uint64_t x) {
         return __popcnt64(x);
     }
-}
 #endif
+}
 #else
 namespace BitUtils {
     int getFirstBit(uint64_t bb) {

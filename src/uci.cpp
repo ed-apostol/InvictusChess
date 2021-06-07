@@ -16,7 +16,7 @@
 const std::string uci_t::name = "Invictus";
 const std::string uci_t::author = "Edsel Apostol";
 const std::string uci_t::year = "2021";
-const std::string uci_t::version = "r340";
+const std::string uci_t::version = "r382";
 
 void uci_t::info() {
     LogAndPrintOutput() << name << " " << version;
@@ -64,6 +64,7 @@ bool uci_t::input(iss& stream) {
     else if (cmd == "d") displaypos();
     else if (cmd == "speedup") speedup(stream);
     else if (cmd == "tune") tune();
+    else if (cmd == "see") see();
     else LogAndPrintOutput() << "Invalid cmd: " << cmd;
 
     return true;
@@ -143,7 +144,8 @@ void uci_t::positioncmd(iss& stream) {
         for (move_t m : ml) {
             if (m.to_str() == token) {
                 found = true;
-                engine.origpos.doMove(undo, m);
+                int ply = 0;
+                engine.origpos.doMove(undo, m, ply);
                 break;
             }
         }
@@ -169,6 +171,23 @@ void uci_t::tune() {
 #ifdef TUNE
     Tuner::Tune("lichess-quiet.txt");
 #endif
+}
+
+void uci_t::see() {
+    std::vector<std::string> fenPos = {
+        "r4rk1/2q1bppp/p1N1b3/1p1np1Pn/8/2N1BP2/PPPQ3P/1K1R1BR1 b - - 1 17 "
+    };
+
+    for (auto fen : fenPos) {
+        engine.origpos.setPosition(fen);
+        displaypos();
+        movelist_t<256> ml;
+        engine.origpos.genTacticalMoves(ml);
+        for (move_t m : ml) {
+            PrintOutput() << m.to_str() << " " << engine.origpos.staticExchangeEval(m, 0);
+        }
+        PrintOutput() << "\n\n\n";
+    }
 }
 
 void uci_t::perftbench(iss& stream) {

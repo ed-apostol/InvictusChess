@@ -33,6 +33,7 @@ private:
     void displayID();
     void quit();
     void tune();
+    void see();
     void perftbench(iss& stream);
     void perft(iss& stream);
     void eval();

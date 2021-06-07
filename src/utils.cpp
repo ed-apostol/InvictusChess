@@ -11,16 +11,21 @@
 #include "utils.h"
 
 namespace Utils {
-    void printBitBoard(uint64_t b) {
+    std::string printBitBoard(uint64_t b) {
+        std::string str;
         for (int j = 7; j >= 0; --j) {
+            str += '1' + j;
+            str += " ";
             for (int i = 0; i <= 7; ++i) {
                 int sq = (j * 8) + i;
-                if (BitMask[sq] & b) std::cout << "X";
-                else std::cout << ".";
-                std::cout << " ";
+                if (BitMask[sq] & b) str += "1";
+                else str += ".";
+                str += " ";
             }
-            std::cout << "\n";
+            str += "\n";
         }
+        str += "  a b c d e f g h\n";
+        return str;
     }
 
     uint64_t getTime(void) {

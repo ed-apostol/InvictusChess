@@ -19,23 +19,23 @@ namespace EvalParam {
     extern score_t PawnIsolatedOpen;
     extern score_t PawnBackwardOpen;
 
-    extern score_t PasserBonusMin;
-    extern score_t PasserBonusMax;
-    extern score_t PasserDistOwn;
-    extern score_t PasserDistEnemy;
-    extern score_t PasserNotBlocked;
-    extern score_t PasserSafePush;
-    extern score_t PasserSafeProm;
+    extern score_t PasserDistOwn[8];
+    extern score_t PasserDistEnemy[8];
+    extern score_t PasserBonus[8];
+    extern score_t PasserNotBlocked[8];
+    extern score_t PasserSafePush[8];
+    extern score_t PasserSafeProm[8];
 
-    extern score_t KnightMob;
-    extern score_t BishopMob;
-    extern score_t RookMob;
-    extern score_t QueenMob;
+    extern score_t KnightMob[9];
+    extern score_t BishopMob[14];
+    extern score_t RookMob[15];
+    extern score_t QueenMob[28];
     extern score_t RookOn7th;
     extern score_t RookOnSemiOpenFile;
     extern score_t RookOnOpenFile;
     extern score_t OutpostBonus;
     extern score_t BishopPawns;
+    extern score_t CenterSquares;
     extern basic_score_t Tempo;
 
     extern score_t PawnPush;
@@ -48,23 +48,25 @@ namespace EvalParam {
     extern score_t KingxMinors;
     extern score_t KingxRooks;
 
-    extern basic_score_t KingShelter1;
-    extern basic_score_t KingShelter2;
-    extern basic_score_t KingStorm1;
-    extern basic_score_t KingStorm2;
-
     extern basic_score_t KnightAtk;
     extern basic_score_t BishopAtk;
     extern basic_score_t RookAtk;
     extern basic_score_t QueenAtk;
-    extern basic_score_t AttackValue;
+    extern basic_score_t KingZoneAttacks;
     extern basic_score_t WeakSquares;
-    extern basic_score_t NoEnemyQueens;
     extern basic_score_t EnemyPawns;
     extern basic_score_t QueenSafeCheckValue;
     extern basic_score_t RookSafeCheckValue;
     extern basic_score_t BishopSafeCheckValue;
     extern basic_score_t KnightSafeCheckValue;
+
+    extern basic_score_t KingShelter1;
+    extern basic_score_t KingShelter2;
+    extern basic_score_t KingStorm1;
+    extern basic_score_t KingStorm2;
+
+    extern score_t PieceSpace;
+    extern score_t EmptySpace;
 
     extern basic_score_t KnightPhase;
     extern basic_score_t BishopPhase;

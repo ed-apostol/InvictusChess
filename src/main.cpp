@@ -15,8 +15,5 @@ int main(void) {
 }
 
 // TODO:
-// counter moves history
-// capture moves history
-// follow up move history
 // Syzygy
 // NNUE

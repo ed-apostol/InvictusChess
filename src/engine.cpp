@@ -67,13 +67,13 @@ void engine_t::initSearch() {
     time_range = time_limit_max;
     time_limit_max += start_time;
     time_limit_abs += start_time;
-    use_time = !limits.ponder && (mytime || limits.movetime);
+    use_time = !limits.ponder && (mytime || limits.movetime || t_inc);
     stop = false;
     resolve_iter = false;
     rootbestmove.m = 0;
     rdepth = 1;
     alpha = -MATE;
-    beta = -MATE;
+    beta = MATE;
 
     defer_depth = options["ABDADA Depth"].getIntVal();
     cutoffcheck_depth = options["Cutoff Check Depth"].getIntVal();

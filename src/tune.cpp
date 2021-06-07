@@ -15,21 +15,24 @@
 #include "eval.h"
 #include "params.h"
 
+#define N(v) (#v)
+
 #ifdef TUNE
 namespace Tuner {
     using Ldouble = long double;
 
-    Ldouble K = 1.37621;
-    const int num_threads = 7;
+    Ldouble K = 1.37996;
+    const int num_threads = 4;
 
-    const int TuneAll = 0;
+    const int TuneAll = 1;
     const int TuneMaterial = 0;
     const int TuneActivity = 0;
     const int TunePawnStructure = 0;
     const int TuneThreats = 0;
     const int TuneKingSafety = 0;
     const int TunePassedPawns = 0;
-    const int TunePhase = 1;
+    const int TunePhase = 0;
+    const int TuneNew = 0;
 
     struct PositionResults {
         position_t* p;
@@ -183,6 +186,7 @@ namespace Tuner {
     void LocalSearch(std::vector<TunerParam>& params, std::vector<PositionResults>& data) {
         std::ofstream str("tuned.txt");
         const std::vector<Ldouble> delta = { 1, -1 };
+        std::vector<Ldouble> last_delta(params.size(), 1.0);
 
         Ldouble currError = Error(data, data.size());
         PrintOutput() << "Base Error: " << currError;
@@ -193,21 +197,31 @@ namespace Tuner {
             PrintOutput() << "\n\nEpoch = " << epoch << " start error = " << currError;
             Ldouble baseError = currError;
             Randomize(data);
+            int k = -1;
             for (auto par : params) {
-                bool improved = false;
+                ++k;
                 const basic_score_t oldpar = par;
-                for (auto d : delta) {
-                    if (improved) break;
-                    par = oldpar + d;
-                    if (oldpar == par) continue; // reached upper or lower
+                par = oldpar + last_delta[k];
+                if (oldpar != par) {
                     Ldouble error = Error(data, data.size());
                     if (error < currError) {
                         currError = error;
-                        improved = true;
                         PrintOutput() << par.name << " " << oldpar << " --> " << par;
+                        continue;
                     }
                 }
-                if (!improved) par = oldpar;
+                par = oldpar + last_delta[k] * -1.0;
+                if (oldpar != par) {
+                    Ldouble error = Error(data, data.size());
+                    if (error < currError) {
+                        currError = error;
+                        last_delta[k] = last_delta[k] * -1.0;
+                        PrintOutput() << par.name << " " << oldpar << " --> " << par;
+                        continue;
+                    }
+                }
+                par = oldpar;
+                last_delta[k] = last_delta[k] * -1.0;
             }
             PrintParams(str, params, baseError, currError, epoch);
             if (baseError == currError) break;
@@ -247,115 +261,130 @@ namespace Tuner {
         std::vector<TunerParam> input;
 
         if (TuneAll || TuneMaterial) {
-            //input.push_back({MaterialValues[PAWN].m, 0, 2000, "PawnVal.m"}); // peg to 100
-            input.push_back({ MaterialValues[PAWN].e, 0, 2000, "PawnVal.e" });
-            input.push_back({ MaterialValues[KNIGHT].m, 0, 2000, "KnightVal.m" });
-            input.push_back({ MaterialValues[KNIGHT].e, 0, 2000, "KnightVal.e" });
-            input.push_back({ MaterialValues[BISHOP].m, 0, 2000, "BishopVal.m" });
-            input.push_back({ MaterialValues[BISHOP].e, 0, 2000, "BishopVal.e" });
-            input.push_back({ MaterialValues[ROOK].m, 0, 2000, "RookVal.m" });
-            input.push_back({ MaterialValues[ROOK].e, 0, 2000, "RookVal.e" });
-            input.push_back({ MaterialValues[QUEEN].m, 0, 2000, "QueenVal.m" });
-            input.push_back({ MaterialValues[QUEEN].e, 0, 2000, "QueenVal.e" });
-            input.push_back({ BishopPair.m, 0, 100, "BishopPair.m" });
-            input.push_back({ BishopPair.e, 0, 100, "BishopPair.e" });
+            //input.push_back({MaterialValues[PAWN].m, 0, 2000, N(PawnVal.m"}); // peg to 100
+            input.push_back({ MaterialValues[PAWN].e, 0, 2000, N(PawnVal.e) });
+            input.push_back({ MaterialValues[KNIGHT].m, 0, 2000, N(KnightVal.m) });
+            input.push_back({ MaterialValues[KNIGHT].e, 0, 2000, N(KnightVal.e) });
+            input.push_back({ MaterialValues[BISHOP].m, 0, 2000, N(BishopVal.m) });
+            input.push_back({ MaterialValues[BISHOP].e, 0, 2000, N(BishopVal.e) });
+            input.push_back({ MaterialValues[ROOK].m, 0, 2000, N(RookVal.m) });
+            input.push_back({ MaterialValues[ROOK].e, 0, 2000, N(RookVal.e) });
+            input.push_back({ MaterialValues[QUEEN].m, 0, 2000, N(QueenVal.m) });
+            input.push_back({ MaterialValues[QUEEN].e, 0, 2000, N(QueenVal.e) });
+            input.push_back({ BishopPair.m, 0, 100, N(BishopPair.m) });
+            input.push_back({ BishopPair.e, 0, 100, N(BishopPair.e) });
         }
         if (TuneAll || TunePawnStructure) {
-            input.push_back({ PawnConnected.m, 0, 100, "PawnConnected.m" });
-            input.push_back({ PawnConnected.e, 0, 100, "PawnConnected.e" });
-            input.push_back({ PawnDoubled.m, 0, 100, "PawnDoubled.m" });
-            input.push_back({ PawnDoubled.e, 0, 100, "PawnDoubled.e" });
-            input.push_back({ PawnIsolated.m, 0, 100, "PawnIsolated.m" });
-            input.push_back({ PawnIsolated.e, 0, 100, "PawnIsolated.e" });
-            input.push_back({ PawnBackward.m, 0, 100, "PawnBackward.m" });
-            input.push_back({ PawnBackward.e, 0, 100, "PawnBackward.e" });
-            input.push_back({ PawnIsolatedOpen.m, 0, 100, "PawnIsolatedOpen.m" });
-            input.push_back({ PawnIsolatedOpen.e, 0, 100, "PawnIsolatedOpen.e" });
-            input.push_back({ PawnBackwardOpen.m, 0, 100, "PawnBackwardOpen.m" });
-            input.push_back({ PawnBackwardOpen.e, 0, 100, "PawnBackwardOpen.e" });
+            input.push_back({ PawnConnected.m, 0, 100, N(PawnConnected.m) });
+            input.push_back({ PawnConnected.e, 0, 100, N(PawnConnected.e) });
+            input.push_back({ PawnDoubled.m, 0, 100, N(PawnDoubled.m) });
+            input.push_back({ PawnDoubled.e, 0, 100, N(PawnDoubled.e) });
+            input.push_back({ PawnIsolated.m, 0, 100, N(PawnIsolated.m) });
+            input.push_back({ PawnIsolated.e, 0, 100, N(PawnIsolated.e) });
+            input.push_back({ PawnBackward.m, 0, 100, N(PawnBackward.m) });
+            input.push_back({ PawnBackward.e, 0, 100, N(PawnBackward.e) });
+            input.push_back({ PawnIsolatedOpen.m, 0, 100, N(PawnIsolatedOpen.m) });
+            input.push_back({ PawnIsolatedOpen.e, 0, 100, N(PawnIsolatedOpen.e) });
+            input.push_back({ PawnBackwardOpen.m, 0, 100, N(PawnBackwardOpen.m) });
+            input.push_back({ PawnBackwardOpen.e, 0, 100, N(PawnBackwardOpen.e) });
         }
         if (TuneAll || TunePassedPawns) {
-            input.push_back({ PasserBonusMin.m, 0, 200, "PasserBonusMin.m" });
-            input.push_back({ PasserBonusMin.e, 0, 200, "PasserBonusMin.e" });
-            input.push_back({ PasserBonusMax.m, 0, 200, "PasserBonusMax.m" });
-            input.push_back({ PasserBonusMax.e, 0, 200, "PasserBonusMax.e" });
-            input.push_back({ PasserDistOwn.m, 0, 200, "PasserDistOwn.m" });
-            input.push_back({ PasserDistOwn.e, 0, 200, "PasserDistOwn.e" });
-            input.push_back({ PasserDistEnemy.m, 0, 200, "PasserDistEnemy.m" });
-            input.push_back({ PasserDistEnemy.e, 0, 200, "PasserDistEnemy.e" });
-            input.push_back({ PasserNotBlocked.m, 0, 200, "PasserNotBlocked.m" });
-            input.push_back({ PasserNotBlocked.e, 0, 200, "PasserNotBlocked.e" });
-            input.push_back({ PasserSafePush.m, 0, 200, "PasserSafePush.m" });
-            input.push_back({ PasserSafePush.e, 0, 200, "PasserSafePush.e" });
-            input.push_back({ PasserSafeProm.m, 0, 200, "PasserSafeProm.m" });
-            input.push_back({ PasserSafeProm.e, 0, 200, "PasserSafeProm.e" });
+            for (int rank = 1; rank <= 6; ++rank) {
+                input.push_back({ PasserDistOwn[rank].m, 0, 1000, "PasserDistOwn[" + std::to_string(rank) + "].m" });
+                input.push_back({ PasserDistOwn[rank].e, 0, 1000, "PasserDistOwn[" + std::to_string(rank) + "].e" });
+                input.push_back({ PasserDistEnemy[rank].m, 0, 1000, "PasserDistEnemy[" + std::to_string(rank) + "].m" });
+                input.push_back({ PasserDistEnemy[rank].e, 0, 1000, "PasserDistEnemy[" + std::to_string(rank) + "].e" });
+                input.push_back({ PasserBonus[rank].m, 0, 1000, "PasserBonus[" + std::to_string(rank) + "].m" });
+                input.push_back({ PasserBonus[rank].e, 0, 1000, "PasserBonus[" + std::to_string(rank) + "].e" });
+                input.push_back({ PasserNotBlocked[rank].m, 0, 1000, "PasserNotBlocked[" + std::to_string(rank) + "].m" });
+                input.push_back({ PasserNotBlocked[rank].e, 0, 1000, "PasserNotBlocked[" + std::to_string(rank) + "].e" });
+                input.push_back({ PasserSafePush[rank].m, 0, 1000, "PasserSafePush[" + std::to_string(rank) + "].m" });
+                input.push_back({ PasserSafePush[rank].e, 0, 1000, "PasserSafePush[" + std::to_string(rank) + "].e" });
+                input.push_back({ PasserSafeProm[rank].m, 0, 1000, "PasserSafeProm[" + std::to_string(rank) + "].m" });
+                input.push_back({ PasserSafeProm[rank].e, 0, 1000, "PasserSafeProm[" + std::to_string(rank) + "].e" });
+            }
         }
         if (TuneAll || TuneActivity) {
-            input.push_back({ KnightMob.m, 0, 100, "KnightMob.m" });
-            input.push_back({ KnightMob.e, 0, 100, "KnightMob.e" });
-            input.push_back({ BishopMob.m, 0, 100, "BishopMob.m" });
-            input.push_back({ BishopMob.e, 0, 100, "BishopMob.e" });
-            input.push_back({ RookMob.m, 0, 100, "RookMob.m" });
-            input.push_back({ RookMob.e, 0, 100, "RookMob.e" });
-            input.push_back({ QueenMob.m, 0, 100, "QueenMob.m" });
-            input.push_back({ QueenMob.e, 0, 100, "QueenMob.e" });
-            input.push_back({ RookOn7th.m, 0, 100, "RookOn7th.m" });
-            input.push_back({ RookOn7th.e, 0, 100, "RookOn7th.e" });
-            input.push_back({ RookOnSemiOpenFile.m, 0, 100, "RookOnSemiOpenFile.m" });
-            input.push_back({ RookOnSemiOpenFile.e, 0, 100, "RookOnSemiOpenFile.e" });
-            input.push_back({ RookOnOpenFile.m, 0, 100, "RookOnOpenFile.m" });
-            input.push_back({ RookOnOpenFile.e, 0, 100, "RookOnOpenFile.e" });
-            input.push_back({ OutpostBonus.m, 0, 100, "OutpostBonus.m" });
-            input.push_back({ OutpostBonus.e, 0, 100, "OutpostBonus.e" });
-            input.push_back({ BishopPawns.m, 0, 100, "BishopPawns.m" });
-            input.push_back({ BishopPawns.e, 0, 100, "BishopPawns.e" });
-            input.push_back({ Tempo, 0, 100, "Tempo" });
+            for (int cnt = 0; cnt < 9; ++cnt) {
+                input.push_back({ KnightMob[cnt].m, -300, 300, "KnightMob[" + std::to_string(cnt) + "].m" });
+                input.push_back({ KnightMob[cnt].e, -300, 300, "KnightMob[" + std::to_string(cnt) + "].e" });
+            }
+            for (int cnt = 0; cnt < 14; ++cnt) {
+                input.push_back({ BishopMob[cnt].m, -300, 300, "BishopMob[" + std::to_string(cnt) + "].m" });
+                input.push_back({ BishopMob[cnt].e, -300, 300, "BishopMob[" + std::to_string(cnt) + "].e" });
+            }
+            for (int cnt = 0; cnt < 15; ++cnt) {
+                input.push_back({ RookMob[cnt].m, -300, 300, "RookMob[" + std::to_string(cnt) + "].m" });
+                input.push_back({ RookMob[cnt].e, -300, 300, "RookMob[" + std::to_string(cnt) + "].e" });
+            }
+            for (int cnt = 0; cnt < 28; ++cnt) {
+                input.push_back({ QueenMob[cnt].m, -300, 300, "QueenMob[" + std::to_string(cnt) + "].m" });
+                input.push_back({ QueenMob[cnt].e, -300, 300, "QueenMob[" + std::to_string(cnt) + "].e" });
+            }
+            input.push_back({ RookOn7th.m, 0, 100, N(RookOn7th.m) });
+            input.push_back({ RookOn7th.e, 0, 100, N(RookOn7th.e) });
+            input.push_back({ RookOnSemiOpenFile.m, 0, 100, N(RookOnSemiOpenFile.m) });
+            input.push_back({ RookOnSemiOpenFile.e, 0, 100, N(RookOnSemiOpenFile.e) });
+            input.push_back({ RookOnOpenFile.m, 0, 100, N(RookOnOpenFile.m) });
+            input.push_back({ RookOnOpenFile.e, 0, 100, N(RookOnOpenFile.e) });
+            input.push_back({ OutpostBonus.m, 0, 100, N(OutpostBonus.m) });
+            input.push_back({ OutpostBonus.e, 0, 100, N(OutpostBonus.e) });
+            input.push_back({ BishopPawns.m, 0, 100, N(BishopPawns.m) });
+            input.push_back({ BishopPawns.e, 0, 100, N(BishopPawns.e) });
+            input.push_back({ Tempo, 0, 100, N(Tempo) });
         }
         if (TuneAll || TuneThreats) {
-            input.push_back({ PawnPush.m, 0, 100, "PawnPush.m" });
-            input.push_back({ PawnPush.e, 0, 100, "PawnPush.e" });
-            input.push_back({ WeakPawns.m, 0, 100, "WeakPawns.m" });
-            input.push_back({ WeakPawns.e, 0, 100, "WeakPawns.e" });
-            input.push_back({ PawnsxMinors.m, 0, 100, "PawnsxMinors.m" });
-            input.push_back({ PawnsxMinors.e, 0, 100, "PawnsxMinors.e" });
-            input.push_back({ MinorsxMinors.m, 0, 100, "MinorsxMinors.m" });
-            input.push_back({ MinorsxMinors.e, 0, 100, "MinorsxMinors.e" });
-            input.push_back({ MajorsxWeakMinors.m, 0, 100, "MajorsxWeakMinors.m" });
-            input.push_back({ MajorsxWeakMinors.e, 0, 100, "MajorsxWeakMinors.e" });
-            input.push_back({ PawnsMinorsxMajors.m, 0, 100, "PawnsMinorsxMajors.m" });
-            input.push_back({ PawnsMinorsxMajors.e, 0, 100, "PawnsMinorsxMajors.e" });
-            input.push_back({ AllxQueens.m, 0, 100, "AllxQueens.m" });
-            input.push_back({ AllxQueens.e, 0, 100, "AllxQueens.e" });
-            input.push_back({ KingxMinors.m, 0, 100, "KingxMinors.m" });
-            input.push_back({ KingxMinors.e, 0, 100, "KingxMinors.e" });
-            input.push_back({ KingxRooks.m, 0, 100, "KingxRooks.m" });
-            input.push_back({ KingxRooks.e, 0, 100, "KingxRooks.e" });
+            input.push_back({ PawnPush.m, 0, 100, N(PawnPush.m) });
+            input.push_back({ PawnPush.e, 0, 100, N(PawnPush.e) });
+            input.push_back({ WeakPawns.m, 0, 100, N(WeakPawns.m) });
+            input.push_back({ WeakPawns.e, 0, 100, N(WeakPawns.e) });
+            input.push_back({ PawnsxMinors.m, 0, 100, N(PawnsxMinors.m) });
+            input.push_back({ PawnsxMinors.e, 0, 100, N(PawnsxMinors.e) });
+            input.push_back({ MinorsxMinors.m, 0, 100, N(MinorsxMinors.m) });
+            input.push_back({ MinorsxMinors.e, 0, 100, N(MinorsxMinors.e) });
+            input.push_back({ MajorsxWeakMinors.m, 0, 100, N(MajorsxWeakMinors.m) });
+            input.push_back({ MajorsxWeakMinors.e, 0, 100, N(MajorsxWeakMinors.e) });
+            input.push_back({ PawnsMinorsxMajors.m, 0, 100, N(PawnsMinorsxMajors.m) });
+            input.push_back({ PawnsMinorsxMajors.e, 0, 100, N(PawnsMinorsxMajors.e) });
+            input.push_back({ AllxQueens.m, 0, 100, N(AllxQueens.m) });
+            input.push_back({ AllxQueens.e, 0, 100, N(AllxQueens.e) });
+            input.push_back({ KingxMinors.m, 0, 100, N(KingxMinors.m) });
+            input.push_back({ KingxMinors.e, 0, 100, N(KingxMinors.e) });
+            input.push_back({ KingxRooks.m, 0, 100, N(KingxRooks.m) });
+            input.push_back({ KingxRooks.e, 0, 100, N(KingxRooks.e) });
         }
         if (TuneAll || TuneKingSafety) {
-            input.push_back({ KingShelter1, 0, 100, "KingShelter1" });
-            input.push_back({ KingShelter2, 0, 100, "KingShelter2" });
-            input.push_back({ KingStorm1, 0, 100, "KingStorm1" });
-            input.push_back({ KingStorm2, 0, 100, "KingStorm2" });
-            input.push_back({ KnightAtk, 0, 200, "KnightAtk" });
-            input.push_back({ BishopAtk, 0, 200, "BishopAtk" });
-            input.push_back({ RookAtk, 0, 200, "RookAtk" });
-            input.push_back({ QueenAtk, 0, 200, "QueenAtk" });
-            input.push_back({ AttackValue, 0, 200, "AttackValue" });
-            input.push_back({ WeakSquares, 0, 200, "WeakSquares" });
-            input.push_back({ NoEnemyQueens, 0, 200, "NoEnemyQueens" });
-            input.push_back({ EnemyPawns, 0, 200, "EnemyPawns" });
-            input.push_back({ QueenSafeCheckValue, 0, 200, "QueenSafeCheckValue" });
-            input.push_back({ RookSafeCheckValue, 0, 200, "RookSafeCheckValue" });
-            input.push_back({ BishopSafeCheckValue, 0, 200, "BishopSafeCheckValue" });
-            input.push_back({ KnightSafeCheckValue, 0, 200, "KnightSafeCheckValue" });
+            input.push_back({ KnightAtk, 0, 200, N(KnightAtk) });
+            input.push_back({ BishopAtk, 0, 200, N(BishopAtk) });
+            input.push_back({ RookAtk, 0, 200, N(RookAtk) });
+            input.push_back({ QueenAtk, 0, 200, N(QueenAtk) });
+            input.push_back({ KingZoneAttacks, 0, 200, N(KingZoneAttacks) });
+            input.push_back({ WeakSquares, 0, 200, N(WeakSquares) });
+            input.push_back({ EnemyPawns, 0, 200, N(EnemyPawns) });
+            input.push_back({ QueenSafeCheckValue, 0, 200, N(QueenSafeCheckValue) });
+            input.push_back({ RookSafeCheckValue, 0, 200, N(RookSafeCheckValue) });
+            input.push_back({ BishopSafeCheckValue, 0, 200, N(BishopSafeCheckValue) });
+            input.push_back({ KnightSafeCheckValue, 0, 200, N(KnightSafeCheckValue) });
+            input.push_back({ KingShelter1, 0, 100, N(KingShelter1) });
+            input.push_back({ KingShelter2, 0, 100, N(KingShelter2) });
+            input.push_back({ KingStorm1, 0, 100, N(KingStorm1) });
+            input.push_back({ KingStorm2, 0, 100, N(KingStorm2) });
         }
         if (TuneAll || TunePhase) {
-            input.push_back({ KnightPhase, 0, 100, "KnightPhase" });
-            input.push_back({ BishopPhase, 0, 100, "BishopPhase" });
-            input.push_back({ RookPhase, 0, 100, "RookPhase" });
-            input.push_back({ QueenPhase, 0, 100, "QueenPhase" });
+            input.push_back({ KnightPhase, 0, 100, N(KnightPhase) });
+            input.push_back({ BishopPhase, 0, 100, N(BishopPhase) });
+            input.push_back({ RookPhase, 0, 100, N(RookPhase) });
+            input.push_back({ QueenPhase, 0, 100, N(QueenPhase) });
         }
-        FindBestK(data);
+        if (TuneAll || TuneNew) {
+            input.push_back({ CenterSquares.m, 0, 100, N(CenterSquares.m) });
+            input.push_back({ CenterSquares.e, 0, 100, N(CenterSquares.e) });
+            input.push_back({ PieceSpace.m, 0, 100, N(PieceSpace.m) });
+            input.push_back({ PieceSpace.e, 0, 100, N(PieceSpace.e) });
+            input.push_back({ EmptySpace.m, 0, 100, N(EmptySpace.m) });
+            input.push_back({ EmptySpace.e, 0, 100, N(EmptySpace.e) });
+        }
+        //FindBestK(data);
         PrintOutput() << "Best K " << K;
 
         PrintOutput() << "\nInitial values:";

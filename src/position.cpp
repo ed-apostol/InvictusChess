@@ -114,18 +114,23 @@ void position_t::initPosition() {
     stack.init();
 }
 
-void position_t::undoNullMove(undo_t& undo) {
+void position_t::undoNullMove(undo_t& undo, int& ply) {
     side ^= 1;
     stack = undo;
+    --ply;
 }
 
-void position_t::doNullMove(undo_t& undo) {
+void position_t::doNullMove(undo_t& undo, int& ply) {
     undo = stack;
+    ++ply;
 
     stack.lastmove.m = 0;
     stack.epsq = -1;
     stack.fifty += 1;
     stack.pliesfromnull = 0;
+    stack.capturedpc = EMPTY;
+    stack.movingpc = EMPTY;
+    stack.dest = 0;
 
     if (undo.epsq != -1) stack.hash ^= ZobEpsq[sqFile(undo.epsq)];
 
@@ -133,66 +138,49 @@ void position_t::doNullMove(undo_t& undo) {
     side ^= 1;
 }
 
-void position_t::undoMove(undo_t& undo) {
+void position_t::undoMove(undo_t& undo, int& ply) {
     move_t m = stack.lastmove;
     const int xside = side;
     const int from = m.moveFrom();
     const int to = m.moveTo();
     const int pc = pieces[to];
+    const int cap = stack.capturedpc;
 
     side = xside ^ 1;
+    --ply;
 
-    pieces[from] = pc;
-    piecesBB[pc] ^= BitMask[from] | BitMask[to];
-    colorBB[side] ^= BitMask[from] | BitMask[to];
-
-    const int cap = stack.capturedpc;
-    pieces[to] = cap;
-    if (cap != EMPTY) {
-        piecesBB[cap] ^= BitMask[to];
-        colorBB[xside] ^= BitMask[to];
-        mat_idx[xside] += MatMul[cap];
-    }
-    if (pc == KING) kpos[side] = from;
+    removePiece(false, to, side, pc);
+    setPiece(false, from, side, pc);
+    if (cap != EMPTY) setPiece(false, to, xside, cap);
 
     switch (m.moveFlags()) {
-    case MF_CASTLE: {
-        int rook_from = RookFrom[to / 56][(to % 8) > 5];
-        int rook_to = RookTo[to / 56][(to % 8) > 5];
-        pieces[rook_from] = ROOK;
-        pieces[rook_to] = EMPTY;
-        piecesBB[ROOK] ^= BitMask[rook_from] | BitMask[rook_to];
-        colorBB[side] ^= BitMask[rook_from] | BitMask[rook_to];
-    } break;
-    case MF_ENPASSANT: {
-        int epsq = (sqRank(from) << 3) + sqFile(to);
-        pieces[epsq] = PAWN;
-        mat_idx[xside] += MatMul[PAWN];
-        piecesBB[PAWN] ^= BitMask[epsq];
-        colorBB[xside] ^= BitMask[epsq];
-    } break;
-    case MF_PROMQ: case MF_PROMR: case MF_PROMB: case MF_PROMN: {
-        int prom = m.movePromote();
-        pieces[from] = PAWN;
-        mat_idx[side] += MatMul[PAWN];
-        mat_idx[side] -= MatMul[prom];
-        piecesBB[PAWN] ^= BitMask[from];
-        piecesBB[prom] ^= BitMask[from];
-    } break;
+    case MF_CASTLE:
+        removePiece(false, RookTo[to / 56][(to % 8) > 5], side, ROOK);
+        setPiece(false, RookFrom[to / 56][(to % 8) > 5], side, ROOK);
+        break;
+    case MF_ENPASSANT:
+        setPiece(false, (sqRank(from) << 3) + sqFile(to), xside, PAWN);
+        break;
+    case MF_PROMQ: case MF_PROMR: case MF_PROMB: case MF_PROMN:
+        removePiece(false, from, side, m.movePromote());
+        setPiece(false, from, side, PAWN);
+        break;
     }
-    occupiedBB = colorBB[side] | colorBB[xside];
     stack = undo;
     history.pop_back();
 }
 
-void position_t::doMove(undo_t& undo, move_t m) {
+void position_t::doMove(undo_t& undo, move_t m, int& ply) {
     const int from = m.moveFrom();
     const int to = m.moveTo();
     const int xside = side ^ 1;
+    const int pc = pieces[from];
+    const int cap = pieces[to];
 
     ASSERT(pieces[to] != KING);
 
     undo = stack;
+    ++ply;
 
     if (undo.epsq != -1) stack.hash ^= ZobEpsq[sqFile(undo.epsq)];
     stack.hash ^= ZobCastle[undo.castle];
@@ -203,98 +191,67 @@ void position_t::doMove(undo_t& undo, move_t m) {
     stack.hash ^= ZobCastle[stack.castle];
     stack.fifty += 1;
     stack.pliesfromnull += 1;
-    stack.capturedpc = pieces[to];
+    stack.capturedpc = cap;
+    stack.movingpc = pc;
+    stack.dest = to;
     stack.hash ^= ZobColor;
 
-    const int pc = pieces[from];
-    pieces[to] = pieces[from];
-    pieces[from] = EMPTY;
-    piecesBB[pc] ^= BitMask[from] | BitMask[to];
-    colorBB[side] ^= BitMask[from] | BitMask[to];
-    stack.score[side] += PcSqTab[side][pc][to];
-    stack.score[side] -= PcSqTab[side][pc][from];
-    stack.hash ^= ZobPiece[side][pc][from] ^ ZobPiece[side][pc][to];
-    if (pc == PAWN) {
-        stack.phash ^= ZobPiece[side][pc][from] ^ ZobPiece[side][pc][to];
-        stack.fifty = 0;
-    }
-    if (pc == KING) kpos[side] = to;
+    removePiece(true, from, side, pc);
+    if (cap != EMPTY) removePiece(true, to, xside, cap);
+    setPiece(true, to, side, pc);
+    if (cap != EMPTY || pc == PAWN) stack.fifty = 0;
 
-    const int cap = stack.capturedpc;
-    if (cap != EMPTY) {
-        piecesBB[cap] ^= BitMask[to];
-        colorBB[xside] ^= BitMask[to];
-        stack.score[xside] -= PcSqTab[xside][cap][to];
-        stack.fifty = 0;
-        stack.hash ^= ZobPiece[xside][cap][to];
-        if (cap == PAWN)
-            stack.phash ^= ZobPiece[xside][cap][to];
-        mat_idx[xside] -= MatMul[cap];
-    }
     switch (m.moveFlags()) {
-    case MF_PAWN2: {
+    case MF_PAWN2:
         stack.epsq = (from + to) / 2;
-        if (piecesBB[PAWN] & colorBB[xside] & pawnAttacksBB(stack.epsq, side))
-            stack.hash ^= ZobEpsq[sqFile(stack.epsq)];
-        else
-            stack.epsq = -1;
+        getPieceBB(PAWN, xside) & pawnAttacksBB(stack.epsq, side) ?
+            stack.hash ^= ZobEpsq[sqFile(stack.epsq)] : stack.epsq = -1;
+        break;
+    case MF_CASTLE:
+        removePiece(true, RookFrom[to / 56][(to % 8) > 5], side, ROOK);
+        setPiece(true, RookTo[to / 56][(to % 8) > 5], side, ROOK);
         stack.fifty = 0;
-    } break;
-    case MF_CASTLE: {
-        const int rook_from = RookFrom[to / 56][(to % 8) > 5];
-        const int rook_to = RookTo[to / 56][(to % 8) > 5];
-        pieces[rook_to] = ROOK;
-        pieces[rook_from] = EMPTY;
-        piecesBB[ROOK] ^= BitMask[rook_from] | BitMask[rook_to];
-        colorBB[side] ^= BitMask[rook_from] | BitMask[rook_to];
-        stack.score[side] += PcSqTab[side][ROOK][rook_to];
-        stack.score[side] -= PcSqTab[side][ROOK][rook_from];
-        stack.hash ^= ZobPiece[side][ROOK][rook_from] ^ ZobPiece[side][ROOK][rook_to];
-    } break;
-    case MF_ENPASSANT: {
-        const int epsq = (sqRank(from) << 3) + sqFile(to);
-        pieces[epsq] = EMPTY;
-        mat_idx[xside] -= MatMul[PAWN];
-        piecesBB[PAWN] ^= BitMask[epsq];
-        colorBB[xside] ^= BitMask[epsq];
-        stack.score[xside] -= PcSqTab[xside][PAWN][epsq];
-        stack.hash ^= ZobPiece[xside][PAWN][epsq];
-        stack.phash ^= ZobPiece[xside][PAWN][epsq];
-        stack.fifty = 0;
-    } break;
-    case MF_PROMQ: case MF_PROMR: case MF_PROMB: case MF_PROMN: {
-        const int prom = m.movePromote();
-        piecesBB[PAWN] ^= BitMask[to]; // remove pawn
-        stack.hash ^= ZobPiece[side][PAWN][to];
-        stack.phash ^= ZobPiece[side][PAWN][to];
-        pieces[to] = prom;
-        mat_idx[side] -= MatMul[PAWN];
-        mat_idx[side] += MatMul[prom];
-        piecesBB[prom] ^= BitMask[to];
-        stack.score[side] += PcSqTab[side][prom][to];
-        stack.score[side] -= PcSqTab[side][PAWN][to];
-        stack.hash ^= ZobPiece[side][prom][to];
-        stack.fifty = 0;
-    } break;
+        break;
+    case MF_ENPASSANT:
+        removePiece(true, (sqRank(from) << 3) + sqFile(to), xside, PAWN);
+        break;
+    case MF_PROMQ: case MF_PROMR: case MF_PROMB: case MF_PROMN:
+        removePiece(true, to, side, PAWN);
+        setPiece(true, to, side, m.movePromote());
+        break;
     }
-    occupiedBB = colorBB[side] | colorBB[xside];
     side = xside;
     history.push_back(stack.hash);
 
-    //ASSERT(hashIsValid());
-    //ASSERT(phashIsValid());
+    ASSERT(hashIsValid());
+    ASSERT(phashIsValid());
 }
 
-void position_t::setPiece(int sq, int c, int pc) {
+void position_t::setPiece(bool update, int sq, int c, int pc) {
     pieces[sq] = pc;
     piecesBB[pc] |= BitMask[sq];
     colorBB[c] |= BitMask[sq];
     occupiedBB |= BitMask[sq];
-    stack.score[c] += PcSqTab[c][pc][sq];
-    stack.hash ^= ZobPiece[c][pc][sq];
-    if (pc == PAWN) stack.phash ^= ZobPiece[c][pc][sq];
     if (pc == KING) kpos[c] = sq;
     mat_idx[c] += MatMul[pc];
+    if (update) {
+        stack.score[c] += PcSqTab[c][pc][sq];
+        stack.hash ^= ZobPiece[c][pc][sq];
+        if (pc == PAWN) stack.phash ^= ZobPiece[c][pc][sq];
+    }
+}
+
+void position_t::removePiece(bool update, int sq, int c, int pc) {
+    pieces[sq] = EMPTY;
+    piecesBB[pc] ^= BitMask[sq];
+    colorBB[c] ^= BitMask[sq];
+    occupiedBB ^= BitMask[sq];
+    mat_idx[c] -= MatMul[pc];
+    if (update) {
+        stack.score[c] -= PcSqTab[c][pc][sq];
+        stack.hash ^= ZobPiece[c][pc][sq];
+        if (pc == PAWN) stack.phash ^= ZobPiece[c][pc][sq];
+    }
 }
 
 void position_t::setPosition(const std::string& fenStr) {
@@ -310,7 +267,7 @@ void position_t::setPosition(const std::string& fenStr) {
         if (isdigit(token)) sq += (token - '0');
         else if (token == '/') sq -= 16;
         else if ((p = pc2char.find(token)) != std::string::npos)
-            setPiece(sq++, (islower(token) ? BLACK : WHITE), char2piece[p % 6]);
+            setPiece(true, sq++, (islower(token) ? BLACK : WHITE), char2piece[p % 6]);
     }
     ss >> token;
     side = (token == 'w' ? WHITE : BLACK);
@@ -328,8 +285,8 @@ void position_t::setPosition(const std::string& fenStr) {
     if (side == WHITE) stack.hash ^= ZobColor;
     stack.hash ^= ZobCastle[stack.castle];
 
-    //ASSERT(hashIsValid());
-    //ASSERT(phashIsValid());
+    ASSERT(hashIsValid());
+    ASSERT(phashIsValid());
 }
 
 std::string position_t::positionToFEN() {
@@ -366,10 +323,9 @@ std::string position_t::positionToFEN() {
 }
 
 std::string position_t::to_str() {
-    std::string str;
     static const std::string piecestr = " PNBRQK pnbrqk";
     static const std::string board = "\n  +---+---+---+---+---+---+---+---+\n";
-    str += positionToFEN() + "\n";
+    std::string str = positionToFEN() + "\n";
     str += "incheck: " + std::to_string(kingIsInCheck());
     str += " capt: " + std::to_string(stack.capturedpc);
     str += " lastmove: " + stack.lastmove.to_str() + "\n";
@@ -502,40 +458,41 @@ uint64_t position_t::discoveredPiecesBB(int c) {
 }
 
 bool position_t::staticExchangeEval(move_t m, int threshold) {
-    static const int StatExEvPcVals[] = { 0, 100,  450,  450,  675, 1300, 0 };
+    static const int PieceVals[] = { 0, 100,  450,  450,  675, 1300, 0 };
+
+    if (m.isCastle()) return true;
+
     const int from = m.moveFrom();
     const int to = m.moveTo();
     const int prom = m.movePromote();
-    const bool isEnPassant = m.isEnPassant();
+    const bool enpassant = m.isEnPassant();
 
-    int piece = prom ? prom : pieces[from];
-    int currval = StatExEvPcVals[pieces[to]] - threshold;
-    if (prom) currval += StatExEvPcVals[prom] - StatExEvPcVals[PAWN];
-    else if (isEnPassant) currval += StatExEvPcVals[PAWN];
-    if (currval < 0) return false;
-    currval -= StatExEvPcVals[piece];
-    if (currval >= 0) return true;
+    int pc = prom ? prom : pieces[from];
+    int val = PieceVals[pieces[to]] - threshold;
+    if (prom) val += PieceVals[prom] - PieceVals[PAWN];
+    else if (enpassant) val += PieceVals[PAWN];
+    if (val < 0) return false;
+    val -= PieceVals[pc];
+    if (val >= 0) return true;
 
     const uint64_t bishops = piecesBB[BISHOP] | piecesBB[QUEEN];
     const uint64_t rooks = piecesBB[ROOK] | piecesBB[QUEEN];
     uint64_t occupied = (occupiedBB ^ BitMask[from]) | BitMask[to];
-    if (isEnPassant) occupied ^= BitMask[stack.epsq];
-    uint64_t allAttackers = allAttackersToSqBB(to, occupied) & occupied;
+    if (enpassant) occupied ^= BitMask[stack.epsq];
+    uint64_t all = allAttackersToSqBB(to, occupied);
     int color = side ^ 1;
-    for (uint64_t mask, attackers; attackers = allAttackers & colorBB[color];) {
-        for (piece = PAWN; !(mask = attackers & piecesBB[piece]); ++piece);
-        occupied ^= BitMask[getFirstBit(mask)];
-        if (piece == PAWN || piece == BISHOP || piece == QUEEN)
-            allAttackers |= bishopAttacksBB(to, occupied) & bishops;
-        if (piece == ROOK || piece == QUEEN)
-            allAttackers |= rookAttacksBB(to, occupied) & rooks;
-        allAttackers &= occupied;
+    for (uint64_t mask, attackers; attackers = (all &= occupied) & colorBB[color];) {
+        for (pc = PAWN; !(mask = attackers & piecesBB[pc]); ++pc);
         color ^= 1;
-        currval = -currval - 1 - StatExEvPcVals[piece];
-        if (currval >= 0) {
-            if (piece == KING && (allAttackers & colorBB[color])) color ^= 1;
+        if ((val = -val - 1 - PieceVals[pc]) >= 0) {
+            if (pc == KING && (all & colorBB[color])) color ^= 1;
             break;
         }
+        occupied ^= BitMask[getFirstBit(mask)];
+        if (pc == PAWN || pc == BISHOP || pc == QUEEN)
+            all |= bishopAttacksBB(to, occupied) & bishops;
+        if (pc == ROOK || pc == QUEEN)
+            all |= rookAttacksBB(to, occupied) & rooks;
     }
     return side != color;
 }

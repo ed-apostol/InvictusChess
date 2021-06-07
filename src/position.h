@@ -28,6 +28,8 @@ struct undo_t {
         phash = 0;
         hash = 0;
         capturedpc = EMPTY;
+        movingpc = EMPTY;
+        dest = 0;
         score[WHITE] = { 0, 0 };
         score[BLACK] = { 0, 0 };
     }
@@ -36,6 +38,8 @@ struct undo_t {
     int32_t fifty;
     int32_t epsq;
     int32_t capturedpc;
+    int32_t movingpc;
+    int32_t dest;
     int32_t pliesfromnull;
     score_t score[2];
     uint64_t phash;
@@ -46,11 +50,12 @@ struct position_t {
     position_t() {}
     position_t(const std::string & fen) { setPosition(fen); }
     void initPosition();
-    void undoNullMove(undo_t& undo);
-    void doNullMove(undo_t& undo);
-    void undoMove(undo_t& undo);
-    void doMove(undo_t& undo, move_t m);
-    void setPiece(int ss, int c, int pc);
+    void undoNullMove(undo_t& undo, int& ply);
+    void doNullMove(undo_t& undo, int& ply);
+    void undoMove(undo_t& undo, int& ply);
+    void doMove(undo_t& undo, move_t m, int& ply);
+    void setPiece(bool update, int sq, int c, int pc);
+    void removePiece(bool update, int sq, int c, int pc);
     void setPosition(const std::string& fenstr);
     std::string positionToFEN();
     std::string to_str();

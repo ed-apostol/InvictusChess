@@ -43,67 +43,74 @@ namespace EvalParam {
         return file[sqFile(sq)] + rank[sqRank(sq)];
     }
 
-    score_t MaterialValues[7] = { { 0, 0 },{ 100, 117 },{ 366, 424 },{ 400, 457 },{ 501, 770 },{ 913, 1592 },{ 0, 0 } };
-    score_t BishopPair = { 23, 66 };
+    score_t MaterialValues[7] = { { 0, 0 },{ 100, 143 },{ 372, 441 },{ 405, 481 },{ 533, 811 },{ 1010, 1609 },{ 0, 0 } };
+    score_t BishopPair = { 28, 71 };
 
-    score_t PawnConnected = { 2, 12 };
-    score_t PawnDoubled = { 10, 1 };
-    score_t PawnIsolated = { 2, 17 };
-    score_t PawnBackward = { 0, 14 };
-    score_t PawnIsolatedOpen = { 28, 17 };
-    score_t PawnBackwardOpen = { 21, 14 };
+    score_t PawnConnected = { 6, 9 };
+    score_t PawnDoubled = { 12, 17 };
+    score_t PawnIsolated = { 3, 9 };
+    score_t PawnBackward = { 0, 10 };
+    score_t PawnIsolatedOpen = { 23, 18 };
+    score_t PawnBackwardOpen = { 22, 17 };
 
-    score_t PasserBonusMin = { 0, 0 };
-    score_t PasserBonusMax = { 34, 105 };
-    score_t PasserDistOwn = { 0, 25 };
-    score_t PasserDistEnemy = { 0, 48 };
-    score_t PasserNotBlocked = { 0, 75 };
-    score_t PasserSafePush = { 0, 25 };
-    score_t PasserSafeProm = { 0, 166 };
+    score_t PasserDistOwn[8] = { { 0, 0 },{ 4, 0 },{ 5, 3 },{ 1, 12 },{ 2, 22 },{ 8, 31 },{ 13, 26 },{ 0, 0 } };
+    score_t PasserDistEnemy[8] = { { 0, 0 },{ 0, 2 },{ 0, 5 },{ 0, 14 },{ 0, 32 },{ 1, 48 },{ 14, 41 },{ 0, 0 } };
+    score_t PasserBonus[8] = { { 0, 0 },{ 0, 0 },{ 0, 6 },{ 0, 5 },{ 24, 16 },{ 85, 28 },{ 115, 89 },{ 0, 0 } };
+    score_t PasserNotBlocked[8] = { { 0, 0 },{ 0, 8 },{ 0, 1 },{ 0, 20 },{ 8, 29 },{ 20, 67 },{ 75, 114 },{ 0, 0 } };
+    score_t PasserSafePush[8] = { { 0, 0 },{ 0, 2 },{ 0, 4 },{ 0, 11 },{ 0, 17 },{ 19, 37 },{ 78, 21 },{ 0, 0 } };
+    score_t PasserSafeProm[8] = { { 0, 0 },{ 0, 22 },{ 0, 6 },{ 0, 26 },{ 0, 53 },{ 0, 120 },{ 37, 200 },{ 0, 0 } };
 
-    score_t KnightMob = { 7, 7 };
-    score_t BishopMob = { 9, 6 };
-    score_t RookMob = { 4, 6 };
-    score_t QueenMob = { 3, 5 };
-    score_t RookOn7th = { 0, 53 };
-    score_t RookOnSemiOpenFile = { 20, 5 };
-    score_t RookOnOpenFile = { 38, 12 };
-    score_t OutpostBonus = { 15, 15 };
-    score_t BishopPawns = { 7, 9 };
+    score_t KnightMob[9] = { { -80, -45 }, { -24, -46 }, { -4, 18 }, { 7, 34 }, { 13, 40 }, { 16, 54 }, { 22, 55 }, { 28, 56 }, { 31, 50 } };
+    score_t BishopMob[14] = { { -64, -72 }, { -22, -38 }, { -12, 8 }, { 0, 29 }, { 13, 33 }, { 21, 42 }, { 26, 49 },
+                            { 31, 53 }, { 33, 57 }, { 33, 60 }, { 35, 61 }, { 42, 54 }, { 46, 61 }, { 63, 43 } };
+    score_t RookMob[15] = { { -101, -139 }, { -48, -80 }, { -13, -14 }, { -3, 6 }, { 4, 20 }, { 6, 33 }, { 6, 41 }, { 9, 41 },
+                            { 13, 45 }, { 18, 50 }, { 17, 58 }, { 17, 63 }, { 15, 70 }, { 18, 72 }, { 17, 72 } };
+    score_t QueenMob[28] = { { -224, -224 }, { -221, 9 }, { -11, -203 }, { -8, -130 }, { 5, 56 }, { 24, 107 }, { 36, 34 },
+                            { 38, 73 }, { 40, 95 }, { 45, 96 }, { 50, 98 }, { 54, 98 }, { 56, 109 }, { 60, 103 },
+                            { 60, 112 }, { 60, 122 }, { 57, 132 }, { 61, 131 }, { 58, 128 }, { 54, 138 }, { 58, 130 },
+                            { 67, 122 }, { 66, 115 }, { 59, 116 }, { 67, 115 },{ 133, 13 }, { 71, 48 }, { 227, -11 } };
+    score_t RookOn7th = { 1, 47 };
+    score_t RookOnSemiOpenFile = { 15, 11 };
+    score_t RookOnOpenFile = { 40, 10 };
+    score_t OutpostBonus = { 17, 12 };
+    score_t BishopPawns = { 6, 10 };
+    score_t CenterSquares = { 14, 2 };
     basic_score_t Tempo = 37;
 
-    score_t PawnPush = { 19, 9 };
-    score_t WeakPawns = { 2, 57 };
-    score_t PawnsxMinors = { 74, 19 };
-    score_t MinorsxMinors = { 30, 40 };
-    score_t MajorsxWeakMinors = { 30, 78 };
-    score_t PawnsMinorsxMajors = { 24, 38 };
-    score_t AllxQueens = { 51, 30 };
-    score_t KingxMinors = { 29, 57 };
-    score_t KingxRooks = { 0, 34 };
+    score_t PawnPush = { 15, 13 };
+    score_t WeakPawns = { 10, 52 };
+    score_t PawnsxMinors = { 65, 27 };
+    score_t MinorsxMinors = { 30, 36 };
+    score_t MajorsxWeakMinors = { 34, 77 };
+    score_t PawnsMinorsxMajors = { 37, 31 };
+    score_t AllxQueens = { 29, 20 };
+    score_t KingxMinors = { 28, 67 };
+    score_t KingxRooks = { 0, 44 };
 
-    basic_score_t KingShelter1 = 29;
-    basic_score_t KingShelter2 = 26;
-    basic_score_t KingStorm1 = 69;
-    basic_score_t KingStorm2 = 24;
+    basic_score_t KnightAtk = 63;
+    basic_score_t BishopAtk = 32;
+    basic_score_t RookAtk = 32;
+    basic_score_t QueenAtk = 84;
+    basic_score_t KingZoneAttacks = 35;
+    basic_score_t WeakSquares = 29;
+    basic_score_t EnemyPawns = 19;
+    basic_score_t QueenSafeCheckValue = 74;
+    basic_score_t RookSafeCheckValue = 108;
+    basic_score_t BishopSafeCheckValue = 61;
+    basic_score_t KnightSafeCheckValue = 123;
 
-    basic_score_t KnightAtk = 10;
-    basic_score_t BishopAtk = 2;
-    basic_score_t RookAtk = 12;
-    basic_score_t QueenAtk = 3;
-    basic_score_t AttackValue = 22;
-    basic_score_t WeakSquares = 40;
-    basic_score_t NoEnemyQueens = 95;
-    basic_score_t EnemyPawns = 21;
-    basic_score_t QueenSafeCheckValue = 60;
-    basic_score_t RookSafeCheckValue = 117;
-    basic_score_t BishopSafeCheckValue = 77;
-    basic_score_t KnightSafeCheckValue = 112;
+    basic_score_t KingShelter1 = 30;
+    basic_score_t KingShelter2 = 14;
+    basic_score_t KingStorm1 = 100;
+    basic_score_t KingStorm2 = 72;
 
-    basic_score_t KnightPhase = 3;
+    score_t PieceSpace = { 3, 3 };
+    score_t EmptySpace = { 5, 0 };
+
+    basic_score_t KnightPhase = 2;
     basic_score_t BishopPhase = 5;
     basic_score_t RookPhase = 9;
-    basic_score_t QueenPhase = 17;
+    basic_score_t QueenPhase = 23;
 
     score_t PcSqTab[2][8][64];
     uint64_t KingZoneBB[2][64];
@@ -130,17 +137,23 @@ namespace EvalParam {
         }
         for (int sq = 0; sq < 64; ++sq) {
             for (int color = WHITE; color <= BLACK; ++color) {
-                KingZoneBB[color][sq] = kingMovesBB(sq) | (1ull << sq) | shift8BB[color](kingMovesBB(sq));
+                KingZoneBB[color][sq] = kingMovesBB(sq) | BitMask[sq];
+                if (Rank1ByColorBB[color] & BitMask[sq]) KingZoneBB[color][sq] |= shift8BB[color](kingMovesBB(sq));
                 KingZoneBB[color][sq] |= sqFile(sq) == FileA ? KingZoneBB[color][sq] << 1 : 0;
                 KingZoneBB[color][sq] |= sqFile(sq) == FileH ? KingZoneBB[color][sq] >> 1 : 0;
             }
+            //PrintOutput() << "sq = " << sq;
+            //Utils::printBitBoard(KingZoneBB[WHITE][sq]);
         }
         for (int color = WHITE; color <= BLACK; ++color) {
             for (int castle = 0; castle <= 2; ++castle) {
                 int sq = KingSquare[color][castle];
-                KingShelterBB[color][castle] = (kingMovesBB(sq) | (1ull << sq)) & Rank2ByColorBB[color];
+                KingShelterBB[color][castle] = (kingMovesBB(sq) | BitMask[sq]) & Rank2ByColorBB[color];
                 KingShelter2BB[color][castle] = shift8BB[color](KingShelterBB[color][castle]);
                 KingShelter3BB[color][castle] = shift16BB[color](KingShelterBB[color][castle]);
+                //PrintOutput() << "color = " << color;
+                //PrintOutput() << "castle = " << castle;
+                //Utils::printBitBoard(KingShelter3BB[color][castle]);
             }
         }
     }
@@ -202,12 +215,16 @@ namespace EvalParam {
 
                             if (wp + bp + minors + majors == 0) mat.flags |= 1;
                             if (!wp && !bp) {
-                                if (majors == 0 && wminors < 2 && bminors < 2) mat.flags |= 1;
-                                if (majors == 0 && minors == 2 && (wn == 2 || bn == 2)) mat.flags |= 1;
-                                if (majors == 1 && wr == 1 && wminors == 0 && bminors == 1) mat.flags |= 2;
-                                if (majors == 1 && br == 1 && bminors == 0 && wminors == 1) mat.flags |= 2;
-                                if (majors == 2 && wr == 1 && br == 1 && minors < 2) mat.flags |= 2;
+                                if (majors == 0 && wminors < 2 && bminors < 2) mat.flags |= 1; // minor vs minor
+                                if (majors == 0 && minors == 2 && (wn == 2 || bn == 2)) mat.flags |= 1; // 2 knights
+                                if (majors == 1 && wr == 1 && wminors == 0 && bminors == 1) mat.flags |= 2; // rook vs minor
+                                if (majors == 1 && br == 1 && bminors == 0 && wminors == 1) mat.flags |= 2; // rook vs minor
+                                if (majors == 2 && wr == 1 && br == 1 && minors < 2) mat.flags |= 2; // rook+minor vs rook
                             }
+                            if (majors == 0 && minors == 2 && wb == 1 && bb == 1) mat.flags |= 4; // possible ocb
+                            // TODO: material scaling like opposite colored bishops, KRkb, KRkn
+                            // TODO: material recognizer (KBPk, KRPkr, insufficient material, etc)
+                            // TODO: endgame knowledge (KRPkr, KRkp, KBPkb)
                         }
     }
     material_t& getMaterial(int idx1, int idx2) {

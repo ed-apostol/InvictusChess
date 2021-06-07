@@ -14,10 +14,14 @@
 #include <condition_variable>
 
 //#define TUNE
+//#define DEBUG
 
+#ifdef DEBUG
+#define ASSERT(a) if (!(a)) \
+{LogAndPrintInfo() << "file " << __FILE__ << ", line " << __LINE__  << " : " << "assertion \"" #a "\" failed";}
+#else
 #define ASSERT(a)
-//#define ASSERT(a) if (!(a)) \
-//{LogAndPrintInfo() << "file " << __FILE__ << ", line " << __LINE__  << " : " << "assertion \"" #a "\" failed";}
+#endif
 
 enum ColorEnum {
     WHITE,
@@ -67,11 +71,11 @@ enum Square {
     A8, B8, C8, D8, E8, F8, G8, H8
 };
 
-inline int sqRank(int sq) {
+constexpr int sqRank(int sq) {
     return sq >> 3;
 }
 
-inline int  sqFile(int sq) {
+constexpr int  sqFile(int sq) {
     return sq & 7;
 }
 
@@ -85,16 +89,16 @@ struct move_t {
     move_t(int f, int t, int fl) {
         m = f | (t << 6) | (fl << 12);
     }
-    inline void init() { m = 0;  s = SHRT_MIN; }
-    inline int moveFrom() const { return 63 & m; }
-    inline int moveTo() const { return 63 & (m >> 6); }
-    inline int movePromote() const { return (m >> 14) ? (m >> 12) - 2 : 0; }
-    inline int moveFlags() const { return m >> 12; }
-    inline bool isCastle() const { return MF_CASTLE == (m >> 12); }
-    inline bool isPawn2Forward() const { return MF_PAWN2 == (m >> 12); }
-    inline bool isPromote() const { return (m >> 14); }
-    inline bool isEnPassant() const { return MF_ENPASSANT == (m >> 12); }
-    inline bool operator == (const move_t& mv) { return mv.m == m; }
+    constexpr int moveFrom() const { return 63 & m; }
+    constexpr int moveTo() const { return 63 & (m >> 6); }
+    constexpr int movePromote() const { return (m >> 14) ? (m >> 12) - 2 : 0; }
+    constexpr int moveFlags() const { return m >> 12; }
+    constexpr bool isCastle() const { return MF_CASTLE == (m >> 12); }
+    constexpr bool isPawn2Forward() const { return MF_PAWN2 == (m >> 12); }
+    constexpr bool isPromote() const { return (m >> 14); }
+    constexpr bool isEnPassant() const { return MF_ENPASSANT == (m >> 12); }
+    constexpr bool isSpecial() const { return moveFlags() ? !isPawn2Forward() : 0; }
+    constexpr bool operator == (const move_t& mv) { return mv.m == m; }
     inline std::string to_str() {
         static const std::string promstr = "0pnbrqk";
         std::string str;
@@ -121,6 +125,7 @@ public:
     movelist_t() : size(0) {}
     void add(const move_t& m) { tab[size] = m; ++size; }
     move_t& mv(int idx) { return tab[idx]; }
+    static const int maxsize = N - 1;
     int size;
 private:
     move_t tab[N];
