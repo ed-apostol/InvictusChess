@@ -4,18 +4,17 @@
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
 
-#define USE_PEXT
+#include "typedefs.h"
+#include "constants.h"
+#include "attacks.h"
+#include "bitutils.h"
+#include "log.h"
 
 #include <functional>
 #include <vector>
 #ifdef USE_PEXT
 #include <immintrin.h>
 #endif
-#include "typedefs.h"
-#include "constants.h"
-#include "attacks.h"
-#include "bitutils.h"
-#include "log.h"
 
 namespace {
     const uint64_t BMagic[64] =

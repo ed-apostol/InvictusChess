@@ -22,12 +22,12 @@ movepicker_t::movepicker_t(search_t& search, bool inCheck, bool inQS, int marg, 
 move_t movepicker_t::getBestMoveFromIdx(int idx) {
     int best_idx = idx;
     for (int i = idx + 1; i < mvlist.size; ++i) {
-        if (mvlist.mv(i).s > mvlist.mv(best_idx).s)
+        if (mvlist[i].s > mvlist[best_idx].s)
             best_idx = i;
     }
     if (best_idx != idx)
-        std::swap(mvlist.mv(best_idx), mvlist.mv(idx));
-    return mvlist.mv(idx);
+        std::swap(mvlist[best_idx], mvlist[idx]);
+    return mvlist[idx];
 }
 
 bool movepicker_t::getMoves(move_t& move, bool skipquiets) {
@@ -112,7 +112,7 @@ bool movepicker_t::getMoves(move_t& move, bool skipquiets) {
         idx = 0;
     case STG_BADTACTICS:
         while (idx < mvlistbad.size) { // no need to order, ordered already
-            move = mvlistbad.mv(idx++);
+            move = mvlistbad[idx++];
             if (move.m == hashmove) continue;
             if (pos.moveIsLegal(move, pinned, false))
                 return true;
@@ -122,7 +122,7 @@ bool movepicker_t::getMoves(move_t& move, bool skipquiets) {
         //if (deferred.size) PrintOutput() << "deferred size: " << deferred.size;
     case STG_DEFERRED:
         while (idx < deferred.size) {
-            move = deferred.mv(idx++);
+            move = deferred[idx++];
             if (skipquiets && !pos.moveIsTactical(move)) continue;
             return true;
         }
@@ -136,10 +136,10 @@ bool movepicker_t::getMoves(move_t& move, bool skipquiets) {
 
 void movepicker_t::scoreTactical() {
     for (move_t& m : mvlist) {
-        int to = m.moveTo();
-        int piece = pos.getPiece(m.moveFrom());
+        int to = m.to();
+        int piece = pos.getPiece(m.from());
         int cap = pos.pieces[to];
-        m.s = (cap + m.movePromote()) * 6 - piece;
+        m.s = (cap + m.promoted()) * 6 - piece;
         m.s += s.caphistory[piece][cap][to];
     }
 }
@@ -160,7 +160,7 @@ void movepicker_t::scoreEvasions() {
         else if (m.m == killer1) m.s = 5000;
         else if (m.m == killer2) m.s = 4999;
         else if (m.m == counter) m.s = 4998;
-        else if (pos.moveIsTactical(m)) m.s = 7000 + (pos.pieces[m.moveTo()] + m.movePromote()) * 10 - pos.pieces[m.moveFrom()];
+        else if (pos.moveIsTactical(m)) m.s = 7000 + (pos.pieces[m.to()] + m.promoted()) * 10 - pos.pieces[m.from()];
         else {
             s.getHistoryValues(h, ch, fh, m);
             m.s = h + ch + fh;

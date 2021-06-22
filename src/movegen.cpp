@@ -29,10 +29,15 @@ static const MoveFlags Flags[11] = {
 };
 
 #define genMoves(mt, PCB, SP, TBB)\
-    for (uint64_t from, bits = getPieceBB(Pieces[mt], side) & PCB; bits;) {\
-        for (uint64_t mvbits = AttackFuncs[mt](int(from = popFirstBit(bits)), SP) & TBB; mvbits;) {\
-            for (int to = popFirstBit(mvbits), fl = Flags[mt], fll = (Flags[mt] == MF_PROMN ? MF_PROMQ : Flags[mt]); fl <= fll; ++fl)\
-                mvlist.add(move_t(int(from), to, fl));}}
+    for (uint64_t from, bits = getPieceBB(Pieces[mt], side) & PCB; bits;) \
+        for (uint64_t mvbits = AttackFuncs[mt](int(from = popFirstBit(bits)), SP) & TBB; mvbits;) \
+            mvlist.add(move_t(int(from), popFirstBit(mvbits), Flags[mt] ));
+
+#define genProms(mt, PCB, SP, TBB)\
+    for (uint64_t from, bits = getPieceBB(Pieces[mt], side) & PCB; bits;) \
+        for (uint64_t mvbits = AttackFuncs[mt](int(from = popFirstBit(bits)), SP) & TBB; mvbits;) \
+            for (int to = popFirstBit(mvbits), fl = MF_PROMN; fl <= MF_PROMQ; ++fl) \
+                mvlist.add(move_t(int(from), to, fl));
 
 #define genMovesPcs(PCB, TBB)\
     genMoves(MT_KNIGHT, PCB, occupiedBB, TBB);\
@@ -40,11 +45,11 @@ static const MoveFlags Flags[11] = {
     genMoves(MT_ROOK, PCB, occupiedBB, TBB);\
     genMoves(MT_QUEEM, PCB, occupiedBB, TBB);
 
-void position_t::genLegal(movelist_t<256>& mvlist) {
+void position_t::genLegal(movelist_t<220>& mvlist) {
     if (kingIsInCheck())
         genCheckEvasions(mvlist);
     else {
-        movelist_t<256> mlt;
+        movelist_t<220> mlt;
         uint64_t pinned = pinnedPiecesBB(side);
         genTacticalMoves(mlt);
         genQuietMoves(mlt);
@@ -55,7 +60,7 @@ void position_t::genLegal(movelist_t<256>& mvlist) {
     }
 }
 
-void position_t::genQuietMoves(movelist_t<256>& mvlist) {
+void position_t::genQuietMoves(movelist_t<220>& mvlist) {
     const int xside = side ^ 1;
     if (canCastleKS(side) && !(occupiedBB & CastleSquareMask1[side][0]))
         mvlist.add(move_t(CastleSquareFrom[side], CastleSquareTo[side][0], MF_CASTLE));
@@ -68,21 +73,21 @@ void position_t::genQuietMoves(movelist_t<256>& mvlist) {
     genMoves(MT_KING, occupiedBB, 0, ~occupiedBB & ~kingMovesBB(kpos[xside]));
 }
 
-void position_t::genTacticalMoves(movelist_t<256>& mvlist) {
+void position_t::genTacticalMoves(movelist_t<220>& mvlist) {
     const int xside = side ^ 1;
     const uint64_t targetBB = colorBB[xside] & ~piecesBB[KING];
 
     if (stack.epsq != -1)
         genMoves(MT_EP, pawnAttacksBB(stack.epsq, xside), side, BitMask[stack.epsq]);
 
-    genMoves(MT_PAWNPROM, Rank7ByColorBB[side], side, ~occupiedBB);
-    genMoves(MT_PAWNCAPPROM, Rank7ByColorBB[side], side, targetBB);
+    genProms(MT_PAWNPROM, Rank7ByColorBB[side], side, ~occupiedBB);
+    genProms(MT_PAWNCAPPROM, Rank7ByColorBB[side], side, targetBB);
     genMoves(MT_PAWNCAP, ~Rank7ByColorBB[side], side, targetBB);
     genMovesPcs(occupiedBB, targetBB);
     genMoves(MT_KING, occupiedBB, 0, targetBB & ~kingMovesBB(kpos[xside]));
 }
 
-void position_t::genCheckEvasions(movelist_t<256>& mvlist) {
+void position_t::genCheckEvasions(movelist_t<220>& mvlist) {
     const int xside = side ^ 1;
     const int ksq = kpos[side];
     const uint64_t checkersBB = getAttacksBB(ksq, xside);
@@ -97,7 +102,7 @@ void position_t::genCheckEvasions(movelist_t<256>& mvlist) {
 
     uint64_t pcbits = notpinned & pawnAttacksBB(sqchecker, xside);
     genMoves(MT_PAWNCAP, pcbits & ~Rank7ByColorBB[side], side, checkersBB);
-    genMoves(MT_PAWNCAPPROM, pcbits & Rank7ByColorBB[side], side, checkersBB);
+    genProms(MT_PAWNCAPPROM, pcbits & Rank7ByColorBB[side], side, checkersBB);
 
     if (checkersBB & getPieceBB(PAWN, xside) && (sqchecker + ((side == WHITE) ? 8 : -8)) == stack.epsq)
         genMoves(MT_EP, notpinned, side, BitMask[stack.epsq]);
@@ -108,7 +113,7 @@ void position_t::genCheckEvasions(movelist_t<256>& mvlist) {
 
     pcbits = notpinned & shift8BB[xside](inbetweenBB);
     genMoves(MT_PAWN, pcbits & ~Rank7ByColorBB[side], side, inbetweenBB);
-    genMoves(MT_PAWNPROM, pcbits & Rank7ByColorBB[side], side, inbetweenBB);
+    genProms(MT_PAWNPROM, pcbits & Rank7ByColorBB[side], side, inbetweenBB);
     pcbits = notpinned & shift8BB[xside](~occupiedBB) & shift16BB[xside](~occupiedBB) & shift16BB[xside](inbetweenBB);
     genMoves(MT_PAWN2, pcbits & Rank2ByColorBB[side], side, inbetweenBB);
 }

@@ -21,9 +21,6 @@ struct LogToFile : public std::ofstream {
         return logger;
     }
     LogToFile(const std::string& f = "invictus.log") : std::ofstream(f.c_str(), std::ios::app) {}
-    ~LogToFile() {
-        if (is_open()) close();
-    }
 };
 
 template <LogLevel level, bool out = true, bool logtofile = false>
@@ -37,11 +34,10 @@ public:
     }
     ~Log() {
         static const std::string LevelText[7] = { "->", "<-", "==" };
-        _buffer << "\n";
         static spinlock_t splock;
         std::lock_guard<spinlock_t> lock(splock);
-        if (out) std::cout << _buffer.str();
-        if (logtofile) LogToFile::Inst() << Utils::getTime() << " " << LevelText[level] << " " << _buffer.str();
+        if (out) std::cout << _buffer.str() << "\n";
+        if (logtofile) LogToFile::Inst() << Utils::getTime() << " " << LevelText[level] << " " << _buffer.str() << std::endl;
     }
 private:
     std::ostringstream _buffer;

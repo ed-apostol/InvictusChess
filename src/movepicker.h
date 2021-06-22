@@ -43,7 +43,7 @@ struct movepicker_t {
     uint16_t counter;
     search_t& s;
     position_t& pos;
-    movelist_t<256> mvlist;
-    movelist_t<256> mvlistbad;
-    movelist_t<256> deferred;
+    movelist_t<220> mvlist;
+    movelist_t<80> mvlistbad;
+    movelist_t<220> deferred;
 };

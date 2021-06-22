@@ -48,16 +48,16 @@ void engine_t::initSearch() {
         t_inc = limits.binc;
     }
     if (mytime || t_inc) {
-        mytime = std::max(0, mytime - 1000);
+        int time = std::max(0, mytime - 1000);
         if (limits.movestogo < 1 || limits.movestogo > 30) limits.movestogo = 30;
 
-        time_limit_max = (mytime / limits.movestogo) + ((t_inc * 4) / 5);
+        time_limit_max = (time / limits.movestogo) + ((t_inc * 4) / 5);
         if (limits.ponder) time_limit_max += time_limit_max / 4;
-        if (time_limit_max > mytime) time_limit_max = mytime;
+        if (time_limit_max > time) time_limit_max = time;
 
-        time_limit_abs = ((mytime * 3) / 10) + ((t_inc * 4) / 5);
+        time_limit_abs = ((time * 3) / 10) + ((t_inc * 4) / 5);
         if (time_limit_abs < time_limit_max) time_limit_abs = time_limit_max;
-        if (time_limit_abs > mytime) time_limit_abs = mytime;
+        if (time_limit_abs > time) time_limit_abs = time;
     }
     if (!limits.depth) limits.depth = MAXPLY;
     LogInfo() << "max time = " << time_limit_max << " abs time = " << time_limit_abs << " depth = " << limits.depth;
@@ -67,7 +67,7 @@ void engine_t::initSearch() {
     time_range = time_limit_max;
     time_limit_max += start_time;
     time_limit_abs += start_time;
-    use_time = !limits.ponder && (mytime || limits.movetime || t_inc);
+    use_time = !limits.ponder && (limits.movetime || mytime || t_inc);
     stop = false;
     resolve_iter = false;
     rootbestmove.m = 0;
@@ -89,6 +89,7 @@ void engine_t::initSearch() {
         t->pos = origpos;
         t->wakeup();
     }
+    updatelock.unlock();
 }
 
 void engine_t::waitForThreads() {

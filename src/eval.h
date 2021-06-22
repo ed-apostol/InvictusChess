@@ -10,10 +10,9 @@
 #include "position.h"
 
 struct eval_t {
-    void material(position_t& p, int side);
+    void material(position_t& p);
     void pawnstructure(position_t& p, int side);
     void pieceactivity(position_t& p, int side);
-    basic_score_t kingshelter(position_t& p, int sq, int side);
     void kingsafety(position_t& p, int side);
     void threats(position_t& p, int side);
     void passedpawns(position_t& p, int side);

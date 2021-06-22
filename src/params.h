@@ -10,7 +10,6 @@
 
 namespace EvalParam {
     extern score_t MaterialValues[7];
-    extern score_t BishopPair;
 
     extern score_t PawnConnected;
     extern score_t PawnDoubled;
@@ -33,9 +32,11 @@ namespace EvalParam {
     extern score_t RookOn7th;
     extern score_t RookOnSemiOpenFile;
     extern score_t RookOnOpenFile;
-    extern score_t OutpostBonus;
+    extern score_t KnightOutpost;
+    extern score_t KnightXOutpost;
+    extern score_t BishopOutpost;
     extern score_t BishopPawns;
-    extern score_t CenterSquares;
+    extern score_t BishopCenterControl;
     extern basic_score_t Tempo;
 
     extern score_t PawnPush;
@@ -62,6 +63,8 @@ namespace EvalParam {
 
     extern basic_score_t KingShelter1;
     extern basic_score_t KingShelter2;
+    extern basic_score_t KingShelterF1;
+    extern basic_score_t KingShelterF2;
     extern basic_score_t KingStorm1;
     extern basic_score_t KingStorm2;
 
@@ -72,6 +75,9 @@ namespace EvalParam {
     extern basic_score_t BishopPhase;
     extern basic_score_t RookPhase;
     extern basic_score_t QueenPhase;
+
+    extern score_t ImbalanceInternal[6][6];
+    extern score_t ImbalanceExternal[6][6];
 
     extern score_t PcSqTab[2][8][64];
     extern uint64_t KingZoneBB[2][64];
@@ -86,4 +92,5 @@ namespace EvalParam {
     extern void initMaterial();
     extern material_t& getMaterial(int idx1, int idx2);
     extern void displayPST();
+    extern score_t imbalance(const int pieceCount[2][6], int side);
 }

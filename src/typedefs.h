@@ -9,12 +9,17 @@
 #include <climits>
 #include <cstdint>
 #include <vector>
+#include <array>
 #include <thread>
 #include <atomic>
 #include <condition_variable>
 
+#include <string>
+
 //#define TUNE
 //#define DEBUG
+//#define NOPOPCNT
+#define USE_PEXT
 
 #ifdef DEBUG
 #define ASSERT(a) if (!(a)) \
@@ -85,54 +90,52 @@ enum MoveFlags {
 
 struct move_t {
     move_t() { }
-    move_t(int v) : m(v) { }
+    move_t(int _m) : m(_m) { }
     move_t(int f, int t, int fl) {
         m = f | (t << 6) | (fl << 12);
     }
-    constexpr int moveFrom() const { return 63 & m; }
-    constexpr int moveTo() const { return 63 & (m >> 6); }
-    constexpr int movePromote() const { return (m >> 14) ? (m >> 12) - 2 : 0; }
-    constexpr int moveFlags() const { return m >> 12; }
-    constexpr bool isCastle() const { return MF_CASTLE == (m >> 12); }
-    constexpr bool isPawn2Forward() const { return MF_PAWN2 == (m >> 12); }
-    constexpr bool isPromote() const { return (m >> 14); }
-    constexpr bool isEnPassant() const { return MF_ENPASSANT == (m >> 12); }
-    constexpr bool isSpecial() const { return moveFlags() ? !isPawn2Forward() : 0; }
+    constexpr int from() const { return 63 & m; }
+    constexpr int to() const { return 63 & (m >> 6); }
+    constexpr int promoted() const { return isPromotion() ? flags() - 2 : 0; }
+    constexpr int flags() const { return m >> 12; }
+    constexpr bool isCastle() const { return MF_CASTLE == flags(); }
+    constexpr bool isPawn2Forward() const { return MF_PAWN2 == flags(); }
+    constexpr bool isPromotion() const { return (m >> 14); }
+    constexpr bool isEnPassant() const { return MF_ENPASSANT == flags(); }
+    constexpr bool isSpecial() const { return flags() ? !isPawn2Forward() : 0; }
     constexpr bool operator == (const move_t& mv) { return mv.m == m; }
     inline std::string to_str() {
         static const std::string promstr = "0pnbrqk";
         std::string str;
-        str += (sqFile(moveFrom()) + 'a');
-        str += ('1' + sqRank(moveFrom()));
-        str += (sqFile(moveTo()) + 'a');
-        str += ('1' + sqRank(moveTo()));
-        if (movePromote() != EMPTY)
-            str += promstr[movePromote()];
+        str += (sqFile(from()) + 'a');
+        str += ('1' + sqRank(from()));
+        str += (sqFile(to()) + 'a');
+        str += ('1' + sqRank(to()));
+        if (promoted() != EMPTY)
+            str += promstr[promoted()];
         return str;
     }
     uint16_t m;
     int16_t s;
 };
 
-template<int N>
-struct movelist_t {
-public:
-    move_t* begin() { return &tab[0]; }
-    move_t* end() { return &tab[size]; }
-    move_t const* begin() const { return &tab[0]; }
-    move_t const* end() const { return &tab[size]; }
+template<typename T, size_t capacity>
+struct container_t : public std::array<T, capacity> {
+    T* begin() { return &(*this)[0]; }
+    T* end() { return &(*this)[size]; }
+    T const* begin() const { return &(*this)[0]; }
+    T const* end() const { return &(*this)[size]; }
 
-    movelist_t() : size(0) {}
-    void add(const move_t& m) { tab[size] = m; ++size; }
-    move_t& mv(int idx) { return tab[idx]; }
-    static const int maxsize = N - 1;
+    container_t() : size(0) { }
+    void add(const T& m) { (*this)[size] = m; ++size; }
     int size;
-private:
-    move_t tab[N];
 };
 
+template<int N>
+struct movelist_t : public container_t<move_t, N> {};
+
 #ifdef TUNE
-typedef long double basic_score_t;
+typedef double basic_score_t;
 #else
 typedef int16_t basic_score_t;
 #endif
@@ -157,7 +160,9 @@ struct score_t {
     inline score_t& operator/=(const int x) { m /= x, e /= x; return *this; }
     inline score_t& operator*=(const int x) { m *= x, e *= x; return *this; }
     inline bool operator==(const score_t &d) { return (d.e == e) && (d.m == m); }
-
+    inline std::string to_str() {
+        return  "{" + std::to_string((int)std::round(m)) + ", " + std::to_string((int)std::round(e)) + "}";
+    }
     basic_score_t m;
     basic_score_t e;
 };

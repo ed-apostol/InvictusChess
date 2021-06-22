@@ -74,7 +74,7 @@ uint64_t search_t::perft(size_t depth) {
     undo_t undo;
     uint64_t cnt = 0ull;
     if (depth == 0) return 1ull;
-    movelist_t<256> mvlist;
+    movelist_t<220> mvlist;
     bool inCheck = pos.kingIsInCheck();
     if (inCheck) pos.genCheckEvasions(mvlist);
     else {
@@ -93,7 +93,7 @@ uint64_t search_t::perft(size_t depth) {
 
 // use this for checking move generation: faster
 uint64_t search_t::perft2(int depth) {
-    movelist_t<256> mvlist;
+    movelist_t<220> mvlist;
     pos.genLegal(mvlist);
     if (depth == 1) return mvlist.size;
     undo_t undo;
@@ -172,7 +172,7 @@ void search_t::start() {
                     e.plysearched[rdepth - 1] = true;
                     e.resolve_iter = false;
                     e.rootbestmove = rootmove;
-                    if (pvlist[0].size > 1) e.rootponder = pvlist[0].mv(1);
+                    if (pvlist[0].size > 1) e.rootponder = pvlist[0][1];
                     if (rdepth >= 12) displayInfo(rootmove, rdepth, e.alpha, e.beta);
                     e.rdepth = ++rdepth;
                     if (rdepth >= 5)
@@ -234,9 +234,6 @@ bool search_t::stopSearch() {
 
 int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, bool inCheck) {
     if (depth <= 0) return qsearch(inPv, alpha, beta, inCheck);
-
-    ASSERT(alpha < beta);
-    ASSERT(!(pos.colorBB[WHITE] & pos.colorBB[BLACK]));
 
     pvlist[ply].size = 0;
 
@@ -439,9 +436,6 @@ int search_t::search(bool inRoot, bool inPv, int alpha, int beta, int depth, boo
 }
 
 int search_t::qsearch(bool inPv, int alpha, int beta, bool inCheck) {
-    ASSERT(alpha < beta);
-    ASSERT(!(pos.colorBB[WHITE] & pos.colorBB[BLACK]));
-
     pvlist[ply].size = 0;
     if (stopSearch()) return 0;
 
@@ -497,7 +491,7 @@ int search_t::qsearch(bool inPv, int alpha, int beta, bool inCheck) {
     return best_score;
 }
 
-void search_t::updateHistoryValues(int& sc, int delta) {
+void search_t::updateHistoryValues(int16_t& sc, int delta) {
     sc += delta - (sc * abs(delta)) / 800;
 }
 
@@ -512,29 +506,24 @@ void search_t::updateHistory(move_t bm, int depth) {
     int bonus = std::min(depth * depth, 400);
     for (move_t m : playedmoves[ply]) {
         int delta = (m.m == bm.m) ? bonus : -bonus;
-        int from = m.moveFrom();
-        int to = m.moveTo();
-        int piece = pos.getPiece(from);
-        updateHistoryValues(history[pos.side][from][to], delta);
-        updateHistoryValues(cmh[cm_pc][cm_to][piece][to], delta);
-        updateHistoryValues(fmh[fm_pc][fm_to][piece][to], delta);
+        int piece = pos.getPiece(m.from());
+        updateHistoryValues(history[pos.side][m.from()][m.to()], delta);
+        updateHistoryValues(cmh[cm_pc][cm_to][piece][m.to()], delta);
+        updateHistoryValues(fmh[fm_pc][fm_to][piece][m.to()], delta);
     }
 }
 
 void search_t::getHistoryValues(int& h, int& ch, int& fh, move_t m) {
-    int from = m.moveFrom();
-    int to = m.moveTo();
-    int piece = pos.getPiece(from);
-    h = history[pos.side][from][to];
-    ch = cmh[pos.stack.movingpc][pos.stack.dest][piece][to];
-    fh = (ply > 1) ? fmh[stack[ply - 1].movingpc][stack[ply - 1].dest][piece][to] : 0;
+    int piece = pos.getPiece(m.from());
+    h = history[pos.side][m.from()][m.to()];
+    ch = cmh[pos.stack.movingpc][pos.stack.dest][piece][m.to()];
+    fh = (ply > 1) ? fmh[stack[ply - 1].movingpc][stack[ply - 1].dest][piece][m.to()] : 0;
 }
 
 void search_t::updateCapHistory(move_t bm, int depth) {
     int bonus = std::min(depth * depth, 400);
     for (move_t m : playedcaps[ply]) {
         int delta = (m.m == bm.m) ? bonus : -bonus;
-        int to = m.moveTo();
-        updateHistoryValues(caphistory[pos.getPiece(m.moveFrom())][pos.getPiece(to)][to], delta);
+        updateHistoryValues(caphistory[pos.getPiece(m.from())][pos.getPiece(m.to())][m.to()], delta);
     }
 }

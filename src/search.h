@@ -48,9 +48,9 @@ struct engine_t;
 
 struct search_t : public thread_t {
     search_t(int _thread_id, engine_t& _e) : e(_e), thread_t(_thread_id) {
-        native_thread = std::thread(&search_t::idleloop, this);
         et.init(1);
         ply = 0;
+        native_thread = std::thread(&search_t::idleloop, this);
     }
 
     void idleloop();
@@ -62,7 +62,7 @@ struct search_t : public thread_t {
     bool stopSearch();
     int search(bool inRoot, bool inPv, int alpha, int beta, int depth, bool inCheck);
     int qsearch(bool inPv, int alpha, int beta, bool inCheck);
-    void updateHistoryValues(int& sc, int delta);
+    void updateHistoryValues(int16_t& sc, int delta);
     void updateHistory(move_t bm, int depth);
     void getHistoryValues(int& h, int& ch, int& fh, move_t m);
     void updateCapHistory(move_t bm, int depth);
@@ -79,15 +79,15 @@ struct search_t : public thread_t {
 
     move_t rootmove;
     movelist_t<MAXPLYSIZE> pvlist[MAXPLYSIZE];
-    movelist_t<256> playedmoves[MAXPLYSIZE];
-    movelist_t<256> playedcaps[MAXPLYSIZE];
+    movelist_t<220> playedmoves[MAXPLYSIZE];
+    movelist_t<80> playedcaps[MAXPLYSIZE];
     undo_t stack[MAXPLYSIZE];
     int evalvalue[MAXPLYSIZE];
     uint16_t killer1[MAXPLYSIZE];
     uint16_t killer2[MAXPLYSIZE];
     uint16_t countermove[2][8][64];
-    int history[2][64][64];
-    int caphistory[8][8][64];
-    int cmh[8][64][8][64];
-    int fmh[8][64][8][64];
+    int16_t history[2][64][64];
+    int16_t caphistory[8][8][64];
+    int16_t cmh[8][64][8][64];
+    int16_t fmh[8][64][8][64];
 };

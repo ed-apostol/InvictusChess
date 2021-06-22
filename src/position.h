@@ -90,13 +90,17 @@ struct position_t {
     bool hashIsValid();
     bool phashIsValid();
 
-    void genLegal(movelist_t<256>& mvlist);
-    void genQuietMoves(movelist_t<256>& mvlist);
-    void genTacticalMoves(movelist_t<256>& mvlist);
-    void genCheckEvasions(movelist_t<256>& mvlist);
+    void genLegal(movelist_t<220>& mvlist);
+    void genQuietMoves(movelist_t<220>& mvlist);
+    void genTacticalMoves(movelist_t<220>& mvlist);
+    void genCheckEvasions(movelist_t<220>& mvlist);
 
     uint64_t occupiedBB;
-    std::vector<uint64_t> history;
+#ifdef TUNE
+    container_t<uint64_t, 0> history;
+#else
+    container_t<uint64_t, 1024> history;
+#endif
     uint64_t piecesBB[7];
     uint64_t colorBB[2];
     int pieces[64];

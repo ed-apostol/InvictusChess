@@ -110,7 +110,7 @@ void position_t::initPosition() {
     kpos[0] = kpos[1] = A1;
     mat_idx[0] = mat_idx[1] = 0;
     side = WHITE;
-    history.clear();
+    history.size = 0;
     stack.init();
 }
 
@@ -141,8 +141,8 @@ void position_t::doNullMove(undo_t& undo, int& ply) {
 void position_t::undoMove(undo_t& undo, int& ply) {
     move_t m = stack.lastmove;
     const int xside = side;
-    const int from = m.moveFrom();
-    const int to = m.moveTo();
+    const int from = m.from();
+    const int to = m.to();
     const int pc = pieces[to];
     const int cap = stack.capturedpc;
 
@@ -153,7 +153,7 @@ void position_t::undoMove(undo_t& undo, int& ply) {
     setPiece(false, from, side, pc);
     if (cap != EMPTY) setPiece(false, to, xside, cap);
 
-    switch (m.moveFlags()) {
+    switch (m.flags()) {
     case MF_CASTLE:
         removePiece(false, RookTo[to / 56][(to % 8) > 5], side, ROOK);
         setPiece(false, RookFrom[to / 56][(to % 8) > 5], side, ROOK);
@@ -162,17 +162,17 @@ void position_t::undoMove(undo_t& undo, int& ply) {
         setPiece(false, (sqRank(from) << 3) + sqFile(to), xside, PAWN);
         break;
     case MF_PROMQ: case MF_PROMR: case MF_PROMB: case MF_PROMN:
-        removePiece(false, from, side, m.movePromote());
+        removePiece(false, from, side, m.promoted());
         setPiece(false, from, side, PAWN);
         break;
     }
     stack = undo;
-    history.pop_back();
+    --history.size;
 }
 
 void position_t::doMove(undo_t& undo, move_t m, int& ply) {
-    const int from = m.moveFrom();
-    const int to = m.moveTo();
+    const int from = m.from();
+    const int to = m.to();
     const int xside = side ^ 1;
     const int pc = pieces[from];
     const int cap = pieces[to];
@@ -201,7 +201,7 @@ void position_t::doMove(undo_t& undo, move_t m, int& ply) {
     setPiece(true, to, side, pc);
     if (cap != EMPTY || pc == PAWN) stack.fifty = 0;
 
-    switch (m.moveFlags()) {
+    switch (m.flags()) {
     case MF_PAWN2:
         stack.epsq = (from + to) / 2;
         getPieceBB(PAWN, xside) & pawnAttacksBB(stack.epsq, side) ?
@@ -217,11 +217,11 @@ void position_t::doMove(undo_t& undo, move_t m, int& ply) {
         break;
     case MF_PROMQ: case MF_PROMR: case MF_PROMB: case MF_PROMN:
         removePiece(true, to, side, PAWN);
-        setPiece(true, to, side, m.movePromote());
+        setPiece(true, to, side, m.promoted());
         break;
     }
     side = xside;
-    history.push_back(stack.hash);
+    history.add(stack.hash);
 
     ASSERT(hashIsValid());
     ASSERT(phashIsValid());
@@ -318,7 +318,7 @@ std::string position_t::positionToFEN() {
         fen += sqFile(stack.epsq) + 'a';
         fen += '1' + sqRank(stack.epsq);
     }
-    fen += " " + std::to_string(stack.fifty) + " " + std::to_string(history.size() + 1);
+    fen += " " + std::to_string(stack.fifty) + " " + std::to_string(history.size + 1);
     return fen;
 }
 
@@ -346,9 +346,9 @@ std::string position_t::to_str() {
 }
 
 bool position_t::isRepeat() {
-    int idx_limit = std::max(history.size() - stack.fifty, history.size() - stack.pliesfromnull);
+    int idx_limit = std::max(history.size - stack.fifty, history.size - stack.pliesfromnull);
     idx_limit = std::max(idx_limit, 0);
-    for (int idx = history.size() - 5; idx >= idx_limit; idx -= 2) {
+    for (int idx = history.size - 5; idx >= idx_limit; idx -= 2) {
         if (history[idx] == stack.hash)
             return true;
     }
@@ -383,6 +383,7 @@ uint64_t  position_t::getPieceBB(int pc, int c) {
 uint64_t position_t::bishopSlidersBB(int c) {
     return (piecesBB[QUEEN] | piecesBB[BISHOP]) & colorBB[c];
 }
+
 uint64_t position_t::rookSlidersBB(int c) {
     return (piecesBB[QUEEN] | piecesBB[ROOK]) & colorBB[c];
 }
@@ -462,9 +463,9 @@ bool position_t::staticExchangeEval(move_t m, int threshold) {
 
     if (m.isCastle()) return true;
 
-    const int from = m.moveFrom();
-    const int to = m.moveTo();
-    const int prom = m.movePromote();
+    const int from = m.from();
+    const int to = m.to();
+    const int prom = m.promoted();
     const bool enpassant = m.isEnPassant();
 
     int pc = prom ? prom : pieces[from];
@@ -528,8 +529,8 @@ bool position_t::moveIsLegal(move_t move, uint64_t pinned, bool incheck) {
     if (incheck) return true;
 
     const int xside = side ^ 1;
-    const int from = move.moveFrom();
-    const int to = move.moveTo();
+    const int from = move.from();
+    const int to = move.to();
     const int ksq = kpos[side];
 
     if (move.isEnPassant()) {
@@ -547,30 +548,30 @@ bool position_t::moveIsLegal(move_t move, uint64_t pinned, bool incheck) {
 
 bool position_t::moveIsCheck(move_t move, uint64_t dcc) {
     const int xside = side ^ 1;
-    const int from = move.moveFrom();
-    const int to = move.moveTo();
+    const int from = move.from();
+    const int to = move.to();
     const int enemy_ksq = kpos[xside];
     const int pc = pieces[from];
-    const int prom = move.movePromote();
+    const int prom = move.promoted();
 
     if ((dcc & BitMask[from]) && DirFromTo[from][enemy_ksq] != DirFromTo[to][enemy_ksq]) return true;
     if (pc != PAWN && pc != KING && pieceAttacksFromBB(pc, enemy_ksq, occupiedBB)  & BitMask[to]) return true;
     if (pc == PAWN && pawnAttacksBB(enemy_ksq, xside) & BitMask[to]) return true;
     uint64_t tempOccBB = occupiedBB ^ BitMask[from] ^ BitMask[to];
-    if (move.isPromote() && pieceAttacksFromBB(prom, enemy_ksq, tempOccBB)  & BitMask[to]) return true;
+    if (move.isPromotion() && pieceAttacksFromBB(prom, enemy_ksq, tempOccBB)  & BitMask[to]) return true;
     if (move.isEnPassant() && sqIsAttacked(tempOccBB ^ BitMask[(sqRank(from) << 3) + sqFile(to)], enemy_ksq, side)) return true;
     if (move.isCastle() && rookAttacksBB(enemy_ksq, tempOccBB) & BitMask[RookTo[to / 56][(to % 8) > 5]]) return true;
     return false;
 }
 
 bool position_t::moveIsValid(move_t m, uint64_t pinned) {
-    const int from = m.moveFrom();
-    const int to = m.moveTo();
+    const int from = m.from();
+    const int to = m.to();
     const int pc = pieces[from];
     const int cap = pieces[to];
     const int absdiff = abs(from - to);
-    const int flag = m.moveFlags();
-    const int prom = m.movePromote();
+    const int flag = m.flags();
+    const int prom = m.promoted();
 
     if (pc == EMPTY) return false;
     if (cap == KING) return false;
@@ -630,7 +631,7 @@ bool position_t::moveIsValid(move_t m, uint64_t pinned) {
 }
 
 bool position_t::moveIsTactical(move_t m) {
-    return pieces[m.moveTo()] != EMPTY || m.isPromote() || m.isEnPassant();
+    return pieces[m.to()] != EMPTY || m.isPromotion() || m.isEnPassant();
 }
 
 // TEST UTILS

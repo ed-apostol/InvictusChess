@@ -16,7 +16,7 @@
 const std::string uci_t::name = "Invictus";
 const std::string uci_t::author = "Edsel Apostol";
 const std::string uci_t::year = "2021";
-const std::string uci_t::version = "r382";
+const std::string uci_t::version = "r391";
 
 void uci_t::info() {
     LogAndPrintOutput() << name << " " << version;
@@ -136,7 +136,7 @@ void uci_t::positioncmd(iss& stream) {
     }
     engine.origpos.setPosition(fen);
     for (bool found = true; stream >> token && found;) {
-        movelist_t<256> ml;
+        movelist_t<220> ml;
         undo_t undo;
         found = false;
         engine.origpos.genLegal(ml);
@@ -181,7 +181,7 @@ void uci_t::see() {
     for (auto fen : fenPos) {
         engine.origpos.setPosition(fen);
         displaypos();
-        movelist_t<256> ml;
+        movelist_t<220> ml;
         engine.origpos.genTacticalMoves(ml);
         for (move_t m : ml) {
             PrintOutput() << m.to_str() << " " << engine.origpos.staticExchangeEval(m, 0);
@@ -220,8 +220,8 @@ void uci_t::perftbench(iss& stream) {
 
         uint64_t oldtime = Utils::getTime();
 
-        uint64_t nodes = engine[0]->perft(depth);
-        //uint64_t nodes = engine[0]->perft2(depth);
+        //uint64_t nodes = engine[0]->perft(depth);
+        uint64_t nodes = engine[0]->perft2(depth);
 
         totalnodes += nodes;
         uint64_t timespent = Utils::getTime() - oldtime;
@@ -240,8 +240,8 @@ void uci_t::perft(iss& stream) {
     stream >> depth;
     engine[0]->pos = engine.origpos;
     uint64_t oldtime = Utils::getTime();
-    uint64_t nodes = engine[0]->perft(depth);
-    //uint64_t nodes = engine.perft2(depth);
+    //uint64_t nodes = engine[0]->perft(depth);
+    uint64_t nodes = engine[0]->perft2(depth);
     uint64_t timespent = Utils::getTime() - oldtime;
     PrintOutput() << "nodes: " << nodes << " time: " << timespent << " ms NPS: " << (nodes * 1000 / timespent);
 }
@@ -252,7 +252,7 @@ void uci_t::eval() {
 }
 
 void uci_t::moves() {
-    movelist_t<256> ml;
+    movelist_t<220> ml;
     engine.origpos.genLegal(ml);
     for (move_t m : ml)
         PrintOutput() << " " << m.to_str();

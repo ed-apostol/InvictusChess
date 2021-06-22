@@ -12,27 +12,25 @@
 #include "log.h"
 #include "eval.h"
 
-template <typename hash_entity_t>
+template <typename T>
 class hashtable_t {
 public:
-    hashtable_t() : table(nullptr), tabsize(0), mask(0) {}
+    hashtable_t() : table(nullptr), size(0), mask(0) {}
     ~hashtable_t() { delete[] table; }
-    void clear() { memset(table, 0, tabsize * sizeof(hash_entity_t)); }
-    hash_entity_t& getEntry(const uint64_t hash) { return table[hash & mask]; }
+    void clear() { memset(table, 0, size * sizeof(T)); }
+    T& getEntry(const uint64_t hash) { return table[hash & mask]; }
     void init(uint64_t mb) {
-        //PrintOutput() << sizeof(hash_entity_t);
-        tabsize = (1 << 20) / sizeof(hash_entity_t); // at least 1MB
-        for (mb <<= 19; tabsize * sizeof(hash_entity_t) <= mb; tabsize <<= 1);
-        mask = tabsize - 1;
+        for (size = (1 << 20) / sizeof(T), mb <<= 19; size * sizeof(T) <= mb; size <<= 1);
+        mask = size - 1;
         delete[] table;
-        table = new hash_entity_t[tabsize];
+        table = new T[size];
         clear();
     }
     uint32_t lock(uint64_t hash) const { return hash >> 32; }
 
 protected:
-    hash_entity_t *table;
-    uint64_t tabsize;
+    T *table;
+    uint64_t size;
     uint64_t mask;
 };
 

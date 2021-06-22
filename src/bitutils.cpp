@@ -7,8 +7,6 @@
 #include "typedefs.h"
 #include "constants.h"
 
-//#define NOPOPCNT
-
 #ifdef _MSC_VER
 
 #include <intrin.h>
