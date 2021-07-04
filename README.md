@@ -35,6 +35,11 @@ Ratings:
 * Invictus r340 (May 19, 2021) - 3031
 * Invictus r382 (June 07, 2021) - 3108
 
+[CCRL 40/40](http://ccrl.chessdom.com/ccrl/4040/rating_list_all.html)
+* Invictus r228 (August 05, 2018) - 2292
+* Invictus r305 (December 05, 2019) - 2878
+* Invictus r382 (June 07, 2021) - 3099
+
 If you would like to help with the development of Invictus chess engine, which is being tested in a Google Compute instance due to lack of hardware resource, please consider donating!
 
 [![](https://www.paypalobjects.com/en_US/i/btn/btn_donateCC_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=Y79ZRSGB2KFSE)
