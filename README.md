@@ -24,7 +24,7 @@ Thanks Tom Kerrigan (of TSCP fame) for the ABDADA idea!
 
 Ratings:
 
-[CEGT 40/20](http://www.cegt.net/40_40%20Rating%20List/40_40%20All%20Versions/rangliste.html)
+[CEGT 40/20](http://www.cegt.net/40_40%20Rating%20List/40_40%20SingleVersion/rangliste.html)
 * Invictus r305 (December 05, 2019) - 2738
 * Invictus r340 (May 19, 2021) - 2902
 * Invictus r382 (June 07, 2021) - 2986
