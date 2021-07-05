@@ -9,7 +9,6 @@
 #include "typedefs.h"
 #include "trans.h"
 #include "utils.h"
-#include "log.h"
 #include "eval.h"
 
 namespace Search {

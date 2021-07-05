@@ -4,8 +4,8 @@
 /*  ed_apostol@yahoo.com                          */
 /**************************************************/
 
+#include "typedefs.h"
 #include "trans.h"
-#include "log.h"
 
 int eval_table_t::retrieve(position_t& pos) {
     eval_hash_entry_t *entry = &getEntry(pos.stack.hash).bucket[0], *replace = entry;

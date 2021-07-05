@@ -5,10 +5,8 @@
 /**************************************************/
 
 #include "typedefs.h"
-#include "constants.h"
 #include "attacks.h"
-#include "bitutils.h"
-#include "log.h"
+#include "utils.h"
 
 #include <functional>
 #include <vector>
@@ -99,8 +97,8 @@ namespace {
             Magic& m = mtable[s];
             m.magic = magics[s];
             m.mask = slideAttacks(s, 0, dir) & ~(((Rank1BB | Rank8BB) & ~RankBB[sqRank(s)]) | ((FileABB | FileHBB) & ~FileBB[sqFile(s)]));
-            m.shift = 64 - BitUtils::bitCnt(m.mask);
-            if (s < 63) mtable[s + 1].offset = m.offset + (1ull << BitUtils::bitCnt(m.mask));
+            m.shift = 64 - Utils::bitCnt(m.mask);
+            if (s < 63) mtable[s + 1].offset = m.offset + (1ull << Utils::bitCnt(m.mask));
             uint64_t occ = 0;
             do {
                 m.offset[sliderIndex(occ, m)] = slideAttacks(s, occ, dir);

@@ -5,8 +5,8 @@
 /**************************************************/
 
 #include <algorithm>
+#include "typedefs.h"
 #include "movepicker.h"
-#include "log.h"
 
 movepicker_t::movepicker_t(search_t& search, bool inCheck, bool inQS, int marg, uint16_t hmove, uint16_t k1, uint16_t k2, uint16_t cm)
     : s(search), pos(s.pos), idx(0), hashmove(hmove), killer1(k1), killer2(k2), counter(cm), inQSearch(inQS), margin(marg) {

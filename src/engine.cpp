@@ -9,9 +9,7 @@
 #include "typedefs.h"
 #include "position.h"
 #include "utils.h"
-#include "bitutils.h"
 #include "eval.h"
-#include "log.h"
 #include "movepicker.h"
 #include "engine.h"
 

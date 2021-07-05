@@ -5,16 +5,14 @@
 /**************************************************/
 
 #include "eval.h"
-#include "bitutils.h"
-#include "log.h"
-#include "constants.h"
 #include "attacks.h"
 #include "params.h"
+#include "utils.h"
 
 #include <algorithm>
 #include <cstring>
 
-using namespace BitUtils;
+using namespace Utils;
 using namespace Attacks;
 using namespace EvalParam;
 

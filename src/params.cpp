@@ -7,8 +7,7 @@
 #include <cstring>
 #include "params.h"
 #include "attacks.h"
-#include "log.h"
-#include "constants.h"
+#include "utils.h"
 
 using namespace Attacks;
 

@@ -11,7 +11,6 @@
 #include "typedefs.h"
 #include "utils.h"
 #include "engine.h"
-#include "log.h"
 
 using iss = std::istringstream;
 class uci_t {

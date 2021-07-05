@@ -9,7 +9,6 @@
 #include <algorithm>
 #include <cstring>
 #include "typedefs.h"
-#include "log.h"
 #include "eval.h"
 
 template <typename T>

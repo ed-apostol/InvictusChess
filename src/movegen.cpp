@@ -5,13 +5,12 @@
 /**************************************************/
 
 #include "typedefs.h"
-#include "constants.h"
 #include "attacks.h"
-#include "bitutils.h"
+#include "utils.h"
 #include "position.h"
 
 using namespace Attacks;
-using namespace BitUtils;
+using namespace Utils;
 using namespace PositionData;
 
 enum move_type {

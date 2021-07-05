@@ -6,14 +6,12 @@
 
 #include <algorithm>
 #include <cstring>
+#include <sstream>
 
 #include "typedefs.h"
-#include "constants.h"
 #include "position.h"
 #include "utils.h"
-#include "bitutils.h"
 #include "attacks.h"
-#include "log.h"
 #include "eval.h"
 #include "params.h"
 
@@ -98,7 +96,7 @@ namespace PositionData {
 }
 
 using namespace Attacks;
-using namespace BitUtils;
+using namespace Utils;
 using namespace PositionData;
 using namespace EvalParam;
 
