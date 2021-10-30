@@ -8,6 +8,7 @@
 
 #include <climits>
 #include <cstdint>
+#include <cmath>
 #include <vector>
 #include <array>
 #include <thread>
