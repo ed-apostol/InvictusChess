@@ -33,7 +33,7 @@ public:
         static const std::string LevelText[7] = { "->", "<-", "==" };
         static spinlock_t splock;
         std::lock_guard<spinlock_t> lock(splock);
-        if (out) std::cout << _buffer.str() << "\n";
+        if (out) std::cout << _buffer.str() << std::endl;
         if (logtofile) LogToFile::Inst() << Utils::getTime() << " " << LevelText[level] << " " << _buffer.str() << std::endl;
     }
 private:
